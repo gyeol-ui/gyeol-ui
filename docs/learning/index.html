@@ -4,37 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>gyeol-ui 학습 노트</title>
-    <link rel="stylesheet" href="./modules/base.css" />
+    <link rel="stylesheet" href="learn.css" />
+    <script src="learn.js" defer></script>
   </head>
   <body>
-    <main>
-      <h1>gyeol-ui 학습 노트</h1>
-      <p class="lede">
-        슬라이스를 진행하며 배운 개념을 정리한다. 절차는
-        <a
-          href="https://github.com/gyeol-ui/gyeol-ui/blob/main/docs/workflow.md#7-학습-노트"
-          >워크플로우 "7. 학습 노트"</a
-        >를 따른다.
-      </p>
-
-      <h2>모노레포 기반</h2>
-      <ul>
-        <li>
-          <a href="./github-actions-concurrency.html"
-            >GitHub Actions concurrency</a
-          >: 실행 1개와 대기 1개 규칙, PR과 <code>main</code>에서 그룹을 다르게
-          나누는 이유
-        </li>
-        <li>
-          <a href="./squash-merge-and-release-please.html"
-            >squash merge와 release-please</a
-          >: PR 제목이 다음 버전이 되기까지
-        </li>
-        <li>
-          <a href="./oxlint-categories.html">oxlint 규칙 범주</a>: 범주별로 켜고
-          끄는 기준
-        </li>
-      </ul>
-    </main>
+    <div class="layout single">
+      <main>
+        <h1>gyeol-ui 학습 노트</h1>
+        <p class="lead">
+          슬라이스를 진행하며 배운 개념을 카테고리별로 모았다. 태그를 누르면
+          카테고리와 상관없이 그 주제의 노트만 볼 수 있다.
+        </p>
+        <div data-doc-index></div>
+      </main>
+    </div>
   </body>
 </html>

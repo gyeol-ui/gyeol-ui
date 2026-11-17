@@ -43,9 +43,10 @@ const CANCEL_MODES = {
 const styles = new CSSStyleSheet();
 styles.replaceSync(`
   .yaml {
-    font-family: var(--font-mono);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.82rem;
-    background: var(--note-code-bg);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 12px;
     margin: 0 0 12px;
@@ -59,13 +60,14 @@ styles.replaceSync(`
   }
 
   .group {
-    border: 1px solid var(--note-border);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 12px;
   }
 
   .group-name {
-    font-family: var(--font-mono);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.82rem;
     font-weight: 600;
     margin-bottom: 8px;
@@ -78,7 +80,7 @@ styles.replaceSync(`
   }
 
   .slot {
-    border: 1px dashed var(--note-border);
+    border: 1px dashed var(--border);
     border-radius: 6px;
     padding: 6px 8px;
     min-height: 54px;
@@ -86,7 +88,7 @@ styles.replaceSync(`
 
   .slot-title {
     font-size: 0.72rem;
-    color: var(--note-muted);
+    color: var(--muted);
     margin-bottom: 4px;
   }
 
@@ -97,7 +99,7 @@ styles.replaceSync(`
   .bar {
     height: 4px;
     margin-top: 6px;
-    background: var(--note-border);
+    background: var(--border);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -105,7 +107,7 @@ styles.replaceSync(`
   .bar > span {
     display: block;
     height: 100%;
-    background: var(--state-running);
+    background: var(--green);
   }
 
   .history {
@@ -126,7 +128,7 @@ styles.replaceSync(`
   }
 
   .empty {
-    color: var(--note-muted);
+    color: var(--muted);
     font-size: 0.85rem;
     padding: 8px 0;
   }

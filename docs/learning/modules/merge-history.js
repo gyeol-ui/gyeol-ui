@@ -40,15 +40,15 @@ styles.replaceSync(`
     display: block;
   }
 
-  .line { stroke: var(--note-muted); stroke-width: 2; fill: none; }
-  .branch { stroke: var(--note-accent); stroke-width: 2; fill: none; }
+  .line { stroke: var(--muted); stroke-width: 2; fill: none; }
+  .branch { stroke: var(--blue); stroke-width: 2; fill: none; }
   .faded { opacity: 0.35; }
   .dashed { stroke-dasharray: 4 4; }
-  .node-main { fill: var(--note-surface); stroke: var(--note-muted); stroke-width: 2; }
-  .node-new { fill: var(--note-accent); stroke: var(--note-accent); stroke-width: 2; }
-  .node-branch { fill: var(--note-surface); stroke: var(--note-accent); stroke-width: 2; }
-  text { font-family: var(--font-mono); font-size: 11px; fill: var(--note-text); }
-  text.caption { font-family: var(--font-sans); fill: var(--note-muted); }
+  .node-main { fill: var(--surface); stroke: var(--muted); stroke-width: 2; }
+  .node-new { fill: var(--blue); stroke: var(--blue); stroke-width: 2; }
+  .node-branch { fill: var(--surface); stroke: var(--blue); stroke-width: 2; }
+  text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; fill: var(--text); }
+  text.caption { font-family: inherit; fill: var(--muted); }
 
   .summary { margin: 8px 0 12px; font-size: 0.92rem; }
 
@@ -61,12 +61,12 @@ styles.replaceSync(`
   th, td {
     text-align: left;
     padding: 6px 8px;
-    border-top: 1px solid var(--note-border);
+    border-top: 1px solid var(--border);
     vertical-align: top;
   }
 
-  th { font-weight: 600; color: var(--note-muted); font-size: 0.78rem; }
-  td.title { font-family: var(--font-mono); font-size: 0.8rem; }
+  th { font-weight: 600; color: var(--muted); font-size: 0.78rem; }
+  td.title { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
 `);
 
 class MergeHistory extends HTMLElement {

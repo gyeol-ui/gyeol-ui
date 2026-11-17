@@ -25,11 +25,11 @@ styles.replaceSync(`
   textarea {
     width: 100%;
     min-height: 120px;
-    font-family: var(--font-mono);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.82rem;
     color: inherit;
-    background: var(--note-bg);
-    border: 1px solid var(--note-border);
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 10px;
     resize: vertical;
@@ -45,11 +45,11 @@ styles.replaceSync(`
   th, td {
     text-align: left;
     padding: 6px 8px;
-    border-top: 1px solid var(--note-border);
+    border-top: 1px solid var(--border);
   }
 
-  th { font-weight: 600; color: var(--note-muted); font-size: 0.78rem; }
-  td.title { font-family: var(--font-mono); font-size: 0.8rem; }
+  th { font-weight: 600; color: var(--muted); font-size: 0.78rem; }
+  td.title { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; }
 
   .result {
     display: flex;
@@ -58,11 +58,11 @@ styles.replaceSync(`
     margin-top: 14px;
     padding: 12px;
     border-radius: 6px;
-    background: var(--note-bg);
+    background: var(--bg);
   }
 
   .version {
-    font-family: var(--font-mono);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 1.3rem;
     font-weight: 700;
   }

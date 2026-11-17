@@ -77,13 +77,13 @@ styles.replaceSync(`
     display: flex;
     justify-content: space-between;
     font-size: 0.78rem;
-    color: var(--note-muted);
+    color: var(--muted);
     margin-bottom: 6px;
   }
 
   .arrow {
     height: 2px;
-    background: linear-gradient(to right, var(--state-cancelled), var(--note-border));
+    background: linear-gradient(to right, var(--accent), var(--border));
     margin-bottom: 12px;
     position: relative;
   }
@@ -114,14 +114,14 @@ styles.replaceSync(`
   }
 
   .name {
-    font-family: var(--font-mono);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-weight: 600;
     font-size: 0.85rem;
   }
 
   .bar {
     height: 8px;
-    background: var(--note-border);
+    background: var(--border);
     border-radius: 4px;
     overflow: hidden;
   }
@@ -129,7 +129,7 @@ styles.replaceSync(`
   .bar > span {
     display: block;
     height: 100%;
-    background: var(--note-accent);
+    background: var(--blue);
   }
 
   .detail {
