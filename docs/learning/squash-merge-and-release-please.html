@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="learn.css" />
     <script src="vendor/highlightjs/highlight.min.js" defer></script>
     <script src="learn.js" defer></script>
-    <script type="module" src="modules/index.js"></script>
   </head>
   <body>
     <div class="layout">
@@ -18,7 +17,7 @@
           <li><a href="#methods">merge 방식과 main의 커밋</a></li>
           <li><a href="#title">squash 커밋의 제목</a></li>
           <li><a href="#chain">PR 제목에서 다음 버전까지</a></li>
-          <li><a href="#bump">버전 계산해 보기</a></li>
+          <li><a href="#bump">다음 버전의 경우의 수</a></li>
           <li><a href="#code">쓰인 곳</a></li>
           <li><a href="#sources">출처</a></li>
         </ol>
@@ -51,10 +50,80 @@
           <h2>merge 방식이 main의 커밋을 정한다</h2>
           <p>
             같은 PR이라도 어떤 방식으로 merge하느냐에 따라 <code>main</code>에
-            남는 커밋이 다르다. 방식을 바꿔 보자. PR 브랜치에는 PR 안에서만 의미
-            있는 커밋(<code>wip</code>, 앞 커밋의 오타 수정)이 섞여 있다.
+            남는 커밋이 다르다. PR #12(<code>feat(react): Button 추가</code>)의
+            브랜치에 커밋 세 개가 있고, 그중 둘은 PR 안에서만 의미 있는
+            커밋(<code>wip</code>, 앞 커밋의 오타 수정)이라고 하자.
           </p>
-          <merge-history></merge-history>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>방식</th>
+                  <th><code>main</code>에 새로 생기는 커밋</th>
+                  <th>release-please가 읽는 결과</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td rowspan="4">
+                    <strong>merge commit</strong
+                    ><small>갈래가 남고 merge commit이 하나 더 생긴다</small>
+                  </td>
+                  <td><code>feat(react): Button 추가</code></td>
+                  <td><span class="badge green">읽음</span> feat</td>
+                </tr>
+                <tr>
+                  <td><code>wip</code></td>
+                  <td><span class="badge muted">형식 아님</span></td>
+                </tr>
+                <tr>
+                  <td><code>fix(react): 앞 커밋의 오타 수정</code></td>
+                  <td>
+                    <span class="badge green">읽음</span> fix.
+                    <code>main</code>에 없던 버그가 CHANGELOG에 오른다
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>Merge pull request #12 from someone/button</code>
+                  </td>
+                  <td>
+                    <span class="badge muted">형식 아님</span> GitHub이 만든
+                    제목
+                  </td>
+                </tr>
+                <tr>
+                  <td rowspan="3">
+                    <strong>rebase</strong
+                    ><small>일직선, 브랜치 커밋이 그대로 들어온다</small>
+                  </td>
+                  <td><code>feat(react): Button 추가</code></td>
+                  <td><span class="badge green">읽음</span> feat</td>
+                </tr>
+                <tr>
+                  <td><code>wip</code></td>
+                  <td><span class="badge muted">형식 아님</span></td>
+                </tr>
+                <tr>
+                  <td><code>fix(react): 앞 커밋의 오타 수정</code></td>
+                  <td>
+                    <span class="badge green">읽음</span> fix.
+                    <code>main</code>에 없던 버그가 CHANGELOG에 오른다
+                  </td>
+                </tr>
+                <tr>
+                  <td rowspan="1">
+                    <strong>squash</strong><small>일직선, 커밋 하나</small>
+                  </td>
+                  <td><code>feat(react): Button 추가 (#12)</code></td>
+                  <td>
+                    <span class="badge green">읽음</span> feat 하나. 제목은 CI가
+                    검사한 PR 제목이다
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <p>release-please README가 squash merge를 강하게 권하는 이유:</p>
           <ul>
             <li>
@@ -145,7 +214,7 @@
         </section>
 
         <section id="bump">
-          <h2>버전 계산해 보기</h2>
+          <h2>다음 버전의 경우의 수</h2>
           <p>
             README 기준으로 <span class="badge blue">feat</span>는 minor,
             <span class="badge blue">fix</span>는 patch, type 뒤의
@@ -156,14 +225,56 @@
           </p>
           <p>
             1.0.0 미만에서는 옵션 두 개가 계산을 바꾼다. 둘 다 기본값은
-            <code>false</code>라서, 옵션 없이 0.x에서 breaking 커밋이 들어가면
-            곧바로 1.0.0이 된다. 옵션을 켜고 끄면서
-            <code>feat(react)!: Button API 변경</code> 같은 줄을 넣어 보자.
+            <code>false</code>다. 현재 버전이 <code>0.1.0</code>일 때, 쌓인 커밋
+            중 가장 큰 것과 옵션 조합마다 다음 버전은 다음과 같다. 옵션 없음과
+            달라지는 칸을 굵게 표시했다.
           </p>
-          <release-bump version="0.1.0"></release-bump>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>가장 큰 커밋</th>
+                  <th>옵션 없음</th>
+                  <th><code>bump-minor-pre-major</code></th>
+                  <th><code>bump-patch-for-minor-pre-major</code></th>
+                  <th>둘 다</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>chore</code>, <code>build</code>만</td>
+                  <td colspan="4" class="muted">릴리스 PR이 생기지 않는다</td>
+                </tr>
+                <tr>
+                  <td><code>fix</code>, <code>deps</code></td>
+                  <td colspan="4">0.1.1. 옵션과 상관없다</td>
+                </tr>
+                <tr>
+                  <td><code>feat</code></td>
+                  <td>0.2.0</td>
+                  <td>0.2.0</td>
+                  <td><strong>0.1.1</strong></td>
+                  <td><strong>0.1.1</strong></td>
+                </tr>
+                <tr>
+                  <td><code>feat!</code>, <code>fix!</code></td>
+                  <td>1.0.0</td>
+                  <td><strong>0.2.0</strong></td>
+                  <td>1.0.0</td>
+                  <td><strong>0.2.0</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            옵션 없이 0.x에서 breaking 커밋이 하나라도 들어가면 곧바로 1.0.0이
+            된다. 1.0.0 이상에서는 두 옵션이 아무것도 바꾸지 않는다.
+            <code>1.2.3</code>에서는 <code>fix</code>가 1.2.4,
+            <code>feat</code>가 1.3.0, breaking이 2.0.0이다.
+          </p>
           <div class="callout warn">
             <p>
-              이 모듈은 커밋 제목만 본다. 커밋 본문의
+              이 표는 커밋 제목만 본다. 커밋 본문의
               <code>BREAKING CHANGE:</code> footer나
               <code>changelog-sections</code>
               설정으로 릴리스 대상 type을 바꾸는 경우는 다루지 않는다. 0.x에서

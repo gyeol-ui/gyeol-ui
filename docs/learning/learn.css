@@ -283,6 +283,12 @@ td code {
   word-break: normal;
   overflow-wrap: break-word;
 }
+/* 칸 안의 보충 설명은 다음 줄에 흐리게 */
+td small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
 /* 계산 표에서 보지 않고 건너뛰는 칸 */
 td.muted {
   color: var(--muted);
@@ -951,6 +957,14 @@ td.muted {
 .badge.green {
   color: var(--green);
   background: var(--green-bg);
+}
+.badge.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+.badge.muted {
+  color: var(--muted);
+  background: var(--code-bg);
 }
 
 .tags {

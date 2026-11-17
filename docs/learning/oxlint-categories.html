@@ -7,7 +7,6 @@
     <link rel="stylesheet" href="learn.css" />
     <script src="vendor/highlightjs/highlight.min.js" defer></script>
     <script src="learn.js" defer></script>
-    <script type="module" src="modules/index.js"></script>
   </head>
   <body>
     <div class="layout">
@@ -51,19 +50,131 @@
 }</code></pre>
           <p>
             범주는 "이 코드가 틀렸을 확률"이 높은 쪽부터 "팀이 정하기 나름"인
-            쪽까지 늘어서 있다고 보면 이해하기 쉽다. 아래는 이 저장소 설정이다.
-            범주를 눌러 예시 규칙을 보자.
+            쪽까지 늘어서 있다. 아래 표는 위에서부터 그 순서이고, nursery는
+            안정성이 다른 축이라 맨 끝에 둔다. 설정 파일이 없으면 oxlint는
+            correctness만 <code>warn</code>으로 켠다. 설정 없이
+            <code>debugger;</code> 한 줄을 검사하면
+            <code>warning eslint(no-debugger)</code>가 나온다.
           </p>
-          <lint-category-scale
-            config='{"correctness":"error","suspicious":"error","pedantic":"off","perf":"off","style":"off","restriction":"off","nursery":"off"}'
-          ></lint-category-scale>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>범주</th>
+                  <th>규칙 수</th>
+                  <th>예시 규칙</th>
+                  <th>설정 없음</th>
+                  <th>이 저장소</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>correctness</code
+                    ><small>확실히 틀렸거나 쓸모없는 코드</small>
+                  </td>
+                  <td>272</td>
+                  <td>
+                    <code>eslint/no-debugger</code><br /><code
+                      >eslint/for-direction</code
+                    ><br /><code>typescript/no-floating-promises</code>
+                  </td>
+                  <td><span class="badge warn">warn</span></td>
+                  <td><span class="badge green">error</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>suspicious</code
+                    ><small>틀렸거나 쓸모없을 가능성이 높은 코드</small>
+                  </td>
+                  <td>68</td>
+                  <td>
+                    <code>eslint/no-extend-native</code><br /><code
+                      >eslint/no-new</code
+                    ><br /><code>eslint/no-useless-concat</code>
+                  </td>
+                  <td>off</td>
+                  <td><span class="badge green">error</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>pedantic</code
+                    ><small>더 엄격한 규칙. 오탐이 있을 수 있다</small>
+                  </td>
+                  <td>126</td>
+                  <td>
+                    <code>eslint/eqeqeq</code><br /><code
+                      >eslint/array-callback-return</code
+                    ><br /><code>eslint/max-lines</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>perf</code><small>실행 성능을 개선하려는 규칙</small>
+                  </td>
+                  <td>15</td>
+                  <td>
+                    <code>eslint/no-await-in-loop</code><br /><code
+                      >oxc/no-accumulating-spread</code
+                    >
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>style</code
+                    ><small>관용적이고 일관된 스타일 규칙</small>
+                  </td>
+                  <td>279</td>
+                  <td>
+                    <code>eslint/prefer-const</code><br /><code
+                      >eslint/curly</code
+                    ><br /><code>eslint/func-style</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>restriction</code
+                    ><small>특정 패턴이나 기능을 금지하는 규칙</small>
+                  </td>
+                  <td>101</td>
+                  <td>
+                    <code>eslint/no-console</code><br /><code
+                      >eslint/no-var</code
+                    ><br /><code>eslint/no-plusplus</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>nursery</code
+                    ><small>개발 중이라 바뀔 수 있는 규칙</small>
+                  </td>
+                  <td>11</td>
+                  <td>
+                    <code>eslint/no-undef</code><br /><code
+                      >typescript/prefer-optional-chain</code
+                    >
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <p>
-            설정 파일이 없으면 oxlint는 correctness만 켜고, 심각도는
-            <code>warn</code>이다. 설정 없이 <code>debugger;</code> 한 줄을
-            검사하면 <code>warning eslint(no-debugger)</code>가 나온다. 아래가
-            그 기본값이다.
+            규칙 수는 oxlint 1.94.0의
+            <code>oxlint --rules --format=json</code> 출력에서 센, 등록된 전체
+            규칙 수다. 기본으로 꺼진 플러그인(react, import 등)의 규칙도
+            포함하므로 실제로 켜지는 수는 더 적다. 이 저장소에서 켜진 규칙은
+            correctness 111개, suspicious 43개다.
           </p>
-          <lint-category-scale></lint-category-scale>
         </section>
 
         <section id="severity">

@@ -8,13 +8,13 @@
 pnpm learning
 ```
 
-`http://localhost:4321/`에서 전체 목록이 열린다. 인터랙티브 모듈은 ES module이라 `file://`로 열면 동작하지 않으므로 이 서버를 거친다.
+`http://localhost:4321/`에서 전체 목록이 열린다. 노트는 빌드 없는 정적 파일이라 `index.html`을 브라우저로 바로 열어도 된다.
 
 ## 폴더
 
 노트는 카테고리 폴더(`docs/learning/<카테고리>/`)에 둔다. 카테고리와 파일 이름은 사람이 정한다. 카테고리를 정하기 전의 노트는 이 폴더 바로 아래에 두고, `learn.js`의 `learnFolders`에서 `folder: ''` 묶음에 적는다.
 
-공통 파일(`learn.css`, `learn.js`, `modules/`, `vendor/`, `index.html`, `template.html`)은 이 폴더 바로 아래에 둔다. 카테고리 폴더를 새로 만들면 `learn.js`의 `learnFolders`에 먼저 추가한다.
+공통 파일(`learn.css`, `learn.js`, `vendor/`, `index.html`, `template.html`)은 이 폴더 바로 아래에 둔다. 카테고리 폴더를 새로 만들면 `learn.js`의 `learnFolders`에 먼저 추가한다.
 
 ## 새 노트 만들기
 
@@ -43,6 +43,8 @@ pnpm learning
 
 모듈이 표현하려는 내용에 맞지 않으면 내용을 줄이거나 문서 안에서 스타일로 피해 가지 않는다. 기존 모듈을 고쳐 그 경우를 지원하거나 새 모듈을 만든다. 예를 들어 트리가 깊이 제한에 걸리면 단계를 합치지 않고 트리 모듈이 더 깊은 단계를 지원하게 고친다. 모듈을 고치거나 추가하면 `learn.css`, 아래 표, `template.html` 예시를 함께 바꾼다.
 
+버튼이나 입력으로 값을 바꿔 보게 하는 인터랙션은 만들지 않는다. 설정값이나 입력에 따라 결과가 달라지는 개념은 경우의 수를 모두 펼쳐서, 같은 상황을 경우마다 나란히 그린다(시간 막대 여러 개, 경우마다 한 줄인 표, 비교 카드). 읽는 사람이 눌러 보지 않아도 모든 경우를 한 번에 견줄 수 있게 하려는 것이다.
+
 | 모듈 | 클래스 | 용도 |
 |---|---|---|
 | 문서 틀 | `layout`, `lead` | 목차와 본문 배치, 제목 아래 요약 |
@@ -63,8 +65,8 @@ pnpm learning
 | 나머지 격자 | `modgrid`, `modgrid-caption` | 값의 범위를 나머지(`%`)로 접었을 때 결과마다 몇 번 대응하는지(모듈로 편향, 거부 샘플링). 아래 "나머지 격자" 참고 |
 | 관문 | `gates`, `gate-check`, `gate-fail`, `pass` | 차례로 확인하다 하나라도 걸리면 옆으로 빠지는 흐름(가드, 검증). 아래 "관문" 참고 |
 | 테이블 관계도 | `erd`, `erd-table`, `erd-title`, `erd-constraints`, `erd-mark`, `erd-note` | 테이블을 칸 목록 상자로 그리고 외래 키를 선으로 잇는 ERD. 아래 "테이블 관계도" 참고 |
-| 표 | `table-wrap` | 좁은 화면에서 가로로 스크롤되는 표 |
-| 배지 | `badge` | 표나 문장 안의 짧은 분류 |
+| 표 | `table-wrap` | 좁은 화면에서 가로로 스크롤되는 표. 칸 안의 `small`은 다음 줄에 흐리게 보이는 보충 설명이다 |
+| 배지 | `badge`, `blue`, `green`, `warn`, `muted` | 표나 문장 안의 짧은 분류. `muted`는 해당 없음, 결과 없음 |
 | 강조 상자 | `callout`, `callout warn` | 핵심 정의, 주의할 점 |
 | 접는 본문 | `details.fold`, `fold-body` | 코드나 표가 든 선택 읽기 내용 |
 | 문제 | `quiz`, `quiz-q`, `quiz-context`, `quiz-answer` | 맥락(관련 절, 바꾸는 코드, 데이터)이 필요한 자가 점검 문제. 질문과 맥락은 펼쳐 두고 답만 접는다 |
@@ -138,22 +140,6 @@ pnpm learning
 관문(`gates`)은 `ol.gates` 안에 확인 하나마다 `li`를 둔다. `li` 안에 `div.gate-check`(확인할 내용, 예시 값은 `small`)와 `div.gate-fail`(걸렸을 때 일어나는 일, 결과는 `strong`)을 둔다. 번호와 "↓ 통과" 화살표는 CSS가 그린다. 마지막 통과 단계는 `li.pass`로 두고 `gate-fail`을 생략한다.
 
 자가 점검 문제는 `quiz`로 쓴다. `quiz-q`에 질문을, `quiz-context`에 어느 절의 무엇을 묻는지를 적고, 바꾸는 코드는 `language-diff` 코드 블록으로, 필요한 데이터는 표로 질문 아래에 둔다. 답만 `<details class="quiz-answer">` 안의 `fold-body`에 접는다. 질문 한 줄만으로 무엇을 묻는지 분명할 때만 클래스 없는 `<details>`를 쓴다. 그 밖에 문단만 접어 둘 때도 클래스 없이 `<details>`를 쓴다. 코드나 표가 든 선택 읽기 내용을 접을 때는 `<details class="fold">` 안에 `<div class="fold-body">`를 두고, 접어도 흐름이 이어지도록 결론은 접기 밖에 적는다.
-
-## 인터랙티브 모듈
-
-위 모듈은 CSS와 `learn.js`가 그리는 정적인 그림이다. 값을 바꿔 보며 동작을 확인해야 하는 개념은 `modules/`의 Web Component로 만든다. 노트의 `<head>`에 `<script type="module" src="modules/index.js"></script>`를 두면 모두 쓸 수 있다.
-
-| 모듈 | 태그 | 용도 |
-|---|---|---|
-| concurrency 시뮬레이터 | `<concurrency-sim>` | GitHub Actions concurrency group의 실행, 대기, 취소. `run-seconds`로 실행 시간을 정한다 |
-| merge 히스토리 | `<merge-history>` | merge commit, rebase, squash별 `main` 히스토리와 release-please가 읽는 커밋. `pr-number`, `pr-title`, `commits`(JSON), `method` |
-| 버전 계산기 | `<release-bump>` | 커밋 제목으로 release-please의 다음 버전 계산. `version`, `commits`(JSON) |
-| lint 범주 축 | `<lint-category-scale>` | oxlint 범주를 한 축에 놓고 설정별로 켜짐 표시. `config`(categories JSON) |
-
-- 빌드 없이 브라우저가 바로 읽는 ES module로 쓰고, 의존성을 두지 않는다.
-- 노트 내용이 아니라 attribute로 데이터를 받아 여러 노트에서 다시 쓸 수 있게 만든다.
-- 색은 `learn.css`의 테마 변수(`--blue`, `--green-bg` 등)를 쓴다. CSS 변수와 글꼴은 shadow DOM 안으로 상속된다. 버튼, 배지 같은 공통 스타일은 `modules/shared.js`에 있다.
-- 새 모듈은 `modules/index.js`에 등록하고 위 표에 추가한다.
 
 ## 외부 라이브러리
 

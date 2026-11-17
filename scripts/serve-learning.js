@@ -1,5 +1,5 @@
 // docs/learning을 로컬 정적 서버로 띄운다. `pnpm learning`으로 실행한다.
-// 브라우저는 file://에서 ES module을 불러오지 않으므로, 노트를 보려면 이 서버를 거친다.
+// 노트는 file://로 바로 열어도 되지만, 서버로 열면 주소 하나로 목록과 노트를 오갈 수 있다.
 // 의존성 없이 Node 내장 모듈만 쓴다.
 
 import { createReadStream } from "node:fs";
