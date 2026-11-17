@@ -7,13 +7,14 @@ on:
   push:
     branches: [main]
 
-# 각 job이 필요한 권한만 따로 더한다
+# job에 permissions를 두면 이 값을 대체한다. job마다 필요한 권한만 선언한다
 permissions:
   contents: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # main push는 커밋마다 검사를 끝까지 돌린다
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check:
@@ -53,6 +54,7 @@ jobs:
       pull-requests: read
     steps:
       # type은 기본값(Conventional Commits 표준 type)을 쓴다. scope는 생략할 수 있다.
+      # scope 목록은 docs/workflow.md "6. merge"와 맞춘다.
       - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
