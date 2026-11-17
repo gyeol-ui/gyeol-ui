@@ -137,6 +137,7 @@ tools/
 - Style Dictionary(5.8)는 색 객체를 지원하지만 Resolver는 지원하지 않고(이슈 #1590), Tailwind `@theme` format이 내장되어 있지 않다. Terrazzo(2.10)는 둘 다 지원한다.
 - oxlint(1.94)의 타입 인식 lint는 TypeScript 7 이상이 필요하다. TypeScript 7(Go 네이티브 컴파일러)이 `latest`다.
 - tsup은 유지보수가 중단되었고, tsup과 Vite 문서 모두 tsdown(0.23)을 권한다.
+- tsdown(0.23.7)의 타입 선언 생성은 TypeScript 7.0.2에서 동작한다. `isolatedDeclarations`를 켜면 TypeScript 컴파일러를 거치지 않는 빠른 경로로 만들고, 끄면 TypeScript 7로 만든다. 두 경로 모두 확인했다.
 - npm trusted publishing(OIDC)은 정식 기능이다. 쓰기 가능한 granular token은 최대 90일이다.
 - `@gyeol-ui` 스코프에 배포된 패키지는 없다. org 이름의 등록 여부는 확인하지 못했다.
 - Base UI(1.9)에는 날짜 컴포넌트와 내장 가상화가 없고, Combobox의 IME 이슈가 아직 열려 있다. React Aria(RAC 1.22)는 ko-KR 문구와 CJK IME 수정 사항을 갖추고 있다.
