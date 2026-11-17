@@ -51,6 +51,7 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 - PR은 squash merge만 한다. `main`은 CI 통과를 필수로 보호한다.
 - PR 제목은 Conventional Commit 형식으로 쓴다. release-please가 이 제목을 읽는다.
 - scope는 패키지나 앱 이름(`tokens`, `tailwind`, `react`, `figma-plugin`, `storybook`)이다. 저장소 전체 변경에는 scope를 쓰지 않는다.
+- PR 제목과 커밋 제목의 설명은 한국어로 쓰고, type과 scope는 영어 그대로 둔다(예: `ci: PR 제목 검사를 별도 워크플로로 분리`).
 
 ### 7. 학습 노트
 
