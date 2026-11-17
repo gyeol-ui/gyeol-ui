@@ -1,0 +1,32 @@
+name: PR title
+
+on:
+  pull_request:
+    # edited: 제목을 고치면 이 검사만 다시 돈다.
+    # synchronize: 필수 검사는 커밋마다 결과가 있어야 하므로 push할 때도 돈다
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    name: PR title
+    runs-on: ubuntu-latest
+    steps:
+      # type은 기본값(Conventional Commits 표준 type)을 쓴다. scope는 생략할 수 있다.
+      # scope 목록은 docs/workflow.md "6. merge"와 맞춘다.
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scopes: |
+            tokens
+            tailwind
+            react
+            figma-plugin
+            storybook
