@@ -21,17 +21,17 @@ pnpm install
 pnpm check
 ```
 
-| 명령                | 하는 일                                                                    |
-| ------------------- | -------------------------------------------------------------------------- |
-| `pnpm check`        | 모든 패키지의 lint, format 검사, typecheck, test, build를 한 번에 실행한다 |
-| `pnpm lint`         | oxlint로 코드를 검사한다                                                   |
-| `pnpm format`       | Prettier로 저장소 전체의 형식을 고친다                                     |
-| `pnpm format:check` | 형식이 맞는지 검사만 한다                                                  |
-| `pnpm typecheck`    | 타입을 검사한다                                                            |
-| `pnpm test`         | 테스트를 실행한다                                                          |
-| `pnpm build`        | 패키지를 빌드한다                                                          |
+| 명령 | 하는 일 |
+|---|---|
+| `pnpm check` | 모든 패키지의 lint, format 검사, typecheck, test, build를 한 번에 실행한다 |
+| `pnpm lint` | oxlint로 코드를 검사한다 |
+| `pnpm format` | Prettier로 형식을 고친다 |
+| `pnpm format:check` | 형식이 맞는지 검사만 한다 |
+| `pnpm typecheck` | 타입을 검사한다 |
+| `pnpm test` | 테스트를 실행한다 |
+| `pnpm build` | 패키지를 빌드한다 |
 
-명령은 Turborepo가 패키지별로 실행합니다. 패키지 하나만 실행하려면 `pnpm --filter @gyeol-ui/tokens test`처럼 씁니다. `format`과 `format:check`는 저장소 루트에서 전체 파일을 대상으로 실행합니다.
+명령은 Turborepo가 패키지별로 실행합니다. 패키지 하나만 실행하려면 `pnpm --filter @gyeol-ui/tokens test`처럼 씁니다. `format`과 `format:check`는 저장소 루트에서 전체 파일을 대상으로 실행합니다. Markdown 파일은 Prettier가 건드리지 않습니다.
 
 lint 규칙은 루트의 `.oxlintrc.json`에 있습니다. `pnpm install`을 하면 pre-commit hook이 설치되어, 커밋할 때 staged 파일에 Prettier와 oxlint가 실행됩니다. 형식은 자동으로 고쳐지고, lint error가 있으면 커밋이 막힙니다.
 

@@ -18,9 +18,9 @@ packageName(); // "@gyeol-ui/tokens"
 
 저장소 루트에서 의존성을 설치한 뒤 이 폴더에서 실행합니다.
 
-| 명령             | 하는 일                                       |
-| ---------------- | --------------------------------------------- |
-| `pnpm build`     | tsdown으로 `dist/`에 ESM과 타입 선언을 만든다 |
-| `pnpm lint`      | oxlint로 코드를 검사한다                      |
-| `pnpm test`      | Vitest로 테스트를 실행한다                    |
-| `pnpm typecheck` | `tsc`로 타입을 검사한다                       |
+| 명령 | 하는 일 |
+|---|---|
+| `pnpm build` | tsdown으로 `dist/`에 ESM과 타입 선언을 만든다 |
+| `pnpm lint` | oxlint로 코드를 검사한다 |
+| `pnpm test` | Vitest로 테스트를 실행한다 |
+| `pnpm typecheck` | `tsc`로 타입을 검사한다 |

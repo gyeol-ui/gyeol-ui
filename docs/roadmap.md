@@ -96,15 +96,15 @@ tools/
 
 ## 단계
 
-| 단계           | 만드는 것                                                                                                       | 주로 배우는 것                                                                     |
-| -------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Phase 0        | 토큰 파이프라인, Tailwind 테마, 아이콘 파이프라인(Figma → SVG → React), Storybook, CI와 릴리스 기반 · Figma ① ② | DTCG, Style Dictionary, 토큰 계층 설계, Figma Plugin API, 모노레포, release-please |
-| Phase 1        | Button, IconButton, Text/Heading, Checkbox, Radio, Switch, TextField, Tabs, Dialog, Menu, Tooltip (직접 구현)   | WAI-ARIA APG, 포커스 관리, compound 구성과 `render` prop 구현, 접근성 CI           |
-| Phase 1~2      | Figma ③ ④                                                                                                       | Figma 컴포넌트 property와 TS 타입 매핑                                             |
-| Phase 2        | Select, Combobox, Popover, Toast, NumberField, Slider (React Aria hooks) → **1.0**                              | React Aria hooks와 stately, 한국어 IME, 위치 계산                                  |
-| Phase 3        | BottomSheet, safe-area, 키보드 대응, 뒤로가기 연동                                                              | 웹뷰 경험을 디자인 시스템 관점으로 정리                                            |
-| Phase 4        | DatePicker, Table, 가상화 List, Pagination                                                                      | i18n, 가상화, 성능                                                                 |
-| 전 단계에 걸쳐 | Figma ⑤ ⑥, 예제 앱, 도입률 측정, 문서 사이트와 문서 자동화, eslint-plugin, 1.0 이후 하위호환과 codemod          | AI 생산물 검증, 디자인 시스템 거버넌스, DX                                         |
+| 단계 | 만드는 것 | 주로 배우는 것 |
+|---|---|---|
+| Phase 0 | 토큰 파이프라인, Tailwind 테마, 아이콘 파이프라인(Figma → SVG → React), Storybook, CI와 릴리스 기반 · Figma ① ② | DTCG, Style Dictionary, 토큰 계층 설계, Figma Plugin API, 모노레포, release-please |
+| Phase 1 | Button, IconButton, Text/Heading, Checkbox, Radio, Switch, TextField, Tabs, Dialog, Menu, Tooltip (직접 구현) | WAI-ARIA APG, 포커스 관리, compound 구성과 `render` prop 구현, 접근성 CI |
+| Phase 1~2 | Figma ③ ④ | Figma 컴포넌트 property와 TS 타입 매핑 |
+| Phase 2 | Select, Combobox, Popover, Toast, NumberField, Slider (React Aria hooks) → **1.0** | React Aria hooks와 stately, 한국어 IME, 위치 계산 |
+| Phase 3 | BottomSheet, safe-area, 키보드 대응, 뒤로가기 연동 | 웹뷰 경험을 디자인 시스템 관점으로 정리 |
+| Phase 4 | DatePicker, Table, 가상화 List, Pagination | i18n, 가상화, 성능 |
+| 전 단계에 걸쳐 | Figma ⑤ ⑥, 예제 앱, 도입률 측정, 문서 사이트와 문서 자동화, eslint-plugin, 1.0 이후 하위호환과 codemod | AI 생산물 검증, 디자인 시스템 거버넌스, DX |
 
 ## Phase 0 슬라이스
 
