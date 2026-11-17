@@ -21,5 +21,6 @@ packageName(); // "@gyeol-ui/tokens"
 | 명령 | 하는 일 |
 |---|---|
 | `pnpm build` | tsdown으로 `dist/`에 ESM과 타입 선언을 만든다 |
+| `pnpm lint` | oxlint로 코드를 검사한다 |
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |

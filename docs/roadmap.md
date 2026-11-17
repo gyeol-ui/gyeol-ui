@@ -43,7 +43,7 @@ tools/
 - TS 패키지 빌드는 tsdown으로 통일한다. `tokens`의 주 빌드는 Style Dictionary 스크립트다.
 - 배포 패키지는 ESM만 내보낸다.
 - pre-commit hook(husky, lint-staged)은 staged 파일에 Prettier와 oxlint만 돌린다. typecheck와 test는 CI에서만 돌린다.
-- CI는 GitHub Actions 워크플로 하나에서 lint, typecheck, test, build를 turbo로 실행하고 PR 제목 형식을 검사한다. turbo 원격 캐시는 쓰지 않는다.
+- CI는 GitHub Actions 워크플로 하나에서 lint, format 검사, typecheck, test, build를 turbo로 실행하고 PR 제목 형식을 검사한다. turbo 원격 캐시는 쓰지 않는다.
 
 ### 스타일과 테마
 
@@ -136,6 +136,7 @@ tools/
 - DTCG 안정판은 2025.10이다. 색 값은 `colorSpace`와 `components`를 가진 객체이고, 테마는 Resolver 모듈(`.resolver.json`)로 정의한다.
 - Style Dictionary(5.8)는 색 객체를 지원하지만 Resolver는 지원하지 않고(이슈 #1590), Tailwind `@theme` format이 내장되어 있지 않다. Terrazzo(2.10)는 둘 다 지원한다.
 - oxlint(1.94)의 타입 인식 lint는 TypeScript 7 이상이 필요하다. TypeScript 7(Go 네이티브 컴파일러)이 `latest`다.
+- oxlint(1.94.0)의 타입 인식 lint는 `oxlint-tsgolint`(7.0.2007)를 설치하고 설정의 `options.typeAware`를 켜면 TypeScript 7.0.2에서 동작한다. 처리하지 않은 Promise가 `typescript/no-floating-promises` error로 잡히는 것을 확인했다.
 - tsup은 유지보수가 중단되었고, tsup과 Vite 문서 모두 tsdown(0.23)을 권한다.
 - tsdown(0.23.7)의 타입 선언 생성은 TypeScript 7.0.2에서 동작한다. `isolatedDeclarations`를 켜면 TypeScript 컴파일러를 거치지 않는 빠른 경로로 만들고, 끄면 TypeScript 7로 만든다. 두 경로 모두 확인했다.
 - npm trusted publishing(OIDC)은 정식 기능이다. 쓰기 가능한 granular token은 최대 90일이다.

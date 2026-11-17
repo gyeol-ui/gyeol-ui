@@ -64,7 +64,7 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 
 PR마다:
 
-- CI의 lint, typecheck, test, build가 통과한다.
+- CI의 lint, format 검사, typecheck, test, build가 통과한다.
 - 변환 로직(토큰 변환, 아이콘 변환, Drift 비교)에는 Vitest 단위 테스트가 있다. 테스트 파일은 소스 옆에 `*.test.ts`로 둔다.
 - 빌드 산출물(`dist`, 생성된 CSS)은 git에 넣지 않는다. 토큰 JSON과 Drift 검사의 기준이 되는 Figma 스냅샷은 넣는다.
 - 새로 만들거나 사용법이 바뀐 패키지는 README에 사용법이 있다.
