@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>oxlint 규칙 범주 · gyeol-ui 학습 노트</title>
+    <link rel="stylesheet" href="./modules/base.css" />
+    <script type="module" src="./modules/index.js"></script>
+  </head>
+  <body>
+    <main>
+      <nav class="breadcrumb">
+        <a href="./">학습 노트</a> / oxlint 규칙 범주
+      </nav>
+      <h1>oxlint 규칙 범주</h1>
+      <p class="lede">
+        oxlint는 규칙 수백 개를 의도에 따라 7개 범주로 나눈다. 범주 단위로 켜고
+        끄는 방법과, 이 저장소가 correctness와 suspicious만 error로 켠 기준.
+      </p>
+
+      <h2>개념</h2>
+
+      <h3>범주: 의도가 비슷한 규칙 묶음</h3>
+      <p>
+        <code>.oxlintrc.json</code>의 <code>categories</code>로 범주 하나를
+        통째로 켜거나 끈다. 값은 <code>"error"</code>, <code>"warn"</code>,
+        <code>"off"</code>다. 특정 규칙만 다르게 하고 싶으면
+        <code>rules</code>에 적는다. <code>rules</code>가
+        <code>categories</code>보다 우선한다.
+      </p>
+      <p>
+        범주는 "이 코드가 틀렸을 확률"이 높은 쪽부터 "팀이 정하기 나름"인 쪽까지
+        늘어서 있다고 보면 이해하기 쉽다. 아래는 이 저장소 설정이다. 범주를 눌러
+        예시 규칙을 보자.
+      </p>
+      <figure>
+        <lint-category-scale
+          config='{"correctness":"error","suspicious":"error","pedantic":"off","perf":"off","style":"off","restriction":"off","nursery":"off"}'
+        ></lint-category-scale>
+        <figcaption>
+          이 저장소의 <code>.oxlintrc.json</code> categories
+        </figcaption>
+      </figure>
+      <p>
+        설정 파일이 없으면 oxlint는 correctness만 켠다. 이때 심각도는
+        <code>warn</code>이다. 설정 없이 <code>debugger;</code> 한 줄을 검사하면
+        <code>warning eslint(no-debugger)</code>가 나온다. 아래 모듈은 config가
+        빈 상태, 곧 oxlint 기본값이다.
+      </p>
+      <lint-category-scale></lint-category-scale>
+
+      <h3>warn과 error의 차이는 CI에서 드러난다</h3>
+      <p>
+        oxlint는 warning만 있으면 종료 코드 0으로 끝난다(직접 확인). 그래서 CI와
+        pre-commit hook에서
+        <code>warn</code>은 막지 못하고 출력만 남긴다.
+        <code>--deny-warnings</code>를 주면 warning도 종료 코드 1이 된다. 이
+        저장소는 켠 범주를 모두 <code>error</code>로 두어 켜진 규칙은 반드시
+        지키게 했다.
+      </p>
+
+      <h3>범주를 고르는 기준</h3>
+      <ul>
+        <li>
+          <strong>correctness, suspicious → error</strong>: 걸리면 대부분 실제
+          버그다. 오탐이 드물어서 막아도 일하는 데 방해가 되지 않는다.
+        </li>
+        <li>
+          <strong>pedantic → off</strong>: 문서가 "오탐이 있을 수 있다"고 밝힌
+          범주다. 켜면 규칙을 끄는 주석이 늘어난다. 쓸 만한 규칙이 있으면
+          <code>rules</code>에서 하나씩 켠다.
+        </li>
+        <li>
+          <strong>style → off</strong>: 형식(줄바꿈, 따옴표)이 아니라 관용
+          표현(<code>prefer-const</code>, <code>curly</code>)에 관한 규칙이다.
+          형식은 Prettier가 맡고, 관용 표현은 아직 팀 규칙을 정하지 않았다.
+        </li>
+        <li>
+          <strong>restriction → off</strong>: <code>no-console</code>,
+          <code>no-var</code>처럼 특정 기능을 금지한다. 무엇을 금지할지는
+          프로젝트마다 달라서 범주를 통째로 켜기보다 필요한 규칙만 고르는 편이
+          맞다.
+        </li>
+        <li>
+          <strong>perf → off</strong>: 아직 성능이 문제 될 코드가 없다.
+          컴포넌트가 생기면 다시 본다.
+        </li>
+        <li>
+          <strong>nursery → off</strong>: 개발 중이라 동작이 바뀔 수 있다. CLI의
+          <code>all</code>도 nursery는 빼고 켠다.
+        </li>
+      </ul>
+
+      <h3>타입 인식 lint</h3>
+      <p>
+        <code>options.typeAware: true</code>를 켜면
+        <code>oxlint-tsgolint</code>가 TypeScript 타입 정보를 써서 검사한다.
+        <code>typescript/no-floating-promises</code>(처리하지 않은 Promise)처럼
+        타입을 알아야 판단할 수 있는 규칙이 여기에 속한다. 이 규칙은 correctness
+        범주라 이 저장소에서 error로 켜져 있다.
+      </p>
+
+      <h2>이 저장소에서 쓰인 곳</h2>
+      <ul class="code-refs">
+        <li>
+          <a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/.oxlintrc.json"
+            ><code>.oxlintrc.json</code></a
+          >: 범주 설정과
+          <code>typeAware</code>
+        </li>
+        <li>
+          <a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/packages/tokens/package.json#L28"
+            ><code>packages/tokens/package.json:28</code></a
+          >: 패키지별 <code>lint</code> 스크립트. turbo가
+          <code>^build</code> 뒤에 실행한다(<a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/turbo.json#L15"
+            ><code>turbo.json:15</code></a
+          >)
+        </li>
+        <li>
+          <a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/package.json#L19"
+            ><code>package.json:19</code></a
+          >: lint-staged가 커밋할 때 JS/TS 파일에 oxlint를 돌린다(<code
+            >--fix</code
+          >
+          없이)
+        </li>
+        <li>
+          PR #6: 범주별로 켜진 규칙 수(Correctness 111개, Suspicious 43개)와
+          hook 동작 확인 기록
+        </li>
+      </ul>
+
+      <h2>출처</h2>
+      <ul class="sources">
+        <li>
+          Oxc,
+          <a
+            href="https://oxc.rs/docs/guide/usage/linter/config.html#enable-groups-of-rules-with-categories"
+            >Configuring Oxlint: Enable groups of rules with categories</a
+          >: 범주 목록과 설명, 기본으로 correctness만 켜짐
+        </li>
+        <li>
+          Oxc,
+          <a
+            href="https://oxc.rs/docs/guide/usage/linter/config-file-reference.html#categories"
+            >Config file reference: categories</a
+          >: <code>rules</code>가 <code>categories</code>보다 우선
+        </li>
+        <li>
+          Oxc,
+          <a href="https://oxc.rs/docs/guide/usage/linter/cli.html"
+            >Command-line interface</a
+          >: <code>-A</code>, <code>-W</code>, <code>-D</code>와
+          <code>all</code>
+        </li>
+        <li>
+          oxlint 1.94.0 직접 실행:
+          <code>oxlint --rules --format=json</code>(범주별 규칙 수와 예시), 설정
+          없이 <code>debugger;</code> 검사(기본 심각도 warn),
+          <code>--deny-warnings</code> 유무에 따른 종료 코드
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

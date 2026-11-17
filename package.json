@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "learning": "node scripts/serve-learning.js",
     "check": "turbo run lint format:check typecheck test build",
     "prepare": "husky"
   },

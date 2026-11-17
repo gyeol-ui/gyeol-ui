@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>squash merge와 release-please · gyeol-ui 학습 노트</title>
+    <link rel="stylesheet" href="./modules/base.css" />
+    <script type="module" src="./modules/index.js"></script>
+  </head>
+  <body>
+    <main>
+      <nav class="breadcrumb">
+        <a href="./">학습 노트</a> / squash merge와 release-please
+      </nav>
+      <h1>squash merge와 release-please</h1>
+      <p class="lede">
+        이 저장소가 squash merge만 허용하고, squash 커밋 제목을 PR 제목으로 정한
+        이유. PR 제목 한 줄이 어떻게 다음 버전 번호와 CHANGELOG까지 이어지는지.
+      </p>
+
+      <h2>개념</h2>
+
+      <h3>release-please는 main의 커밋 제목을 읽는다</h3>
+      <p>
+        release-please는 마지막 릴리스 이후 기본 브랜치에 들어온 커밋을
+        <a href="https://www.conventionalcommits.org/">Conventional Commit</a
+        >으로 읽는다. 그 결과로 다음 버전과 CHANGELOG를 담은
+        <strong>릴리스 PR</strong>을 연다. 릴리스 PR을 merge하면 태그와 GitHub
+        Release가 만들어진다. 따라서 <code>main</code>의 커밋 제목이 곧 릴리스의
+        입력이다.
+      </p>
+
+      <h3>merge 방식이 main의 커밋을 정한다</h3>
+      <p>
+        같은 PR이라도 어떤 방식으로 merge하느냐에 따라 <code>main</code>에 남는
+        커밋이 다르다. 아래에서 방식을 바꿔 보자. PR 브랜치에는 PR 안에서만 의미
+        있는 커밋(<code>wip</code>, 앞 커밋의 오타 수정)이 섞여 있다.
+      </p>
+      <merge-history></merge-history>
+      <p>
+        release-please README는 squash merge를 강하게 권하면서 이렇게 설명한다.
+      </p>
+      <ul>
+        <li>
+          PR 안에서 <code>feat: A 추가</code> 뒤에
+          <code>fix: A의 버그 수정</code>을 했다면, 그 버그는
+          <code>main</code>에 존재한 적이 없다. 그런데 커밋이 그대로 들어가면
+          CHANGELOG에 버그 수정으로 올라간다.
+        </li>
+        <li>
+          실패하는 테스트를 먼저 커밋하는 방식으로 일하면, merge나 rebase는
+          테스트가 깨진 시점을
+          <code>main</code>에 남긴다.
+        </li>
+        <li>
+          merge 뒤에 릴리스 노트를 고치는 <code>BEGIN_COMMIT_OVERRIDE</code>는
+          PR 하나가 커밋 하나일 때만 동작한다. plain merge에서는 어느 커밋에
+          적용할지 알 수 없어서 동작하지 않는다.
+        </li>
+      </ul>
+
+      <h3>squash 커밋의 제목: 기본값의 함정</h3>
+      <p>GitHub 저장소 설정에서 squash 커밋의 기본 제목은 두 가지 중 하나다.</p>
+      <ul>
+        <li>
+          <code>COMMIT_OR_PR_TITLE</code>(UI 기본값): 커밋이
+          <strong>하나뿐이면 그 커밋의 제목</strong>, 둘 이상이면 PR 제목
+        </li>
+        <li><code>PR_TITLE</code>: 항상 PR 제목</li>
+      </ul>
+      <p>
+        기본값에서는 커밋 하나짜리 PR이 PR 제목이 아니라 커밋 제목으로
+        <code>main</code>에 들어간다. PR 제목은 CI가 검사하지만 커밋 제목은
+        검사하지 않는다. 그래서 커밋 제목이 형식을 어기면 그대로
+        release-please에 들어간다. 이 저장소는 <code>PR_TITLE</code>을 써서 이
+        틈을 막는다. 커밋 본문은 <code>PR_BODY</code>(PR 설명)를 쓴다.
+      </p>
+
+      <h3>PR 제목에서 다음 버전까지</h3>
+      <pre><code>PR 제목 "feat(tokens): 색 토큰 추가"
+  │  pr-title.yml이 Conventional Commit 형식과 scope를 검사 (필수 검사)
+  ▼
+squash merge → main 커밋 "feat(tokens): 색 토큰 추가 (#12)"
+  │  squash_merge_commit_title = PR_TITLE
+  ▼
+release-please가 마지막 릴리스 이후 커밋을 읽음
+  │  feat → minor, fix → patch, ! → major
+  ▼
+릴리스 PR: 다음 버전 0.2.0과 CHANGELOG</code></pre>
+
+      <h2>버전 계산해 보기</h2>
+      <p>
+        README 기준으로 feat는 minor, fix는 patch, type 뒤의
+        <code>!</code>(breaking)는 major를 올린다. 쌓인 커밋 중 가장 큰 변경
+        하나가 버전을 정한다. 릴리스를 만드는 커밋("releasable unit")은 feat,
+        fix, deps이고, chore나 build만 쌓이면 릴리스 PR이 생기지 않는다.
+      </p>
+      <p>
+        1.0.0 미만에서는 옵션 두 개가 계산을 바꾼다. 둘 다 기본값은
+        <code>false</code>다. 그래서 아무 옵션 없이 0.x에서 breaking 커밋이
+        들어가면 곧바로 1.0.0이 된다. 옵션을 켜고 끄면서
+        <code>feat(react)!: Button API 변경</code> 같은 줄을 넣어 보자.
+      </p>
+      <release-bump version="0.1.0"></release-bump>
+      <div class="callout">
+        이 모듈은 커밋 제목만 본다. 커밋 본문의
+        <code>BREAKING CHANGE:</code> footer나 <code>changelog-sections</code>
+        설정으로 릴리스 대상 type을 바꾸는 경우는 다루지 않는다. 0.x에서 어떤
+        옵션을 쓸지는 로드맵의 "릴리스 기반" 슬라이스에서 정한다.
+      </div>
+
+      <h2>이 저장소에서 쓰인 곳</h2>
+      <ul class="code-refs">
+        <li>
+          저장소 설정(코드 밖): squash만 허용,
+          <code>squash_merge_commit_title: PR_TITLE</code>,
+          <code>squash_merge_commit_message: PR_BODY</code>. 확인하는 명령:
+          <code
+            >gh api repos/gyeol-ui/gyeol-ui --jq '{allow_squash_merge,
+            squash_merge_commit_title}'</code
+          >
+        </li>
+        <li>
+          ruleset <code>main</code>(코드 밖): PR 필수,
+          <code>allowed_merge_methods: ["squash"]</code>, 필수 검사
+          <code>Check</code>와 <code>PR title</code>
+        </li>
+        <li>
+          <a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/.github/workflows/pr-title.yml"
+            ><code>.github/workflows/pr-title.yml</code></a
+          >: PR 제목의 형식과 scope 검사
+        </li>
+        <li>
+          <a
+            href="https://github.com/gyeol-ui/gyeol-ui/blob/main/docs/workflow.md#6-merge"
+            ><code>docs/workflow.md</code> "6. merge"</a
+          >: squash merge만 한다는 규칙과 PR 제목 규칙
+        </li>
+      </ul>
+
+      <h2>출처</h2>
+      <ul class="sources">
+        <li>
+          release-please README,
+          <a
+            href="https://github.com/googleapis/release-please#linear-git-commit-history-use-squash-merge"
+            >Linear git commit history (use squash-merge)</a
+          >,
+          <a
+            href="https://github.com/googleapis/release-please#how-should-i-write-my-commits"
+            >How should I write my commits?</a
+          >,
+          <a
+            href="https://github.com/googleapis/release-please#how-can-i-fix-release-notes"
+            >How can I fix release notes?</a
+          >,
+          <a
+            href="https://github.com/googleapis/release-please#release-please-bot-does-not-create-a-release-pr-why"
+            >Release Please bot does not create a release PR. Why?</a
+          >
+        </li>
+        <li>
+          release-please,
+          <a
+            href="https://github.com/googleapis/release-please/blob/main/docs/manifest-releaser.md"
+            >manifest-releaser.md</a
+          >: <code>bump-minor-pre-major</code>,
+          <code>bump-patch-for-minor-pre-major</code>
+        </li>
+        <li>
+          GitHub Docs,
+          <a
+            href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests"
+            >Configuring commit squashing for pull requests</a
+          >
+        </li>
+        <li>
+          GitHub REST API,
+          <a
+            href="https://docs.github.com/en/rest/repos/repos#update-a-repository"
+            >Update a repository</a
+          >: <code>squash_merge_commit_title</code>,
+          <code>squash_merge_commit_message</code>의 값
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>
