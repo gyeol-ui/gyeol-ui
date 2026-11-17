@@ -43,7 +43,7 @@ tools/
 - TS 패키지 빌드는 tsdown으로 통일한다. `tokens`의 주 빌드는 Style Dictionary 스크립트다.
 - 배포 패키지는 ESM만 내보낸다.
 - pre-commit hook(husky, lint-staged)은 staged 파일에 Prettier와 oxlint만 돌린다. typecheck와 test는 CI에서만 돌린다.
-- CI는 GitHub Actions 워크플로 하나에서 lint, typecheck, test, build를 turbo로 실행하고 PR 제목 형식을 검사한다. turbo 원격 캐시는 쓰지 않는다.
+- CI는 GitHub Actions 워크플로 하나에서 lint, format 검사, typecheck, test, build를 turbo로 실행하고 PR 제목 형식을 검사한다. turbo 원격 캐시는 쓰지 않는다.
 
 ### 스타일과 테마
 
