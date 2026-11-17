@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+    # edited: PR 제목을 고치면 제목 검사를 다시 돌린다
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+# 각 job이 필요한 권한만 따로 더한다
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 버전은 package.json의 packageManager에서 읽는다
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # turbo 원격 캐시 대신 로컬 캐시(.turbo/cache)를 Actions 캐시에 보관한다
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # 검사 목록은 루트 package.json의 check 스크립트가 정한다.
+      # 패키지가 lint, typecheck, test, build 스크립트를 두면 자동으로 포함되고,
+      # 새 종류의 검사는 turbo.json의 task와 check 스크립트에 추가한다.
+      - run: pnpm check
+
+  pr-title:
+    name: PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      # type은 기본값(Conventional Commits 표준 type)을 쓴다. scope는 생략할 수 있다.
+      - uses: amannn/action-semantic-pull-request@2252a14e810aa9b85c2d560bd7070c802206ecf6 # v6.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scopes: |
+            tokens
+            tailwind
+            react
+            figma-plugin
+            storybook
