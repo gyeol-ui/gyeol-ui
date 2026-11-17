@@ -32,7 +32,7 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 
 ### 4. 구현
 
-- `main`에서 슬라이스 브랜치를 만들고 그 위에서 작업한다.
+- `main`에서 슬라이스 브랜치 `slice/<이름>`(예: `slice/token-pipeline`)을 만들고 그 위에서 작업한다.
 - `/implement`는 내부에서 `tdd`와 `code-review` 스킬을 실행하고 현재 브랜치에 커밋한다. 따로 실행하지 않는다.
 - 티켓을 모두 구현하면 PR을 연다.
 
@@ -48,6 +48,25 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 - 고른 주제마다 다음을 적는다: 개념 설명, 이 저장소에서 그 개념이 쓰인 코드 위치, 참고한 자료의 출처.
 - 노트에 옮긴 항목은 `docs/learning/candidates.md`에서 지운다.
 - 노트는 슬라이스 PR에 함께 넣는다.
+
+### 7. merge
+
+- PR은 squash merge만 한다. `main`은 CI 통과를 필수로 보호한다.
+- PR 제목은 Conventional Commit 형식으로 쓴다. release-please가 이 제목을 읽는다.
+- scope는 패키지나 앱 이름(`tokens`, `tailwind`, `react`, `figma-plugin`, `storybook`)이다. 저장소 전체 변경에는 scope를 쓰지 않는다.
+
+## 슬라이스 완료 조건
+
+- CI의 lint, typecheck, test, build가 통과한다.
+- 변환 로직(토큰 변환, 아이콘 변환, Drift 비교)에는 Vitest 단위 테스트가 있다. 테스트 파일은 소스 옆에 `*.test.ts`로 둔다.
+- 빌드 산출물(`dist`, 생성된 CSS)은 git에 넣지 않는다. 토큰 JSON과 Drift 검사의 기준이 되는 Figma 스냅샷은 넣는다.
+- 패키지마다 사용법을 적은 README가 있다.
+- 학습 노트를 마무리하고 로드맵에 표시했다.
+
+## 의존성 버전
+
+- 개발 의존성은 정확한 버전으로 고정한다. 자동 업데이트 도구는 쓰지 않고, Phase를 마칠 때 한 번에 올린다.
+- 배포 패키지의 `peerDependencies`만 범위로 쓴다.
 
 ## Phase를 마칠 때
 
