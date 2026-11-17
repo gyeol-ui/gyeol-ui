@@ -10,8 +10,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  # main push는 커밋마다 검사를 끝까지 돌린다
+  # PR은 PR마다 그룹 하나로 묶어 새 push가 이전 실행을 취소한다.
+  # main push는 커밋마다 그룹을 따로 두어 서로 기다리거나 취소하지 않고 끝까지 돈다
+  group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
