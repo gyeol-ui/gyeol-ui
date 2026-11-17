@@ -1,0 +1,3 @@
+# pnpm이 직접 고쳐 쓰는 파일이다
+pnpm-lock.yaml
+pnpm-workspace.yaml

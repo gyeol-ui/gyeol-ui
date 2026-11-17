@@ -10,6 +10,15 @@
     },
     "test": {
       "dependsOn": ["^build"]
-    }
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/tsconfig.base.json"
+      ]
+    },
+    "//#format:check": {}
   }
 }
