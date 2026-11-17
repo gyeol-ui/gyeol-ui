@@ -17,8 +17,11 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": "oxlint",
-    "*": "prettier --write --ignore-unknown"
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
+      "oxlint",
+      "prettier --write"
+    ],
+    "!(*.{js,jsx,mjs,cjs,ts,tsx,mts,cts})": "prettier --write --ignore-unknown"
   },
   "devDependencies": {
     "husky": "9.1.7",
