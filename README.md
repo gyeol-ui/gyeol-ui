@@ -12,6 +12,24 @@ Figma의 디자인 언어와 코드의 **결**을 맞추는 오픈소스 React �
 - **접근성 우선**: WAI-ARIA APG를 따르고, 복잡한 컴포넌트는 React Aria 위에 만듭니다.
 - **모바일 웹뷰 대응**: safe-area, 가상 키보드, 뒤로가기 연동을 지원합니다.
 
+## 개발
+
+Node 26과 pnpm 12가 필요합니다. Node 버전은 `.node-version`에, pnpm 버전은 `package.json`의 `packageManager`에 고정되어 있습니다.
+
+```sh
+pnpm install
+pnpm check
+```
+
+| 명령 | 하는 일 |
+|---|---|
+| `pnpm check` | 모든 패키지의 typecheck, test, build를 한 번에 실행한다 |
+| `pnpm typecheck` | 타입을 검사한다 |
+| `pnpm test` | 테스트를 실행한다 |
+| `pnpm build` | 패키지를 빌드한다 |
+
+명령은 Turborepo가 패키지별로 실행합니다. 패키지 하나만 실행하려면 `pnpm --filter @gyeol-ui/tokens test`처럼 씁니다.
+
 ## 문서
 
 - [로드맵](./docs/roadmap.md)
