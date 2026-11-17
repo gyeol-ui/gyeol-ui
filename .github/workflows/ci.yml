@@ -10,8 +10,14 @@ permissions:
   contents: read
 
 concurrency:
-  # PR은 PR마다 그룹 하나로 묶어 새 push가 이전 실행을 취소한다.
-  # main push는 커밋마다 그룹을 따로 두어 서로 기다리거나 취소하지 않고 끝까지 돈다
+  # group: 이름이 같은 실행끼리 묶는다. 한 그룹에서는 실행 중 1개, 대기 1개까지만 두고,
+  # 새 실행이 오면 대기 중이던 실행은 취소된다. 이름이 다른 그룹은 서로 상관없이 병렬로 돈다.
+  #
+  # `a || b`는 a가 비어 있으면 b를 쓴다.
+  # - PR 이벤트: pull_request.number가 있으므로 그룹은 `ci-<PR 번호>`다(예: ci-7).
+  #   같은 PR의 push끼리 묶이고, 아래 cancel-in-progress가 true라 새 push가 이전 실행을 취소한다.
+  # - main push 이벤트: pull_request 정보가 없어 그룹은 `ci-<커밋 sha>`다.
+  #   커밋마다 그룹이 달라서 연달아 merge돼도 서로 기다리거나 취소하지 않고 끝까지 돈다.
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
