@@ -9,3 +9,5 @@
 - npm trusted publishing(OIDC)
 - TypeScript 7 네이티브 컴파일러와 `isolatedDeclarations`
 - 내부 패키지를 소스가 아닌 빌드 결과로 참조하는 이유
+- GitHub Actions `concurrency`의 group 개념(실행 1개와 대기 1개 규칙), `cancel-in-progress`, PR과 `main` push에서 그룹을 다르게 나누는 이유
+- 조건으로 건너뛴(skipped) job이 필수 검사에서 통과로 처리되는 문제와, PR 제목 검사를 별도 워크플로로 나눈 이유

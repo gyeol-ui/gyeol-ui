@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  # PR 제목 검사는 pr-title.yml이 따로 돌린다. 제목만 고쳤을 때 이 검사를 다시 돌리지 않기 위해서다
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  # group: 이름이 같은 실행끼리 묶는다. 한 그룹에서는 실행 중 1개, 대기 1개까지만 두고,
+  # 새 실행이 오면 대기 중이던 실행은 취소된다. 이름이 다른 그룹은 서로 상관없이 병렬로 돈다.
+  #
+  # `a || b`는 a가 비어 있으면 b를 쓴다.
+  # - PR 이벤트: pull_request.number가 있으므로 그룹은 `ci-<PR 번호>`다(예: ci-7).
+  #   같은 PR의 push끼리 묶이고, 아래 cancel-in-progress가 true라 새 push가 이전 실행을 취소한다.
+  # - main push 이벤트: pull_request 정보가 없어 그룹은 `ci-<커밋 sha>`다.
+  #   커밋마다 그룹이 달라서 연달아 merge돼도 서로 기다리거나 취소하지 않고 끝까지 돈다.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # 버전은 package.json의 packageManager에서 읽는다
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # turbo 원격 캐시 대신 로컬 캐시(.turbo/cache)를 Actions 캐시에 보관한다
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # 검사 목록은 루트 package.json의 check 스크립트가 정한다.
+      # 패키지가 lint, typecheck, test, build 스크립트를 두면 자동으로 포함되고,
+      # 새 종류의 검사는 turbo.json의 task와 check 스크립트에 추가한다.
+      - run: pnpm check
