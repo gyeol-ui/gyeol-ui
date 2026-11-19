@@ -30,6 +30,7 @@ pnpm check
 | `pnpm typecheck` | 타입을 검사한다 |
 | `pnpm test` | 테스트를 실행한다 |
 | `pnpm build` | 패키지를 빌드한다 |
+| `pnpm learning` | 학습 노트(`docs/learning`)를 로컬 서버로 띄운다 |
 
 명령은 Turborepo가 패키지별로 실행합니다. 패키지 하나만 실행하려면 `pnpm --filter @gyeol-ui/tokens test`처럼 씁니다. `format`과 `format:check`는 저장소 루트에서 전체 파일을 대상으로 실행합니다. Markdown 파일은 Prettier가 건드리지 않습니다.
 

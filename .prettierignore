@@ -5,3 +5,6 @@ pnpm-workspace.yaml
 # Markdown은 사람이 쓴 형식을 그대로 둔다
 *.md
 *.mdx
+
+# 저장소에 그대로 복사해 둔 외부 라이브러리다
+docs/learning/vendor/

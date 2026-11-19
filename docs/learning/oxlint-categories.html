@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>oxlint 규칙 범주</title>
+    <link rel="stylesheet" href="learn.css" />
+    <script src="vendor/highlightjs/highlight.min.js" defer></script>
+    <script src="learn.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <nav aria-label="목차">
+        <strong>목차</strong>
+        <ol>
+          <li><a href="#categories">범주</a></li>
+          <li><a href="#severity">warn과 error</a></li>
+          <li><a href="#criteria">고르는 기준</a></li>
+          <li><a href="#type-aware">타입 인식 lint</a></li>
+          <li><a href="#code">쓰인 곳</a></li>
+          <li><a href="#sources">출처</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <h1>oxlint 규칙 범주</h1>
+        <p class="lead">
+          oxlint는 규칙 수백 개를 의도에 따라 7개 범주로 나눈다. 범주 단위로
+          켜고 끄는 방법과, 이 저장소가 correctness와 suspicious만 error로 켠
+          기준을 다룬다.
+        </p>
+
+        <section id="categories">
+          <h2>범주: 의도가 비슷한 규칙 묶음</h2>
+          <p>
+            <code>.oxlintrc.json</code>의 <code>categories</code>로 범주 하나를
+            통째로 켜거나 끈다. 값은 <code>"error"</code>, <code>"warn"</code>,
+            <code>"off"</code>다. 특정 규칙만 다르게 하려면 <code>rules</code>에
+            적는다. <code>rules</code>가 <code>categories</code>보다 우선한다.
+          </p>
+          <pre><code class="language-json">{
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "off"
+  },
+  "rules": {
+    "eslint/eqeqeq": "error"
+  }
+}</code></pre>
+          <p>
+            범주는 "이 코드가 틀렸을 확률"이 높은 쪽부터 "팀이 정하기 나름"인
+            쪽까지 늘어서 있다. 아래 표는 위에서부터 그 순서이고, nursery는
+            안정성이 다른 축이라 맨 끝에 둔다. 설정 파일이 없으면 oxlint는
+            correctness만 <code>warn</code>으로 켠다. 설정 없이
+            <code>debugger;</code> 한 줄을 검사하면
+            <code>warning eslint(no-debugger)</code>가 나온다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>범주</th>
+                  <th>규칙 수</th>
+                  <th>예시 규칙</th>
+                  <th>설정 없음</th>
+                  <th>이 저장소</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>correctness</code
+                    ><small>확실히 틀렸거나 쓸모없는 코드</small>
+                  </td>
+                  <td>272</td>
+                  <td>
+                    <code>eslint/no-debugger</code><br /><code
+                      >eslint/for-direction</code
+                    ><br /><code>typescript/no-floating-promises</code>
+                  </td>
+                  <td><span class="badge warn">warn</span></td>
+                  <td><span class="badge green">error</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>suspicious</code
+                    ><small>틀렸거나 쓸모없을 가능성이 높은 코드</small>
+                  </td>
+                  <td>68</td>
+                  <td>
+                    <code>eslint/no-extend-native</code><br /><code
+                      >eslint/no-new</code
+                    ><br /><code>eslint/no-useless-concat</code>
+                  </td>
+                  <td>off</td>
+                  <td><span class="badge green">error</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>pedantic</code
+                    ><small>더 엄격한 규칙. 오탐이 있을 수 있다</small>
+                  </td>
+                  <td>126</td>
+                  <td>
+                    <code>eslint/eqeqeq</code><br /><code
+                      >eslint/array-callback-return</code
+                    ><br /><code>eslint/max-lines</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>perf</code><small>실행 성능을 개선하려는 규칙</small>
+                  </td>
+                  <td>15</td>
+                  <td>
+                    <code>eslint/no-await-in-loop</code><br /><code
+                      >oxc/no-accumulating-spread</code
+                    >
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>style</code
+                    ><small>관용적이고 일관된 스타일 규칙</small>
+                  </td>
+                  <td>279</td>
+                  <td>
+                    <code>eslint/prefer-const</code><br /><code
+                      >eslint/curly</code
+                    ><br /><code>eslint/func-style</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>restriction</code
+                    ><small>특정 패턴이나 기능을 금지하는 규칙</small>
+                  </td>
+                  <td>101</td>
+                  <td>
+                    <code>eslint/no-console</code><br /><code
+                      >eslint/no-var</code
+                    ><br /><code>eslint/no-plusplus</code>
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>nursery</code
+                    ><small>개발 중이라 바뀔 수 있는 규칙</small>
+                  </td>
+                  <td>11</td>
+                  <td>
+                    <code>eslint/no-undef</code><br /><code
+                      >typescript/prefer-optional-chain</code
+                    >
+                  </td>
+                  <td>off</td>
+                  <td>off</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            규칙 수는 oxlint 1.94.0의
+            <code>oxlint --rules --format=json</code> 출력에서 센, 등록된 전체
+            규칙 수다. 기본으로 꺼진 플러그인(react, import 등)의 규칙도
+            포함하므로 실제로 켜지는 수는 더 적다. 이 저장소에서 켜진 규칙은
+            correctness 111개, suspicious 43개다.
+          </p>
+        </section>
+
+        <section id="severity">
+          <h2>warn과 error의 차이는 CI에서 드러난다</h2>
+          <div class="compare">
+            <div class="compare-card">
+              <div class="compare-title">warn</div>
+              <dl class="compare-facts">
+                <dt>출력</dt>
+                <dd><code>warning eslint(...)</code></dd>
+                <dt>종료 코드</dt>
+                <dd>
+                  <strong>0</strong> (<code>--deny-warnings</code>를 주면 1)
+                </dd>
+              </dl>
+              <p class="compare-result">
+                CI와 pre-commit hook이 막지 못하고 출력만 남는다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">error<small>이 저장소</small></div>
+              <dl class="compare-facts">
+                <dt>출력</dt>
+                <dd><code>error eslint(...)</code></dd>
+                <dt>종료 코드</dt>
+                <dd><strong>1</strong></dd>
+              </dl>
+              <p class="compare-result">
+                CI가 실패하고 커밋이 막힌다. 켜진 규칙은 반드시 지켜진다.
+              </p>
+            </div>
+          </div>
+          <p>
+            종료 코드는 oxlint 1.94.0으로 직접 확인했다. 이 저장소는 켠 범주를
+            모두 <code>error</code>로 둔다.
+          </p>
+        </section>
+
+        <section id="criteria">
+          <h2>범주를 고르는 기준</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>범주</th>
+                  <th>설정</th>
+                  <th>이유</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>correctness</code>, <code>suspicious</code></td>
+                  <td><span class="badge green">error</span></td>
+                  <td>
+                    걸리면 대부분 실제 버그다. 오탐이 드물어 막아도 일에 방해가
+                    되지 않는다.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>pedantic</code></td>
+                  <td>off</td>
+                  <td>
+                    문서가 "오탐이 있을 수 있다"고 밝힌 범주다. 쓸 만한 규칙은
+                    <code>rules</code>에서 하나씩 켠다.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>style</code></td>
+                  <td>off</td>
+                  <td>
+                    형식이 아니라 관용 표현(<code>prefer-const</code>,
+                    <code>curly</code>)에 관한 규칙이다. 형식은 Prettier가 맡고,
+                    관용 표현은 아직 팀 규칙을 정하지 않았다.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>restriction</code></td>
+                  <td>off</td>
+                  <td>
+                    <code>no-console</code>, <code>no-var</code>처럼 특정 기능을
+                    금지한다. 무엇을 금지할지는 프로젝트마다 달라서 범주째
+                    켜기보다 필요한 규칙만 고른다.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>perf</code></td>
+                  <td>off</td>
+                  <td>
+                    아직 성능이 문제 될 코드가 없다. 컴포넌트가 생기면 다시
+                    본다.
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>nursery</code></td>
+                  <td>off</td>
+                  <td>
+                    개발 중이라 동작이 바뀔 수 있다. CLI의 <code>all</code>도
+                    nursery는 빼고 켠다.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="type-aware">
+          <h2>타입 인식 lint</h2>
+          <p>
+            <code>options.typeAware: true</code>를 켜면
+            <code>oxlint-tsgolint</code>가 TypeScript 타입 정보를 써서 검사한다.
+            <code>typescript/no-floating-promises</code>(처리하지 않은
+            Promise)처럼 타입을 알아야 판단할 수 있는 규칙이 여기에 속한다. 이
+            규칙은 correctness 범주라 이 저장소에서 error로 켜져 있다.
+          </p>
+        </section>
+
+        <section id="code">
+          <h2>이 저장소에서 쓰인 곳</h2>
+          <ul>
+            <li>
+              <a
+                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/.oxlintrc.json"
+                ><code>.oxlintrc.json</code></a
+              >: 범주 설정과 <code>typeAware</code>
+            </li>
+            <li>
+              <a
+                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/packages/tokens/package.json#L28"
+                ><code>packages/tokens/package.json:28</code></a
+              >: 패키지별 <code>lint</code> 스크립트. turbo가
+              <code>^build</code> 뒤에 실행한다(<a
+                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/turbo.json#L15"
+                ><code>turbo.json:15</code></a
+              >)
+            </li>
+            <li>
+              <a
+                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/package.json#L19"
+                ><code>package.json:19</code></a
+              >: lint-staged가 커밋할 때 JS/TS 파일에 oxlint를 돌린다(<code
+                >--fix</code
+              >
+              없이)
+            </li>
+            <li>
+              PR #6: 범주별로 켜진 규칙 수(Correctness 111개, Suspicious 43개)와
+              hook 동작 확인 기록
+            </li>
+          </ul>
+        </section>
+
+        <section id="sources">
+          <h2>출처</h2>
+          <ul>
+            <li>
+              Oxc,
+              <a
+                href="https://oxc.rs/docs/guide/usage/linter/config.html#enable-groups-of-rules-with-categories"
+                >Configuring Oxlint: Enable groups of rules with categories</a
+              >: 범주 목록과 설명, 기본으로 correctness만 켜짐
+            </li>
+            <li>
+              Oxc,
+              <a
+                href="https://oxc.rs/docs/guide/usage/linter/config-file-reference.html#categories"
+                >Config file reference: categories</a
+              >: <code>rules</code>가 <code>categories</code>보다 우선
+            </li>
+            <li>
+              Oxc,
+              <a href="https://oxc.rs/docs/guide/usage/linter/cli.html"
+                >Command-line interface</a
+              >: <code>-A</code>, <code>-W</code>, <code>-D</code>와
+              <code>all</code>
+            </li>
+            <li>
+              oxlint 1.94.0 직접 실행:
+              <code>oxlint --rules --format=json</code>(범주별 규칙 수와 예시),
+              설정 없이 <code>debugger;</code> 검사(기본 심각도 warn),
+              <code>--deny-warnings</code> 유무에 따른 종료 코드
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
