@@ -15,8 +15,8 @@ const learnFolders = [
       },
       {
         file: "squash-merge-and-release-please.html",
-        title: "squash merge와 release-please",
-        tags: ["git", "release"],
+        title: "release-please의 다음 버전",
+        tags: ["release"],
       },
       {
         file: "oxlint-categories.html",

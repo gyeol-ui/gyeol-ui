@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>squash merge와 release-please</title>
+    <title>release-please의 다음 버전</title>
     <link rel="stylesheet" href="learn.css" />
     <script src="vendor/highlightjs/highlight.min.js" defer></script>
     <script src="learn.js" defer></script>
@@ -13,205 +13,17 @@
       <nav aria-label="목차">
         <strong>목차</strong>
         <ol>
-          <li><a href="#reads">release-please가 읽는 것</a></li>
-          <li><a href="#methods">merge 방식과 main의 커밋</a></li>
-          <li><a href="#title">squash 커밋의 제목</a></li>
-          <li><a href="#chain">PR 제목에서 다음 버전까지</a></li>
           <li><a href="#bump">다음 버전의 경우의 수</a></li>
-          <li><a href="#code">쓰인 곳</a></li>
           <li><a href="#sources">출처</a></li>
         </ol>
       </nav>
 
       <main>
-        <h1>squash merge와 release-please</h1>
+        <h1>release-please의 다음 버전</h1>
         <p class="lead">
-          이 저장소가 squash merge만 허용하고 squash 커밋 제목을 PR 제목으로
-          정한 이유. PR 제목 한 줄이 어떻게 다음 버전 번호와 CHANGELOG까지
-          이어지는지 다룬다.
+          release-please가 쌓인 커밋으로 다음 버전을 정하는 규칙과, 1.0.0
+          미만에서 옵션 두 개가 그 결과를 어떻게 바꾸는지 다룬다.
         </p>
-
-        <section id="reads">
-          <h2>release-please는 main의 커밋 제목을 읽는다</h2>
-          <p>
-            release-please는 마지막 릴리스 이후 기본 브랜치에 들어온 커밋을
-            <a href="https://www.conventionalcommits.org/"
-              >Conventional Commit</a
-            >으로 읽는다. 그 결과로 다음 버전과 CHANGELOG를 담은
-            <strong>릴리스 PR</strong>을 열고, 릴리스 PR을 merge하면 태그와
-            GitHub Release를 만든다.
-          </p>
-          <div class="callout">
-            <p><code>main</code>의 커밋 제목이 곧 릴리스의 입력이다.</p>
-          </div>
-        </section>
-
-        <section id="methods">
-          <h2>merge 방식이 main의 커밋을 정한다</h2>
-          <p>
-            같은 PR이라도 어떤 방식으로 merge하느냐에 따라 <code>main</code>에
-            남는 커밋이 다르다. PR #12(<code>feat(react): Button 추가</code>)의
-            브랜치에 커밋 세 개가 있고, 그중 둘은 PR 안에서만 의미 있는
-            커밋(<code>wip</code>, 앞 커밋의 오타 수정)이라고 하자.
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>방식</th>
-                  <th><code>main</code>에 새로 생기는 커밋</th>
-                  <th>release-please가 읽는 결과</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td rowspan="4">
-                    <strong>merge commit</strong
-                    ><small>갈래가 남고 merge commit이 하나 더 생긴다</small>
-                  </td>
-                  <td><code>feat(react): Button 추가</code></td>
-                  <td><span class="badge green">읽음</span> feat</td>
-                </tr>
-                <tr>
-                  <td><code>wip</code></td>
-                  <td><span class="badge muted">형식 아님</span></td>
-                </tr>
-                <tr>
-                  <td><code>fix(react): 앞 커밋의 오타 수정</code></td>
-                  <td>
-                    <span class="badge green">읽음</span> fix.
-                    <code>main</code>에 없던 버그가 CHANGELOG에 오른다
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <code>Merge pull request #12 from someone/button</code>
-                  </td>
-                  <td>
-                    <span class="badge muted">형식 아님</span> GitHub이 만든
-                    제목
-                  </td>
-                </tr>
-                <tr>
-                  <td rowspan="3">
-                    <strong>rebase</strong
-                    ><small>일직선, 브랜치 커밋이 그대로 들어온다</small>
-                  </td>
-                  <td><code>feat(react): Button 추가</code></td>
-                  <td><span class="badge green">읽음</span> feat</td>
-                </tr>
-                <tr>
-                  <td><code>wip</code></td>
-                  <td><span class="badge muted">형식 아님</span></td>
-                </tr>
-                <tr>
-                  <td><code>fix(react): 앞 커밋의 오타 수정</code></td>
-                  <td>
-                    <span class="badge green">읽음</span> fix.
-                    <code>main</code>에 없던 버그가 CHANGELOG에 오른다
-                  </td>
-                </tr>
-                <tr>
-                  <td rowspan="1">
-                    <strong>squash</strong><small>일직선, 커밋 하나</small>
-                  </td>
-                  <td><code>feat(react): Button 추가 (#12)</code></td>
-                  <td>
-                    <span class="badge green">읽음</span> feat 하나. 제목은 CI가
-                    검사한 PR 제목이다
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>release-please README가 squash merge를 강하게 권하는 이유:</p>
-          <ul>
-            <li>
-              PR 안에서 <code>feat: A 추가</code> 뒤에
-              <code>fix: A의 버그 수정</code>을 했다면, 그 버그는
-              <code>main</code>에 존재한 적이 없다. 그런데 커밋이 그대로
-              들어가면 CHANGELOG에 버그 수정으로 올라간다.
-            </li>
-            <li>
-              실패하는 테스트를 먼저 커밋하며 일하면, merge나 rebase는 테스트가
-              깨진 시점을 <code>main</code>에 남긴다.
-            </li>
-            <li>
-              merge 뒤에 릴리스 노트를 고치는
-              <code>BEGIN_COMMIT_OVERRIDE</code>는 PR 하나가 커밋 하나일 때만
-              동작한다. plain merge에서는 어느 커밋에 적용할지 알 수 없다.
-            </li>
-          </ul>
-        </section>
-
-        <section id="title">
-          <h2>squash 커밋의 제목: 기본값의 함정</h2>
-          <p>GitHub 저장소 설정에서 squash 커밋의 기본 제목은 둘 중 하나다.</p>
-          <div class="compare">
-            <div class="compare-card">
-              <div class="compare-title">
-                UI 기본값<small>COMMIT_OR_PR_TITLE</small>
-              </div>
-              <dl class="compare-facts">
-                <dt>커밋이 하나인 PR</dt>
-                <dd><strong>커밋 제목</strong></dd>
-                <dt>커밋이 여럿인 PR</dt>
-                <dd>PR 제목</dd>
-              </dl>
-              <p class="compare-result">
-                CI가 검사하지 않은 커밋 제목이 그대로 release-please에 들어갈 수
-                있다.
-              </p>
-            </div>
-            <div class="compare-card green">
-              <div class="compare-title">이 저장소<small>PR_TITLE</small></div>
-              <dl class="compare-facts">
-                <dt>커밋이 하나인 PR</dt>
-                <dd><strong>PR 제목</strong></dd>
-                <dt>커밋이 여럿인 PR</dt>
-                <dd>PR 제목</dd>
-              </dl>
-              <p class="compare-result">
-                <code>main</code>의 모든 커밋 제목이 CI가 검사한 PR 제목이다.
-              </p>
-            </div>
-          </div>
-          <p>
-            커밋 본문은 <code>PR_BODY</code>(PR 설명)를 쓴다. 그 밖의 값은
-            <code>COMMIT_MESSAGES</code>, <code>BLANK</code>다.
-          </p>
-        </section>
-
-        <section id="chain">
-          <h2>PR 제목에서 다음 버전까지</h2>
-          <div class="pipe">
-            <div class="pipe-row">
-              <span class="pipe-label">한 PR이 릴리스에 닿기까지</span>
-              <span class="pipe-val"
-                >feat(tokens): 색 토큰 추가<small>PR 제목</small></span
-              >
-              <span class="pipe-fn">pr-title.yml 검사</span>
-              <span class="pipe-val ok">통과<small>형식과 scope</small></span>
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-val ok">통과</span>
-              <span class="pipe-fn">squash merge</span>
-              <span class="pipe-val"
-                >feat(tokens): 색 토큰 추가 (#12)<small
-                  >main의 커밋 하나</small
-                ></span
-              >
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-val">main의 커밋들</span>
-              <span class="pipe-fn green">release-please</span>
-              <span class="pipe-val"
-                >0.1.0 → 0.2.0<small>릴리스 PR의 버전과 CHANGELOG</small></span
-              >
-              <span class="pipe-note">feat → minor</span>
-            </div>
-          </div>
-        </section>
 
         <section id="bump">
           <h2>다음 버전의 경우의 수</h2>
@@ -283,54 +95,14 @@
           </div>
         </section>
 
-        <section id="code">
-          <h2>이 저장소에서 쓰인 곳</h2>
-          <ul>
-            <li>
-              저장소 설정(코드 밖): squash만 허용,
-              <code>squash_merge_commit_title: PR_TITLE</code>,
-              <code>squash_merge_commit_message: PR_BODY</code>. 확인하는 명령:
-              <code
-                >gh api repos/gyeol-ui/gyeol-ui --jq '{allow_squash_merge,
-                squash_merge_commit_title}'</code
-              >
-            </li>
-            <li>
-              ruleset <code>main</code>(코드 밖): PR 필수,
-              <code>allowed_merge_methods: ["squash"]</code>, 필수 검사
-              <code>Check</code>와 <code>PR title</code>
-            </li>
-            <li>
-              <a
-                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/.github/workflows/pr-title.yml"
-                ><code>.github/workflows/pr-title.yml</code></a
-              >: PR 제목의 형식과 scope 검사
-            </li>
-            <li>
-              <a
-                href="https://github.com/gyeol-ui/gyeol-ui/blob/main/docs/workflow.md#6-merge"
-                ><code>docs/workflow.md</code> "6. merge"</a
-              >: squash merge만 한다는 규칙과 PR 제목 규칙
-            </li>
-          </ul>
-        </section>
-
         <section id="sources">
           <h2>출처</h2>
           <ul>
             <li>
               release-please README:
               <a
-                href="https://github.com/googleapis/release-please#linear-git-commit-history-use-squash-merge"
-                >Linear git commit history (use squash-merge)</a
-              >,
-              <a
                 href="https://github.com/googleapis/release-please#how-should-i-write-my-commits"
                 >How should I write my commits?</a
-              >,
-              <a
-                href="https://github.com/googleapis/release-please#how-can-i-fix-release-notes"
-                >How can I fix release notes?</a
               >,
               <a
                 href="https://github.com/googleapis/release-please#release-please-bot-does-not-create-a-release-pr-why"
@@ -344,21 +116,6 @@
                 >manifest-releaser.md</a
               >: <code>bump-minor-pre-major</code>,
               <code>bump-patch-for-minor-pre-major</code>
-            </li>
-            <li>
-              GitHub Docs,
-              <a
-                href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/configuring-commit-squashing-for-pull-requests"
-                >Configuring commit squashing for pull requests</a
-              >
-            </li>
-            <li>
-              GitHub REST API,
-              <a
-                href="https://docs.github.com/en/rest/repos/repos#update-a-repository"
-                >Update a repository</a
-              >: <code>squash_merge_commit_title</code>,
-              <code>squash_merge_commit_message</code>의 값
             </li>
           </ul>
         </section>
