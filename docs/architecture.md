@@ -34,7 +34,7 @@ tools/
 - Node 26(Active LTS), pnpm 12, Turborepo 2, TypeScript 7을 쓴다. Node는 `.node-version`, pnpm은 `packageManager` 필드로 고정한다.
 - lint는 oxlint, format은 Prettier를 쓴다.
   - oxlint는 `correctness`와 `suspicious` 범주를 error로 두고 타입 인식 lint를 켠다. 나머지 범주는 끄고, 필요한 규칙만 골라 error로 켠다. warn 단계는 두지 않는다.
-  - `react`와 `jsx-a11y` 플러그인은 Phase 1 첫 슬라이스에서 켠다.
+  - `react`와 `jsx-a11y` 플러그인은 Phase 1 첫 스펙에서 켠다.
 - TypeScript는 `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `isolatedDeclarations`를 켠다.
 - TS 패키지 빌드는 tsdown으로 통일한다. `tokens`의 주 빌드는 Style Dictionary 스크립트다.
 - 배포 패키지는 ESM만 내보낸다.
@@ -53,7 +53,7 @@ tools/
 - 컴포넌트 내부는 Tailwind v4로 작성한다. 배포할 때는 빌드된 CSS를 함께 내보내고, 테마는 CSS 변수로 바꾼다. Tailwind 사용자를 위해 `@theme` CSS도 제공한다.
 - Theme 1개 × Color Scheme(light/dark)로 시작하고, Theme을 늘릴 수 있게 설계한다.
 - Token은 Primitive → Semantic → Component 3계층이다. Component Token은 Semantic만으로 표현할 수 없을 때만 만든다.
-- 토큰 파일은 DTCG 2025.10 형식으로 쓰고 Style Dictionary로 빌드한다. Style Dictionary가 DTCG Resolver를 지원하지 않으므로 Theme과 Color Scheme 조합은 파일 분리와 다중 빌드로 처리한다. 구조는 토큰 파이프라인 슬라이스에서 정하고 ADR로 남긴다.
+- 토큰 파일은 DTCG 2025.10 형식으로 쓰고 Style Dictionary로 빌드한다. Style Dictionary가 DTCG Resolver를 지원하지 않으므로 Theme과 Color Scheme 조합은 파일 분리와 다중 빌드로 처리한다. 구조는 토큰 파이프라인 스펙에서 정하고 ADR로 남긴다.
 - Figma Variables collection 구성:
   - `Primitive`: mode = Theme
   - `Semantic`: mode = Color Scheme. Primitive를 alias로 참조한다
@@ -69,7 +69,7 @@ tools/
 - 공개 API는 Compound Component, `render` prop, `data-*` 상태 속성으로 통일한다 ([ADR-0002](./adr/0002-compound-render-prop-public-api.md)).
 - 기본 컴포넌트는 WAI-ARIA APG를 보며 직접 구현한다. 어려운 컴포넌트는 React Aria hooks와 `react-stately`로 구현하고, RAC는 예외적인 경우에만 이유를 기록하고 쓴다 ([ADR-0003](./adr/0003-react-aria-hooks-for-complex-components.md)).
 - Base UI는 API 설계의 참고 자료로 계속 본다.
-- `react`의 peer는 `react >=18`이다. 개발과 Storybook은 React 19로 하고, React 18 테스트는 Phase 1 첫 슬라이스에서 CI에 추가한다. 18을 지원하므로 Part는 `forwardRef`로 감싸고 19 전용 API는 쓰지 않는다.
+- `react`의 peer는 `react >=18`이다. 개발과 Storybook은 React 19로 하고, React 18 테스트는 Phase 1 첫 스펙에서 CI에 추가한다. 18을 지원하므로 Part는 `forwardRef`로 감싸고 19 전용 API는 쓰지 않는다.
 
 확인한 사실(2026-11):
 
