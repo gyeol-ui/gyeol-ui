@@ -39,6 +39,7 @@ lint 규칙은 루트의 `.oxlintrc.json`에 있습니다. `pnpm install`을 하
 ## 문서
 
 - [로드맵](./docs/roadmap.md)
+- [아키텍처](./docs/architecture.md)
 - [용어집](./GLOSSARY.md)
 - [의사결정 기록 (ADR)](./docs/adr/)
 
