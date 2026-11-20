@@ -61,17 +61,34 @@ dictionary.allTokens.map(withColorMix(dictionary));
 dictionary.allTokens.map((token) => applyColorMix({ token, dictionary }));
 ```
 
-## 값을 꺼내는 함수
+## 함수 이름
 
-무엇에서 값을 꺼내는 함수는 `aliasRefOf`처럼 `…Of`로 끝내지 않고 `getAliasRef`처럼 `get`으로 시작한다. 호출하는 코드에서 함수 이름과 값 이름이 헷갈리지 않게 하려는 것이다.
+함수 이름은 하는 일을 드러내는 동사로 시작한다. `colorMix`처럼 명사만 쓰거나 `aliasRefOf`처럼 `…Of`로 끝내지 않는다. 호출하는 코드에서 함수 이름과 값 이름이 헷갈리지 않고, 이름만 보고 함수가 무엇을 하는지 알게 하려는 것이다.
 
 ```ts
 // 하지 않는다
 const aliasRefOf = (token: Token): string | undefined => …;
+function colorMix({ variable, alpha }: { … }): string {}
 
 // 한다
-const getAliasRef = (token: Token): string | undefined => …;
+const findAliasRef = (token: Token): string | undefined => …;
+function formatColorMix({ variable, alpha }: { … }): string {}
 ```
+
+모든 함수를 `get`으로 시작하지 않는다. `get`은 이미 있는 값을 그대로 꺼낼 때만 쓰고, 값을 만들거나 바꾸는 함수는 그 일을 드러내는 동사를 고른다.
+
+| 하는 일 | 동사 | 예 |
+|---|---|---|
+| 없을 수도 있는 것을 찾는다 | `find` | `findAliasRef` |
+| 여러 개를 모으거나 나열한다 | `collect`, `list` | `collectTokens`, `listReferences` |
+| 문자열을 읽어 값으로 푼다 | `parse` | `parseReferencePath` |
+| 값을 출력용 문자열로 쓴다 | `format` | `formatColorMix` |
+| 한 모양을 다른 모양으로 바꾼다 | `to` | `toCssName`, `toViolation` |
+| 경로나 참조를 실제 위치로 푼다 | `resolve` | `resolveTokenFilePaths` |
+| 파일이나 원본에서 읽는다 | `read` | `readTokenFile` |
+| 규칙을 검사해 위반을 돌려준다 | `check` | `checkKebabCase` |
+| 참거짓을 돌려준다 | `is`, `has` | `isReference` |
+| 함수를 돌려준다 | `create` | 아래 "함수를 만드는 함수" |
 
 ## 테스트
 
@@ -86,10 +103,10 @@ const getAliasRef = (token: Token): string | undefined => …;
 - 준비할 것이 전혀 없으면 `// given`을 생략한다.
 
 ```ts
-describe("tokenFilePaths", () => {
+describe("resolveTokenFilePaths", () => {
   it("Primitive 하나와 Color Scheme마다 Semantic 하나", () => {
     // given, when
-    const paths = tokenFilePaths("/repo/tokens");
+    const paths = resolveTokenFilePaths("/repo/tokens");
 
     // then
     expect(paths).toEqual({ … });

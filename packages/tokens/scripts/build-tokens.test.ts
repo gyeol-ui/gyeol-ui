@@ -6,10 +6,10 @@ import { describe, expect, it, onTestFinished } from "vitest";
 import { buildTokens } from "./build-tokens.ts";
 import { TokenValidationError } from "./validate-tokens.ts";
 
-const fixture = (name: string): string =>
+const resolveFixturePath = (name: string): string =>
   fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
 
-const srgb = (...components: number[]) => ({
+const toSrgbColor = (...components: number[]) => ({
   colorSpace: "srgb",
   components,
 });
@@ -19,8 +19,8 @@ const MINIMAL = {
   primitive: {
     color: {
       $type: "color",
-      white: { $value: srgb(1, 1, 1) },
-      black: { $value: srgb(0, 0, 0) },
+      white: { $value: toSrgbColor(1, 1, 1) },
+      black: { $value: toSrgbColor(0, 0, 0) },
     },
     spacing: {
       $type: "dimension",
@@ -59,7 +59,7 @@ async function createTokensDir(
 }
 
 /** 빌드가 TokenValidationError로 실패하면 위반의 파일, 경로, 규칙을 돌려준다 */
-async function getViolations(
+async function collectViolations(
   tokensDir: string,
 ): Promise<{ file: string; path: string; rule: string }[]> {
   const error = await buildTokens(tokensDir).then(
@@ -76,7 +76,7 @@ describe("buildTokens", () => {
   describe("Primitive 블록", () => {
     it("Primitive를 :root에 --gyeol- 접두사 CSS 변수로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain(":root {");
@@ -88,7 +88,7 @@ describe("buildTokens", () => {
 
     it("alpha가 있는 색은 rgba()로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain("--gyeol-color-overlay: rgba(0, 0, 0, 0.5);");
@@ -98,7 +98,7 @@ describe("buildTokens", () => {
   describe("Semantic 블록", () => {
     it("light Semantic을 :root 블록에 color-scheme: light와 var() 참조로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain(
@@ -115,7 +115,7 @@ describe("buildTokens", () => {
 
     it("dark Semantic을 OS 설정 media query 블록에 color-scheme: dark로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain(
@@ -130,7 +130,7 @@ describe("buildTokens", () => {
 
     it("dark Semantic을 <html>의 data-color-scheme 속성 블록에도 color-scheme: dark로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain(
@@ -144,7 +144,7 @@ describe("buildTokens", () => {
 
     it("Semantic이 다른 Semantic을 가리키면 그 Semantic 변수를 var()로 낸다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toContain("--gyeol-ring-offset: var(--gyeol-bg-surface);");
@@ -152,7 +152,7 @@ describe("buildTokens", () => {
 
     it("alias + 투명도가 Semantic을 가리키면 그 Semantic 변수를 color-mix()로 섞는다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then: light와 dark 블록 세 곳 모두에 나온다
       expect(
@@ -164,7 +164,7 @@ describe("buildTokens", () => {
 
     it("alias + 투명도가 Primitive를 가리키면 그 Primitive 변수를 color-mix()로 섞는다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then: dark 블록 두 곳에 나온다
       expect(
@@ -176,7 +176,7 @@ describe("buildTokens", () => {
 
     it("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css.match(/--gyeol-color-white:/g)).toHaveLength(1);
@@ -184,7 +184,7 @@ describe("buildTokens", () => {
 
     it("data-color-scheme 속성은 <html>에서만 Color Scheme을 바꾼다", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then: 모든 블록의 selector가 :root로 시작하므로 하위 요소의 속성은 아무 블록에도 맞지 않는다
       const selectors = [...css.matchAll(/^\s*([^\s@/*].*) \{$/gm)].map(
@@ -223,7 +223,7 @@ describe("buildTokens", () => {
 
     it("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {
       // given, when
-      const result = buildTokens(fixture("does-not-exist"));
+      const result = buildTokens(resolveFixturePath("does-not-exist"));
 
       // then
       await expect(result).rejects.toThrow("primitive.json");
@@ -234,7 +234,7 @@ describe("buildTokens", () => {
       const tokensDir = await mkdtemp(join(tmpdir(), "gyeol-tokens-"));
       onTestFinished(() => rm(tokensDir, { recursive: true, force: true }));
       await cp(
-        fixture("valid/primitive.json"),
+        resolveFixturePath("valid/primitive.json"),
         join(tokensDir, "primitive.json"),
       );
 
@@ -257,7 +257,9 @@ describe("buildTokens", () => {
             ink: { $value: "{color.black}" },
           },
         },
-        light: { "bg-surface": { $type: "color", $value: srgb(1, 1, 1) } },
+        light: {
+          "bg-surface": { $type: "color", $value: toSrgbColor(1, 1, 1) },
+        },
       });
 
       // when
@@ -299,7 +301,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -319,7 +321,7 @@ describe("buildTokens", () => {
           color: {
             ...MINIMAL.primitive.color,
             shade: {
-              $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+              $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 },
               $extensions: {
                 gyeol: { alias: { ref: "{color.black}", alpha: 0.5 } },
               },
@@ -329,7 +331,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -348,7 +350,7 @@ describe("buildTokens", () => {
           ...MINIMAL.primitive,
           color: {
             ...MINIMAL.primitive.color,
-            overlay: { $value: { ...srgb(0, 0, 0), alpha: 0.5 } },
+            overlay: { $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 } },
           },
         },
       });
@@ -365,13 +367,13 @@ describe("buildTokens", () => {
       const tokensDir = await createTokensDir({
         light: {
           ...MINIMAL.light,
-          "fg-default": { $type: "color", $value: srgb(0, 0, 0) },
+          "fg-default": { $type: "color", $value: toSrgbColor(0, 0, 0) },
         },
         dark: { ...MINIMAL.dark, "fg-default": MINIMAL.light["bg-surface"] },
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -390,7 +392,7 @@ describe("buildTokens", () => {
           ...MINIMAL.light,
           scrim: {
             $type: "color",
-            $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+            $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 },
             $extensions: { gyeol: { alias: { alpha: 0.5 } } },
           },
         },
@@ -401,7 +403,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -418,7 +420,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -435,7 +437,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -459,13 +461,13 @@ describe("buildTokens", () => {
           ...MINIMAL.primitive,
           color: {
             ...MINIMAL.primitive.color,
-            gray: { cool: { "900": { $value: srgb(0.1, 0.1, 0.1) } } },
+            gray: { cool: { "900": { $value: toSrgbColor(0.1, 0.1, 0.1) } } },
           },
         },
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -482,12 +484,12 @@ describe("buildTokens", () => {
       const tokensDir = await createTokensDir({
         primitive: {
           ...MINIMAL.primitive,
-          white: { $type: "color", $value: srgb(1, 1, 1) },
+          white: { $type: "color", $value: toSrgbColor(1, 1, 1) },
         },
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -506,7 +508,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -530,7 +532,7 @@ describe("buildTokens", () => {
           ...MINIMAL.primitive,
           color: {
             ...MINIMAL.primitive.color,
-            dark_gray: { $value: srgb(0.2, 0.2, 0.2) },
+            dark_gray: { $value: toSrgbColor(0.2, 0.2, 0.2) },
           },
         },
         light: {
@@ -544,7 +546,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -566,7 +568,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -594,7 +596,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -618,14 +620,14 @@ describe("buildTokens", () => {
           ...MINIMAL.primitive,
           color: {
             ...MINIMAL.primitive.color,
-            gray: { "900": { $value: srgb(0.1, 0.1, 0.1) } },
-            "gray-900": { $value: srgb(0.1, 0.1, 0.1) },
+            gray: { "900": { $value: toSrgbColor(0.1, 0.1, 0.1) } },
+            "gray-900": { $value: toSrgbColor(0.1, 0.1, 0.1) },
           },
         },
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -641,7 +643,7 @@ describe("buildTokens", () => {
       // given: Primitive의 display-p3와 hex 문자열, Semantic의 alias + 투명도에 적은 계산된 색
       const scrim = {
         $type: "color",
-        $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+        $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 },
         $extensions: {
           gyeol: { alias: { ref: "{color.black}", alpha: 0.5 } },
         },
@@ -665,7 +667,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -689,7 +691,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -707,7 +709,7 @@ describe("buildTokens", () => {
           "fg-muted": { $type: "color", $value: "{color}" },
           scrim: {
             $type: "color",
-            $value: { ...srgb(1, 1, 1), alpha: 0.5 },
+            $value: { ...toSrgbColor(1, 1, 1), alpha: 0.5 },
             $extensions: {
               gyeol: { alias: { ref: "{bg-missing}", alpha: 0.5 } },
             },
@@ -722,7 +724,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -759,7 +761,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -785,7 +787,7 @@ describe("buildTokens", () => {
           "fg-muted": { $type: "color", $value: "{fg-default}" },
           scrim: {
             $type: "color",
-            $value: { ...srgb(1, 1, 1), alpha: 0.5 },
+            $value: { ...toSrgbColor(1, 1, 1), alpha: 0.5 },
             $extensions: { gyeol: { alias: { ref: "{scrim}", alpha: 0.5 } } },
           },
         },
@@ -798,7 +800,7 @@ describe("buildTokens", () => {
       });
 
       // when
-      const violations = await getViolations(tokensDir);
+      const violations = await collectViolations(tokensDir);
 
       // then
       expect(violations).toEqual([
@@ -819,7 +821,7 @@ describe("buildTokens", () => {
   describe("전체 출력", () => {
     it("fixture의 CSS 출력 전체", async () => {
       // given, when
-      const { css } = await buildTokens(fixture("valid"));
+      const { css } = await buildTokens(resolveFixturePath("valid"));
 
       // then
       expect(css).toMatchInlineSnapshot(`

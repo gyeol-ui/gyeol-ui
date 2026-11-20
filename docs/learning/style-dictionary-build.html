@@ -840,7 +840,7 @@ const createColorSchemeFormat =
     selectors: SelectorChain;
   }): FormatFn =&gt;
   ({ dictionary }) =&gt;
-    colorSchemeBlock({
+    wrapInColorSchemeBlock({
       colorScheme,
       selectors,
       // ① 변수 줄: Style Dictionary가 들여쓰기 없는 --이름: 값; 줄을 만든다
@@ -854,7 +854,7 @@ const createColorSchemeFormat =
     });
 
 // build-tokens.helper.ts
-export function colorSchemeBlock({
+export function wrapInColorSchemeBlock({
   colorScheme,
   selectors,
   variables,
@@ -863,7 +863,7 @@ export function colorSchemeBlock({
   selectors: SelectorChain;
   variables: string;
 }): string {
-  const indent = indentAt(selectors.length);
+  const indent = formatIndent(selectors.length);
   // ② color-scheme 줄을 맨 앞에 넣고, 줄마다 중첩 깊이만큼 들여 쓴다
   const body = [`color-scheme: ${colorScheme};`, ...variables.split("\n")]
     .map((line) =&gt; `${indent}${line}`)
@@ -871,7 +871,7 @@ export function colorSchemeBlock({
   // ③ 안쪽 selector부터 감싼다
   const block = selectors.reduceRight(
     (content, selector, depth) =&gt;
-      `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
+      `${formatIndent(depth)}${selector} {\n${content}\n${formatIndent(depth)}}`,
     body,
   );
   // ④ 헤더 없이 블록만 돌려준다
@@ -891,7 +891,7 @@ export function colorSchemeBlock({
             </li>
             <li>
               <strong>color-scheme 줄과 들여쓰기</strong>
-              helper <code>colorSchemeBlock</code>이 맨 앞에
+              helper <code>wrapInColorSchemeBlock</code>이 맨 앞에
               <code>color-scheme: light;</code> 또는 <code>dark;</code>를
               붙이고, 줄마다 중첩 깊이만큼 들여 쓴다. selector가 둘이라 두
               단계(공백 4칸) 들여 쓴다.
@@ -918,9 +918,9 @@ export function colorSchemeBlock({
             </li>
           </ol>
           <p>
-            <code>colorSchemeBlock</code>이 어떤 입력을 어떤 블록으로 바꾸는지는
-            <code>scripts/build-tokens.helper.test.ts</code>에 입력과 출력
-            그대로 적혀 있다. 예를 들어 selector
+            <code>wrapInColorSchemeBlock</code>이 어떤 입력을 어떤 블록으로
+            바꾸는지는 <code>scripts/build-tokens.helper.test.ts</code>에 입력과
+            출력 그대로 적혀 있다. 예를 들어 selector
             <code>["@media (prefers-color-scheme: dark)", ':root:not(…)']</code
             >와 변수 줄
             <code>--gyeol-bg-surface: var(--gyeol-color-gray-900);</code>를
@@ -1022,7 +1022,7 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           <h3>2. 파일을 확인하고, 세 번 빌드해 이어 붙인다</h3>
           <pre><code class="language-ts" data-lines="2 11 13 23">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
   // ① 파일이 있는지 확인한다: 토큰 파일 경로를 만들고 셋 다 있는지 본다
-  const paths = tokenFilePaths(tokensDir);
+  const paths = resolveTokenFilePaths(tokensDir);
 
   // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
   // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
@@ -1051,8 +1051,8 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           <ol class="steps blue">
             <li>
               <strong>파일이 있는지 확인한다</strong>
-              helper <code>tokenFilePaths</code>가 <code>primitive.json</code>,
-              <code>semantic/light.json</code>,
+              helper <code>resolveTokenFilePaths</code>가
+              <code>primitive.json</code>, <code>semantic/light.json</code>,
               <code>semantic/dark.json</code>의 경로를 만들고,
               <code>access</code>로 셋 다 있는지 본다. 읽는 일은 Style
               Dictionary가 하는데 왜 확인만 따로 하는지는 바로 다음 절
@@ -1077,7 +1077,7 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
 
           <h3>3. Primitive: 지난 티켓과 같은 설정</h3>
           <pre><code class="language-ts" data-lines="3 8 9 14 15 17">/** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
-const cssPlatform = (files: File[]): PlatformConfig =&gt; ({
+const configureCssPlatform = (files: File[]): PlatformConfig =&gt; ({
   prefix: PREFIX,
   // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
   // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
@@ -1092,7 +1092,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
     source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
-      css: cssPlatform([{ format: "css/variables" }]),
+      css: configureCssPlatform([{ format: "css/variables" }]),
     },
   });
   return (await formatOutputs(sd)).join("");
@@ -1100,9 +1100,9 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           <p>
             Primitive와 Semantic 빌드가 함께 쓰는 플랫폼
             설정(<code>prefix</code>,
-            <code>transformGroup</code>)은 <code>cssPlatform</code>으로 뺐다.
-            Primitive 빌드는 기본 format <code>css/variables</code>를 그대로
-            써서, 파일 맨 위 헤더(<code>Do not edit directly…</code>)와
+            <code>transformGroup</code>)은 <code>configureCssPlatform</code>으로
+            뺐다. Primitive 빌드는 기본 format <code>css/variables</code>를
+            그대로 써서, 파일 맨 위 헤더(<code>Do not edit directly…</code>)와
             <code>:root</code> 블록을 만든다. 각 옵션이 하는 일은 아래 표와
             같다.
           </p>
@@ -1197,7 +1197,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
       formats: Object.fromEntries(formats.map((f) =&gt; [f.name, f.format])),
     },
     platforms: {
-      css: cssPlatform(
+      css: configureCssPlatform(
         formats.map(({ name }) =&gt; ({
           format: name,
           // ③ filter: source(Semantic)에서 읽은 토큰만 낸다
@@ -1461,8 +1461,9 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
             <li>
               <code>packages/tokens/scripts/build-tokens.helper.ts</code>와
               <code>build-tokens.helper.test.ts</code>: 순수 변환 함수
-              <code>colorSchemeBlock</code>, <code>tokenFilePaths</code>와, 그
-              입력과 출력을 보여 주는 테스트
+              <code>wrapInColorSchemeBlock</code>,
+              <code>resolveTokenFilePaths</code>와, 그 입력과 출력을 보여 주는
+              테스트
             </li>
             <li>
               <code>packages/tokens/scripts/build.ts</code>:

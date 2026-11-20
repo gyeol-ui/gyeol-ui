@@ -14,7 +14,7 @@ export interface TokenFilePaths {
 }
 
 /** 토큰 폴더 안의 토큰 파일 경로. Figma collection의 mode 하나가 파일 하나다 */
-export function tokenFilePaths(tokensDir: string): TokenFilePaths {
+export function resolveTokenFilePaths(tokensDir: string): TokenFilePaths {
   return {
     primitive: join(tokensDir, "primitive.json"),
     semantic: {
@@ -28,7 +28,7 @@ export function tokenFilePaths(tokensDir: string): TokenFilePaths {
  * "alias + 투명도"를 CSS 값으로 쓴다. 참조 대상 변수 `--{variable}`을 불투명도 `alpha`(0–1)만큼 남기고 투명하게 섞는다.
  * 참조 대상 변수를 가리키므로 Color Scheme이 바뀌어 대상의 색이 바뀌면 함께 바뀐다.
  */
-export function colorMix({
+export function formatColorMix({
   variable,
   alpha,
 }: {
@@ -40,13 +40,13 @@ export function colorMix({
   return `color-mix(in srgb, var(--${variable}) ${percent}%, transparent)`;
 }
 
-const indentAt = (depth: number): string => "  ".repeat(depth);
+const formatIndent = (depth: number): string => "  ".repeat(depth);
 
 /**
  * 들여쓰기 없는 변수 줄을 `selectors` 블록 안에 넣는다.
  * 맨 앞에 CSS color-scheme 줄을 넣고, 줄마다 중첩 깊이만큼 들여 쓰며, css/variables처럼 줄바꿈으로 끝낸다.
  */
-export function colorSchemeBlock({
+export function wrapInColorSchemeBlock({
   colorScheme,
   selectors,
   variables,
@@ -55,13 +55,13 @@ export function colorSchemeBlock({
   selectors: SelectorChain;
   variables: string;
 }): string {
-  const indent = indentAt(selectors.length);
+  const indent = formatIndent(selectors.length);
   const body = [`color-scheme: ${colorScheme};`, ...variables.split("\n")]
     .map((line) => `${indent}${line}`)
     .join("\n");
   const block = selectors.reduceRight(
     (content, selector, depth) =>
-      `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
+      `${formatIndent(depth)}${selector} {\n${content}\n${formatIndent(depth)}}`,
     body,
   );
   return `${block}\n`;

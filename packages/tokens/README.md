@@ -77,9 +77,9 @@ Semantic 색은 Color Scheme(light/dark)에 따라 바뀝니다. 아무것도 �
 ESM만 제공합니다. 지금은 모노레포 확인용 자리 표시 함수만 있습니다.
 
 ```ts
-import { packageName } from "@gyeol-ui/tokens";
+import { getPackageName } from "@gyeol-ui/tokens";
 
-packageName(); // "@gyeol-ui/tokens"
+getPackageName(); // "@gyeol-ui/tokens"
 ```
 
 ## 토큰 원본
@@ -138,4 +138,4 @@ TokenValidationError: 토큰 JSON이 규칙을 2곳에서 어겼다.
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |
 
-빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 파일을 쓰지 않고 CSS 텍스트를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다.
+빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다.
