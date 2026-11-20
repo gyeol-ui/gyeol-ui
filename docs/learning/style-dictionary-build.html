@@ -14,7 +14,6 @@
         <strong>목차</strong>
         <ol>
           <li><a href="#overview">한눈에 보기</a></li>
-          <li><a href="#color-scheme">Color Scheme 블록</a></li>
           <li><a href="#sd">Style Dictionary가 하는 일</a></li>
           <li><a href="#transforms">transform: 실제로 일하는 셋</a></li>
           <li><a href="#log">log.verbosity</a></li>
@@ -147,166 +146,6 @@
           </ul>
         </section>
 
-        <section id="color-scheme">
-          <h2>Color Scheme 블록</h2>
-          <p>
-            앞의 <code>tokens.css</code>에서 Semantic 블록은 세 개다. 어느
-            블록이 적용될지는 OS 설정과 <code>&lt;html&gt;</code>의
-            <code>data-color-scheme</code> 속성으로 정해진다.
-          </p>
-
-          <h3>어떤 블록이 적용되나</h3>
-          <p>
-            갈림길은 두 개다. OS(웹뷰라면 네이티브 앱)의 설정, 그리고
-            <code>&lt;html&gt;</code>의 <code>data-color-scheme</code> 속성이다.
-            경우는 모두 여섯 가지다. 아래 표는 실제 <code>tokens.css</code>를
-            Chrome에 넣고 경우마다 <code>&lt;html&gt;</code>의
-            <code>--gyeol-bg-surface</code>와 <code>color-scheme</code>을 읽은
-            결과다(light는 <code>#ffffff</code>, dark는 <code>#09090b</code>).
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>OS 설정</th>
-                  <th><code>&lt;html&gt;</code> 태그</th>
-                  <th>맞는 블록</th>
-                  <th>결과</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>light</td>
-                  <td><code>&lt;html&gt;</code></td>
-                  <td>light <code>:root</code></td>
-                  <td><span class="badge blue">light</span></td>
-                </tr>
-                <tr>
-                  <td>light</td>
-                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
-                  <td>light <code>:root</code></td>
-                  <td><span class="badge blue">light</span></td>
-                </tr>
-                <tr>
-                  <td>light</td>
-                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
-                  <td>
-                    light <code>:root</code>,
-                    <code>:root[data-color-scheme="dark"]</code>
-                    <small>명시도가 높은 속성 블록이 이긴다</small>
-                  </td>
-                  <td><span class="badge green">dark</span></td>
-                </tr>
-                <tr>
-                  <td>dark</td>
-                  <td><code>&lt;html&gt;</code></td>
-                  <td>
-                    light <code>:root</code>, media 블록
-                    <small>명시도가 높은 media 블록이 이긴다</small>
-                  </td>
-                  <td><span class="badge green">dark</span></td>
-                </tr>
-                <tr>
-                  <td>dark</td>
-                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
-                  <td>
-                    light <code>:root</code>
-                    <small
-                      >media 블록은
-                      <code>:not([data-color-scheme="light"])</code>에 걸려
-                      빠진다</small
-                    >
-                  </td>
-                  <td><span class="badge blue">light</span></td>
-                </tr>
-                <tr>
-                  <td>dark</td>
-                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
-                  <td>
-                    light <code>:root</code>, media 블록, 속성 블록
-                    <small>dark 두 블록의 내용이 같다</small>
-                  </td>
-                  <td><span class="badge green">dark</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>
-            정리하면 속성이 있으면 속성을, 없으면 OS 설정을 따른다.
-            <code>:not([data-color-scheme="light"])</code>는 "OS는 dark지만
-            사이트에서 light를 골랐다"는 경우를 위해 있다.
-          </p>
-
-          <h3>블록 순서와 명시도</h3>
-          <p>
-            한 요소에 여러 블록이 맞으면 명시도(selector의 점수)가 높은 쪽이
-            이긴다. 같으면 뒤에 나온 쪽이 이긴다.
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>selector</th>
-                  <th>명시도</th>
-                  <th>계산</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>:root</code></td>
-                  <td>(0,1,0)</td>
-                  <td>가상 클래스 1개</td>
-                </tr>
-                <tr>
-                  <td><code>:root:not([data-color-scheme="light"])</code></td>
-                  <td>(0,2,0)</td>
-                  <td>
-                    <code>:root</code> 1개 + <code>:not()</code> 안의 속성
-                    selector 1개
-                    <small><code>:not()</code> 자체는 점수가 없다</small>
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>:root[data-color-scheme="dark"]</code></td>
-                  <td>(0,2,0)</td>
-                  <td><code>:root</code> 1개 + 속성 selector 1개</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>
-            dark 블록은 둘 다 (0,2,0)이라 light <code>:root</code>(0,1,0)를 블록
-            순서와 관계없이 이긴다. 그래서 블록 순서를 바꿔도 결과가 같다.
-          </p>
-
-          <h3>속성은 &lt;html&gt;에서만 동작한다</h3>
-          <p>
-            블록의 selector가 모두 <code>:root</code>로 시작하므로,
-            <code>&lt;html&gt;</code>이 아닌 요소에 붙인 속성은 어느 블록에도
-            맞지 않는다. CSS 변수는 상속되므로 그 요소는
-            <code>&lt;html&gt;</code>의 값을 그대로 물려받는다. 위 여섯 경우
-            모두에서 <code>&lt;section data-color-scheme="dark"&gt;</code>와
-            <code>&lt;section data-color-scheme="light"&gt;</code>는
-            <code>&lt;html&gt;</code>과 같은 값이 나왔다.
-          </p>
-          <div class="callout">
-            <p>
-              페이지 일부만 다른 Color Scheme으로 바꾸는 것은 지원하지 않기로
-              했다. 처음에는 dark 속성 블록이
-              <code>[data-color-scheme="dark"]</code>여서 하위 요소에서
-              <code>dark</code>만 동작하고 <code>light</code>는 동작하지 않는
-              비대칭이 있었다. 모든 블록을 <code>:root</code>로 묶어 이 비대칭을
-              없앴다.
-            </p>
-          </div>
-          <p>
-            확인 방법: OS 설정은 페이지에서 바꿀 수 없어서, OS light는
-            <code>@media</code> 블록을 지운 CSS로, OS dark는
-            <code>@media (…) {</code> 감싸기만 벗긴 CSS로 확인했다. media 조건이
-            거짓일 때와 참일 때 브라우저가 보는 규칙과 같다.
-          </p>
-        </section>
-
         <section id="sd">
           <h2>Style Dictionary가 하는 일</h2>
           <p>
@@ -403,8 +242,7 @@
               Primitive는 빠진다.
               <pre><code class="language-json">// sd.formatPlatform("css")
 [{
-  "output": ":root {\n  --gyeol-bg-surface: var(--gyeol-color-white);\n  --gyeol-fg-default: var(--gyeol-color-gray-900);\n  --gyeol-ring-offset: var(--gyeol-bg-surface);\n}\n",
-  "destination": "light.css"
+  "output": ":root {\n  --gyeol-bg-surface: var(--gyeol-color-white);\n  --gyeol-fg-default: var(--gyeol-color-gray-900);\n  --gyeol-ring-offset: var(--gyeol-bg-surface);\n}\n"
 }]</code></pre>
               <p><code>output</code> 문자열을 펼치면 이렇다.</p>
               <pre><code class="language-css">:root {
@@ -718,7 +556,7 @@ await writeFile(join(generatedDir, "tokens.css"), css);</code></pre>
             <div class="pipe-row">
               <span class="pipe-label">합치기</span>
               <span class="pipe-val">이름 + 값</span>
-              <span class="pipe-fn green">colorSchemeFormat</span>
+              <span class="pipe-fn green">createColorSchemeFormat</span>
               <span class="pipe-val ok"
                 >--gyeol-bg-surface: var(--gyeol-color-white);</span
               >
@@ -913,7 +751,7 @@ await writeFile(join(generatedDir, "tokens.css"), css);</code></pre>
             짠다.
           </p>
           <pre><code class="language-ts" data-lines="14 35 39 45">// build-tokens.ts
-const colorSchemeFormat =
+const createColorSchemeFormat =
   ({
     colorScheme,
     selectors,
@@ -994,7 +832,8 @@ export function colorSchemeBlock({
             <code>["@media (prefers-color-scheme: dark)", ':root:not(…)']</code
             >와 변수 줄
             <code>--gyeol-bg-surface: var(--gyeol-color-gray-900);</code>를
-            넣으면 위 Color Scheme 블록의 media query 블록이 나온다.
+            넣으면 한눈에 보기의 <code>tokens.css</code>에 있는 media query
+            블록이 나온다.
           </p>
 
           <h3>format은 이름으로 등록한다</h3>
@@ -1082,9 +921,9 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
               <code>SCHEME_SELECTORS</code>는 Color Scheme마다 만들 CSS 블록의
               selector다. light는 블록 1개, dark는 블록 2개(OS 설정, 속성)다.
               <code>["@media …", ":root:not(…)"]</code>처럼 배열이면 앞의 것이
-              바깥, 뒤의 것이 안쪽인 중첩 블록이 된다. 이 selector가 경우마다
-              어떻게 적용되는지는 앞의
-              <a href="#color-scheme">Color Scheme 블록</a>에서 보았다.
+              바깥, 뒤의 것이 안쪽인 중첩 블록이 된다. 이 selector가
+              브라우저에서 어떻게 적용되는지는 패키지 README의 "Color Scheme
+              고르기"에 있다.
             </li>
           </ul>
 
@@ -1162,7 +1001,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
     log: { verbosity: "silent" },
     platforms: {
       css: cssPlatform([
-        { destination: "tokens.css", format: "css/variables" },
+        { format: "css/variables" },
       ]),
     },
   });
@@ -1229,18 +1068,6 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                   </td>
                 </tr>
                 <tr>
-                  <td><code>files[].destination</code></td>
-                  <td><code>"tokens.css"</code></td>
-                  <td>
-                    Style Dictionary가 파일을 기록할 경로
-                    <small
-                      ><code>formatPlatform</code>은 파일을 기록하지 않아서
-                      돌려받는 값에 이름표로만 붙는다. 실제 기록은
-                      <code>build.ts</code>가 한다</small
-                    >
-                  </td>
-                </tr>
-                <tr>
                   <td><code>files[].format</code></td>
                   <td><code>"css/variables"</code></td>
                   <td>
@@ -1253,7 +1080,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           </div>
 
           <h3>4. Semantic: Primitive를 함께 넘기고 Semantic만 낸다</h3>
-          <pre><code class="language-ts" data-lines="12 19 24 32">async function buildSemanticCss({
+          <pre><code class="language-ts" data-lines="12 19 24 31">async function buildSemanticCss({
   primitivePath,
   semanticPath,
   colorScheme,
@@ -1267,7 +1094,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
   // ① format: 블록마다 직접 만든 format을 이름 붙여 만든다
   const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) =&gt; ({
     name: `gyeol/css/${colorScheme}-${index}`,
-    format: colorSchemeFormat({ colorScheme, selectors }),
+    format: createColorSchemeFormat({ colorScheme, selectors }),
   }));
 
   const sd = new StyleDictionary({
@@ -1282,7 +1109,6 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
     platforms: {
       css: cssPlatform(
         formats.map(({ name }) =&gt; ({
-          destination: `${name}.css`,
           format: name,
           // ③ filter: source(Semantic)에서 읽은 토큰만 낸다
           filter: (token: TransformedToken) =&gt; token.isSource,
@@ -1309,7 +1135,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                 <tr>
                   <td>① format</td>
                   <td>
-                    <code>colorSchemeFormat(…)</code>을
+                    <code>createColorSchemeFormat(…)</code>을
                     <code>hooks.formats</code>에 이름 붙여 등록
                   </td>
                   <td>
@@ -1447,53 +1273,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           <h2>점검 문제</h2>
           <div class="quiz">
             <p class="quiz-q">
-              1. OS 설정이 dark이고 <code>&lt;html&gt;</code>에 속성이 없다.
-              카드 하나를 밝게 보이려고
-              <code>&lt;div data-color-scheme="light"&gt;</code>로 감쌌다.
-              카드의 <code>--gyeol-bg-surface</code>는?
-            </p>
-            <p class="quiz-context">
-              <a href="#color-scheme">Color Scheme 블록</a>의 "속성은
-              &lt;html&gt;에서만 동작한다"로 생각한다.
-            </p>
-            <details class="quiz-answer">
-              <summary>답 보기</summary>
-              <div class="fold-body">
-                <p>
-                  dark 값 그대로다. 모든 블록의 selector가
-                  <code>:root</code>로 시작해서 <code>&lt;div&gt;</code>에 맞는
-                  블록이 없고, 변수는 <code>&lt;html&gt;</code>의 dark 값을
-                  물려받는다. 페이지 일부의 Color Scheme을 바꾸는 것은 지원하지
-                  않는다.
-                </p>
-              </div>
-            </details>
-          </div>
-          <div class="quiz">
-            <p class="quiz-q">
-              2. 사이트의 다크 모드 토글이 <code>&lt;html&gt;</code>의 속성을
-              <code>"light"</code>로 바꿨다. 사용자의 OS는 dark다. 어느 블록이
-              적용되나?
-            </p>
-            <p class="quiz-context">
-              <a href="#color-scheme">Color Scheme 블록</a>의 여섯 경우 표로
-              생각한다.
-            </p>
-            <details class="quiz-answer">
-              <summary>답 보기</summary>
-              <div class="fold-body">
-                <p>
-                  light <code>:root</code>만 적용된다. media 조건은 참이지만
-                  <code>:root:not([data-color-scheme="light"])</code>가
-                  <code>&lt;html&gt;</code>에 맞지 않아 media 블록이 빠진다.
-                  속성 블록은 <code>"dark"</code>일 때만 맞는다.
-                </p>
-              </div>
-            </details>
-          </div>
-          <div class="quiz">
-            <p class="quiz-q">
-              3. 아래처럼 바꾸면 <code>--gyeol-spacing-4</code>는 무엇이 되나?
+              1. 아래처럼 바꾸면 <code>--gyeol-spacing-4</code>는 무엇이 되나?
             </p>
             <p class="quiz-context">
               <a href="#transforms">transform</a>의 표로 생각한다.
@@ -1514,7 +1294,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           </div>
           <div class="quiz">
             <p class="quiz-q">
-              4. 나중에 <code>{ "value": 1.5, "unit": "rem" }</code> 토큰을
+              2. 나중에 <code>{ "value": 1.5, "unit": "rem" }</code> 토큰을
               허용하게 되면, <code>size/px</code>와 <code>size/rem</code> 중
               무엇이 맞게 내나?
             </p>
@@ -1535,7 +1315,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           </div>
           <div class="quiz">
             <p class="quiz-q">
-              5. <code>buildSemanticCss</code>에서 <code>filter</code> 줄을
+              3. <code>buildSemanticCss</code>에서 <code>filter</code> 줄을
               지우면 <code>tokens.css</code>는 어떻게 되나?
             </p>
             <p class="quiz-context">
@@ -1558,7 +1338,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           </div>
           <div class="quiz">
             <p class="quiz-q">
-              6. <code>buildTokens</code>에 오타 난 폴더를 넘기면 어떻게 되나?
+              4. <code>buildTokens</code>에 오타 난 폴더를 넘기면 어떻게 되나?
               <code>access</code> 확인을 지우면?
             </p>
             <p class="quiz-context">
@@ -1637,9 +1417,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
             <code>size/px</code> 구현과
             <code>lib/common/transform-utils/default-filters.js</code>의
             <code>isColor</code>로, format을 이름으로만 찾는 동작은
-            <code>lib/transform/config.js</code>로도 확인했다. Color Scheme
-            블록의 여섯 경우는 생성된 <code>tokens.css</code>를 Chrome에 넣고
-            <code>getComputedStyle</code>로 읽어 확인했다.
+            <code>lib/transform/config.js</code>로도 확인했다.
           </p>
           <ul>
             <li>
@@ -1706,27 +1484,6 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                 >Design Tokens Format Module 2025.10</a
               >: group의 정의(§6.1), group의 <code>$type</code> 상속(§5.2.2,
               §6.3)
-            </li>
-            <li>
-              MDN,
-              <a
-                href="https://developer.mozilla.org/en-US/docs/Web/CSS/color-scheme"
-                ><code>color-scheme</code></a
-              >: 브라우저 기본 UI를 Color Scheme에 맞춰 그리는 속성
-            </li>
-            <li>
-              MDN,
-              <a
-                href="https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme"
-                ><code>prefers-color-scheme</code></a
-              >: OS 설정을 읽는 media 기능
-            </li>
-            <li>
-              MDN,
-              <a
-                href="https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity"
-                >Specificity</a
-              >: 명시도 계산, <code>:not()</code>은 인자의 명시도를 쓴다
             </li>
           </ul>
         </section>
