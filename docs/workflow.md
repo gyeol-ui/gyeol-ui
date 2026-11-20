@@ -23,6 +23,7 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 | 결정 | 적는 곳 |
 |---|---|
 | Phase 전체에 걸친 규칙 | [`docs/architecture.md`](./architecture.md) |
+| 코드를 쓰고 리뷰할 때의 규칙(함수 인자 모양 등) | [`docs/coding-standards.md`](./coding-standards.md) |
 | 스펙 하나 안에서 끝나는 결정 | spec 이슈의 Implementation Decisions |
 | 되돌리기 어렵고, 맥락 없이는 의아하고, 실제 trade-off가 있었던 결정의 이유 | [`docs/adr/`](./adr/) |
 | 용어 | [`GLOSSARY.md`](../GLOSSARY.md) |

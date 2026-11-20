@@ -1,6 +1,6 @@
 # gyeol-ui
 
-Figma의 디자인 언어와 코드의 결을 맞추는 오픈소스 React 디자인 시스템. 방향은 `docs/roadmap.md`, 구조와 도구 같은 만드는 방법의 규칙은 `docs/architecture.md`, 용어는 `GLOSSARY.md`, 의사결정 기록은 `docs/adr/`를 따른다. 작업 절차와 역할 분담은 `docs/workflow.md`를 따른다.
+Figma의 디자인 언어와 코드의 결을 맞추는 오픈소스 React 디자인 시스템. 방향은 `docs/roadmap.md`, 구조와 도구 같은 만드는 방법의 규칙은 `docs/architecture.md`, 코드를 쓰고 리뷰할 때의 규칙은 `docs/coding-standards.md`, 용어는 `GLOSSARY.md`, 의사결정 기록은 `docs/adr/`를 따른다. 작업 절차와 역할 분담은 `docs/workflow.md`를 따른다.
 
 ## Agent skills
 
