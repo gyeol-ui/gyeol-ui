@@ -52,16 +52,16 @@ interface AliasWithAlpha {
 }
 
 /**
- * "alias + 투명도" 토큰인지 판단한다. 토큰 원본에 `gyeol.alias`가 있으면 그렇다.
- *
- * `gyeol.alias`는 변환 전 원본(`original`)에서 읽는다. Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에,
- * 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
+ * 토큰 원본의 `gyeol.alias`를 읽는다. 변환 전 원본(`original`)에서 읽는 이유:
+ * Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에, 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
  */
-const isAliasWithAlpha = (token: TransformedToken): boolean => {
-  const alias: AliasWithAlpha | undefined =
-    token.original.$extensions?.gyeol?.alias;
-  return alias !== undefined;
-};
+const getAliasWithAlpha = (
+  token: TransformedToken,
+): AliasWithAlpha | undefined => token.original.$extensions?.gyeol?.alias;
+
+/** "alias + 투명도" 토큰인지 판단한다. 토큰 원본에 `gyeol.alias`가 있으면 그렇다 */
+const isAliasWithAlpha = (token: TransformedToken): boolean =>
+  getAliasWithAlpha(token) !== undefined;
 
 /**
  * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
@@ -73,9 +73,8 @@ function applyColorMix({
   token: TransformedToken;
   dictionary: Dictionary;
 }): TransformedToken {
-  if (!isAliasWithAlpha(token)) return token;
-  // 변환 전 원본에서 읽는다. 이유는 isAliasWithAlpha에 적었다
-  const alias: AliasWithAlpha = token.original.$extensions?.gyeol?.alias;
+  const alias = getAliasWithAlpha(token);
+  if (!alias) return token;
   // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
   const target = dictionary.unfilteredTokenMap?.get(alias.ref);
   // 참조 대상이 없으면 Style Dictionary가 ref를 풀다가 먼저 실패하므로 여기에는 오지 않는다. 타입을 좁히는 가드다
