@@ -50,7 +50,13 @@ const indentAt = (depth: number): string => "  ".repeat(depth);
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
  */
 const colorSchemeFormat =
-  (colorScheme: ColorScheme, selectors: SelectorChain): FormatFn =>
+  ({
+    colorScheme,
+    selectors,
+  }: {
+    colorScheme: ColorScheme;
+    selectors: SelectorChain;
+  }): FormatFn =>
   ({ dictionary }) => {
     const indent = indentAt(selectors.length);
     const variables = formattedVariables({
@@ -74,7 +80,13 @@ const readJson = async (path: string): Promise<DesignTokens> =>
   JSON.parse(await readFile(path, "utf8"));
 
 /** `tokens` 안에 `path` 경로의 토큰이 있는지 */
-const hasTokenAt = (tokens: DesignTokens, path: readonly string[]): boolean => {
+const hasTokenAt = ({
+  tokens,
+  path,
+}: {
+  tokens: DesignTokens;
+  path: readonly string[];
+}): boolean => {
   let node: unknown = tokens;
   for (const key of path) {
     if (typeof node !== "object" || node === null || !(key in node)) {
@@ -131,16 +143,20 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise<string> {
  * 출력에서 빠진 Primitive를 가리킨다는 "filtered out token references" 경고가 나지만 의도한 동작이고,
  * 로그를 silent로 꺼서 보이지 않는다.
  */
-async function buildSemanticCss(
-  primitive: DesignTokens,
-  semantic: DesignTokens,
-  colorScheme: ColorScheme,
-): Promise<string[]> {
+async function buildSemanticCss({
+  primitive,
+  semantic,
+  colorScheme,
+}: {
+  primitive: DesignTokens;
+  semantic: DesignTokens;
+  colorScheme: ColorScheme;
+}): Promise<string[]> {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
   const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) => ({
     name: `gyeol/css/${colorScheme}-${index}`,
-    format: colorSchemeFormat(colorScheme, selectors),
+    format: colorSchemeFormat({ colorScheme, selectors }),
   }));
 
   // Semantic에는 범주 그룹이 없어 최상위 이름이 Primitive 범주(color, spacing, radius)와 겹치지 않는다
@@ -155,7 +171,8 @@ async function buildSemanticCss(
         formats.map(({ name }) => ({
           destination: `${name}.css`,
           format: name,
-          filter: (token: TransformedToken) => hasTokenAt(semantic, token.path),
+          filter: (token: TransformedToken) =>
+            hasTokenAt({ tokens: semantic, path: token.path }),
         })),
       ),
     },
@@ -179,7 +196,7 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
       join(tokensDir, "semantic", `${colorScheme}.json`),
     );
     cssBlocks.push(
-      ...(await buildSemanticCss(primitive, semantic, colorScheme)),
+      ...(await buildSemanticCss({ primitive, semantic, colorScheme })),
     );
   }
   return { css: cssBlocks.join("\n").trimEnd() + "\n" };

@@ -201,7 +201,7 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
       join(tokensDir, "semantic", `${colorScheme}.json`),
     );
     cssBlocks.push(
-      ...(await buildSemanticCss(primitive, semantic, colorScheme)),
+      ...(await buildSemanticCss({ primitive, semantic, colorScheme })),
     );
   }
   return { css: cssBlocks.join("\n").trimEnd() + "\n" };
@@ -342,34 +342,10 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
           </div>
 
           <h3>4. Semantic: Primitive를 함께 넘기고 Semantic만 낸다</h3>
-          <pre><code class="language-ts" data-lines="6-9 13 16 21 24">async function buildSemanticCss(
-  primitive: DesignTokens,
-  semantic: DesignTokens,
-  colorScheme: ColorScheme,
-): Promise&lt;string[]&gt; {
-  const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) =&gt; ({
-    name: `gyeol/css/${colorScheme}-${index}`,
-    format: colorSchemeFormat(colorScheme, selectors),
-  }));
-
-  // Semantic에는 범주 그룹이 없어 최상위 이름이 Primitive 범주(color, spacing, radius)와 겹치지 않는다
-  const sd = new StyleDictionary({
-    tokens: { ...primitive, ...semantic },
-    log: { verbosity: "silent" },
-    hooks: {
-      formats: Object.fromEntries(formats.map((f) =&gt; [f.name, f.format])),
-    },
-    platforms: {
-      css: cssPlatform(
-        formats.map(({ name }) =&gt; ({
-          destination: `${name}.css`,
-          format: name,
-          filter: (token: TransformedToken) =&gt; hasTokenAt(semantic, token.path),
-        })),
-      ),
-    },
-  });
-  return formatOutputs(sd);
+          <pre><code class="language-ts" data-lines="12-15 19 22 28-30">async function buildSemanticCss({
+  primitive,
+  semantic,
+  colorScheme,
 }</code></pre>
           <p>Primitive 빌드와 다른 곳은 세 군데다.</p>
           <div class="table-wrap">
@@ -395,7 +371,11 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
                 </tr>
                 <tr>
                   <td>filter</td>
-                  <td><code>hasTokenAt(semantic, token.path)</code></td>
+                  <td>
+                    <code
+                      >hasTokenAt({ tokens: semantic, path: token.path })</code
+                    >
+                  </td>
                   <td>
                     함께 넘긴 Primitive가 Semantic 블록에 다시 나오지 않게,
                     Semantic 파일에 있는 토큰만 낸다
@@ -639,7 +619,9 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
             </div>
             <div class="compare-card green">
               <div class="compare-title">
-                filter 있음<small>hasTokenAt(semantic, token.path)</small>
+                filter 있음<small
+                  >hasTokenAt({ tokens: semantic, path: token.path })</small
+                >
               </div>
               <pre><code class="language-css">:root {
   --gyeol-bg-surface: var(--gyeol-color-white);
@@ -939,8 +921,14 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
             도우미 함수 <code>formattedVariables</code>에 맡기고, 나머지를 직접
             짠다.
           </p>
-          <pre><code class="language-ts" data-lines="5-11 12 13-17">const colorSchemeFormat =
-  (colorScheme: ColorScheme, selectors: SelectorChain): FormatFn =&gt;
+          <pre><code class="language-ts" data-lines="11-17 18 19-23">const colorSchemeFormat =
+  ({
+    colorScheme,
+    selectors,
+  }: {
+    colorScheme: ColorScheme;
+    selectors: SelectorChain;
+  }): FormatFn =&gt;
   ({ dictionary }) =&gt; {
     const indent = indentAt(selectors.length);
     const variables = formattedVariables({
