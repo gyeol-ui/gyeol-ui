@@ -46,7 +46,7 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
  * 변수 줄은 Style Dictionary가 만들고, 블록으로 감싸는 일은 colorSchemeBlock이 한다.
  */
-const colorSchemeFormat =
+const createColorSchemeFormat =
   ({
     colorScheme,
     selectors,
@@ -96,9 +96,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise<string> {
     source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
-      css: cssPlatform([
-        { destination: "tokens.css", format: "css/variables" },
-      ]),
+      css: cssPlatform([{ format: "css/variables" }]),
     },
   });
   return (await formatOutputs(sd)).join("");
@@ -125,7 +123,7 @@ async function buildSemanticCss({
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
   const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) => ({
     name: `gyeol/css/${colorScheme}-${index}`,
-    format: colorSchemeFormat({ colorScheme, selectors }),
+    format: createColorSchemeFormat({ colorScheme, selectors }),
   }));
 
   const sd = new StyleDictionary({
@@ -138,7 +136,6 @@ async function buildSemanticCss({
     platforms: {
       css: cssPlatform(
         formats.map(({ name }) => ({
-          destination: `${name}.css`,
           format: name,
           filter: (token: TransformedToken) => token.isSource,
         })),

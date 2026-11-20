@@ -1092,9 +1092,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
     source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
-      css: cssPlatform([
-        { format: "css/variables" },
-      ]),
+      css: cssPlatform([{ format: "css/variables" }]),
     },
   });
   return (await formatOutputs(sd)).join("");
