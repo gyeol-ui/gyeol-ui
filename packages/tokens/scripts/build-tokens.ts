@@ -1,6 +1,7 @@
 import { access } from "node:fs/promises";
 import StyleDictionary from "style-dictionary";
 import type {
+  Dictionary,
   File,
   FormatFn,
   PlatformConfig,
@@ -9,6 +10,7 @@ import type {
 import { formattedVariables } from "style-dictionary/utils";
 import {
   COLOR_SCHEMES,
+  colorMix,
   colorSchemeBlock,
   tokenFilePaths,
   type ColorScheme,
@@ -41,6 +43,67 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
   ],
 };
 
+/** Figma의 "alias + 투명도". `$extensions.gyeol.alias`에 적는다 */
+interface AliasWithAlpha {
+  /** 참조 대상. 예: `{bg-surface}` */
+  ref: string;
+  /** 불투명도(0–1) */
+  alpha: number;
+}
+
+/**
+ * 토큰 원본의 `gyeol.alias`를 읽는다. 변환 전 원본(`original`)에서 읽는 이유:
+ * Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에, 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
+ */
+const getAliasWithAlpha = (
+  token: TransformedToken,
+): AliasWithAlpha | undefined => token.original.$extensions?.gyeol?.alias;
+
+/** "alias + 투명도" 토큰인지 판단한다. 토큰 원본에 `gyeol.alias`가 있으면 그렇다 */
+const isAliasWithAlpha = (token: TransformedToken): boolean =>
+  getAliasWithAlpha(token) !== undefined;
+
+/**
+ * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
+ */
+function applyColorMix({
+  token,
+  dictionary,
+}: {
+  token: TransformedToken;
+  dictionary: Dictionary;
+}): TransformedToken {
+  const alias = getAliasWithAlpha(token);
+  if (!alias) return token;
+  // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
+  const target = dictionary.unfilteredTokenMap?.get(alias.ref);
+  // 참조 대상이 없으면 Style Dictionary가 ref를 풀다가 먼저 실패하므로 여기에는 오지 않는다. 타입을 좁히는 가드다
+  if (!target) {
+    throw new Error(
+      `${token.path.join(".")}: gyeol.alias의 참조 대상 ${alias.ref}가 없다`,
+    );
+  }
+  return {
+    ...token,
+    // 출력할 값. 원본 $value에 적힌 계산된 색(rgba) 대신 참조 대상 변수를 섞는다
+    $value: colorMix({ variable: target.name, alpha: alias.alpha }),
+    // 블록 안에서 변수 줄의 순서를 다른 참조 토큰과 같은 규칙으로 정하려고 원본 값을 ref로 바꾼다.
+    //
+    // formattedVariables는 outputReferences를 켜면, 참조되는 토큰을 참조하는 토큰보다 앞에 두도록 정렬한다(sortByReference).
+    //   예: --gyeol-ring-offset: var(--gyeol-bg-surface)는 --gyeol-bg-surface 뒤에 나온다.
+    // 이때 토큰이 참조하는지는 original.$value가 "{bg-surface}" 같은 참조 문자열인지로만 판단한다.
+    //
+    // "alias + 투명도"의 original.$value는 계산된 색 객체다. 그대로 두면 참조가 없는 토큰으로 여겨,
+    // 참조하는 토큰 모두보다 앞, 즉 블록 맨 앞으로 옮겨진다.
+    //   예: light 블록에서 --gyeol-alpha-90이 자기가 가리키는 --gyeol-bg-surface보다 먼저 나온다.
+    // ref를 넣으면 bg-surface를 참조하는 토큰으로 여겨 다른 참조 토큰처럼 원본 순서를 지키고, bg-surface 뒤에 나온다.
+    //
+    // 출력 값은 바뀌지 않는다. outputReferences 함수가 이 토큰을 빼므로 ref가 var()로 바뀌지 않고 위의 $value가 나온다.
+    // CSS 변수는 선언 순서와 관계없이 풀리므로 순서는 읽기 위한 것이다.
+    original: { ...token.original, $value: alias.ref },
+  };
+}
+
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
@@ -60,8 +123,14 @@ const createColorSchemeFormat =
       selectors,
       variables: formattedVariables({
         format: "css",
-        dictionary,
-        outputReferences: true,
+        dictionary: {
+          ...dictionary,
+          allTokens: dictionary.allTokens.map((token) =>
+            applyColorMix({ token, dictionary }),
+          ),
+        },
+        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 applyColorMix가 만든 color-mix()를 그대로 낸다
+        outputReferences: (token) => !isAliasWithAlpha(token),
         usesDtcg: true,
         formatting: { indentation: "" },
       }),

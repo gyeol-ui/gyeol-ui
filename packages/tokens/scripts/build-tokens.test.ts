@@ -86,6 +86,30 @@ describe("buildTokens", () => {
       expect(css).toContain("--gyeol-ring-offset: var(--gyeol-bg-surface);");
     });
 
+    it("alias + 투명도가 Semantic을 가리키면 그 Semantic 변수를 color-mix()로 섞는다", async () => {
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
+
+      // then: light와 dark 블록 세 곳 모두에 나온다
+      expect(
+        css.match(
+          /--gyeol-alpha-90: color-mix\(in srgb, var\(--gyeol-bg-surface\) 90%, transparent\);/g,
+        ),
+      ).toHaveLength(3);
+    });
+
+    it("alias + 투명도가 Primitive를 가리키면 그 Primitive 변수를 color-mix()로 섞는다", async () => {
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
+
+      // then: dark 블록 두 곳에 나온다
+      expect(
+        css.match(
+          /--gyeol-border-default: color-mix\(in srgb, var\(--gyeol-color-white\) 10%, transparent\);/g,
+        ),
+      ).toHaveLength(2);
+    });
+
     it("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async () => {
       // given, when
       const { css } = await buildTokens(fixture("valid"));
@@ -125,6 +149,12 @@ describe("buildTokens", () => {
       expect(css).toMatch(/--gyeol-radius-md: \S+;/);
       expect(css).toMatch(/--gyeol-bg-surface: var\(--gyeol-\S+\);/);
       expect(css).toContain("--gyeol-ring-offset: var(--gyeol-bg-surface);");
+      expect(css).toContain(
+        "--gyeol-alpha-90: color-mix(in srgb, var(--gyeol-bg-surface) 90%, transparent);",
+      );
+      expect(css).toMatch(
+        /--gyeol-border-default: color-mix\(in srgb, var\(--gyeol-color-\S+\) \d+%, transparent\);/,
+      );
     });
 
     it("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {
@@ -177,7 +207,9 @@ describe("buildTokens", () => {
           color-scheme: light;
           --gyeol-bg-surface: var(--gyeol-color-white);
           --gyeol-fg-default: var(--gyeol-color-gray-900);
+          --gyeol-border-default: var(--gyeol-color-gray-900);
           --gyeol-ring-offset: var(--gyeol-bg-surface);
+          --gyeol-alpha-90: color-mix(in srgb, var(--gyeol-bg-surface) 90%, transparent);
         }
 
         @media (prefers-color-scheme: dark) {
@@ -185,7 +217,9 @@ describe("buildTokens", () => {
             color-scheme: dark;
             --gyeol-bg-surface: var(--gyeol-color-gray-900);
             --gyeol-fg-default: var(--gyeol-color-white);
+            --gyeol-border-default: color-mix(in srgb, var(--gyeol-color-white) 10%, transparent);
             --gyeol-ring-offset: var(--gyeol-bg-surface);
+            --gyeol-alpha-90: color-mix(in srgb, var(--gyeol-bg-surface) 90%, transparent);
           }
         }
 
@@ -193,7 +227,9 @@ describe("buildTokens", () => {
           color-scheme: dark;
           --gyeol-bg-surface: var(--gyeol-color-gray-900);
           --gyeol-fg-default: var(--gyeol-color-white);
+          --gyeol-border-default: color-mix(in srgb, var(--gyeol-color-white) 10%, transparent);
           --gyeol-ring-offset: var(--gyeol-bg-surface);
+          --gyeol-alpha-90: color-mix(in srgb, var(--gyeol-bg-surface) 90%, transparent);
         }
         "
       `);

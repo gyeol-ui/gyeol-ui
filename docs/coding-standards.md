@@ -41,6 +41,26 @@ hasTokenAt({ tokens: semantic, path: token.path });
 
 시그니처를 바깥에서 정한 콜백은 그 시그니처를 따른다. 예: `Array.prototype.map`, `reduce`의 콜백, Style Dictionary의 `FormatFn`, Vitest의 테스트 함수.
 
+## 함수를 만드는 함수
+
+함수를 돌려주는 함수는 이름을 `create`로 시작한다. 호출하는 코드만 읽어도 돌려받는 것이 값이 아니라 함수라는 것이 보이게 하려는 것이다.
+
+```ts
+const createColorSchemeFormat =
+  ({ colorScheme, selectors }: { … }): FormatFn =>
+  ({ dictionary }) => …;
+```
+
+바깥에서 함수를 요구할 때(예: Style Dictionary의 format)만 함수를 만든다. 인자를 미리 받아 둘 이유가 없으면 커링하지 않고 인자를 한 번에 받는 함수로 쓴다. 콜백 자리에서는 화살표 함수로 감싸 부른다.
+
+```ts
+// 하지 않는다: map에 넘기려고 dictionary를 먼저 받는다
+dictionary.allTokens.map(withColorMix(dictionary));
+
+// 한다
+dictionary.allTokens.map((token) => applyColorMix({ token, dictionary }));
+```
+
 ## 테스트
 
 테스트는 Vitest로 쓰고, 소스 옆에 `*.test.ts`로 둔다.
