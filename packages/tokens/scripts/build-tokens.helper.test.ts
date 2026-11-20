@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatColorMix,
+  formatTsModule,
   wrapInColorSchemeBlock,
   resolveTokenFilePaths,
 } from "./build-tokens.helper.ts";
@@ -131,5 +132,54 @@ describe("resolveTokenFilePaths", () => {
         dark: "/repo/tokens/semantic/dark.json",
       },
     });
+  });
+});
+
+// 토큰 목록을 TS 소스로 쓴다
+describe("formatTsModule", () => {
+  it("경로를 camelCase 키의 중첩 객체로 쓰고 as const를 붙인다", () => {
+    // given, when
+    const ts = formatTsModule({
+      tokens: [
+        { path: ["bg-surface"], value: "var(--gyeol-bg-surface)" },
+        { path: ["alpha", "90"], value: "var(--gyeol-alpha-90)" },
+        { path: ["spacing", "4"], value: "var(--gyeol-spacing-4)" },
+      ],
+      values: {
+        light: [{ path: ["bg-surface"], value: "#ffffff" }],
+        dark: [{ path: ["bg-surface"], value: "#18181b" }],
+      },
+    });
+
+    // then
+    expect(ts).toBe(
+      [
+        "/**",
+        " * Do not edit directly, this file was auto-generated.",
+        " */",
+        "",
+        "/** CSS 변수 참조. Semantic 색과 spacing, radius를 담는다 */",
+        "export const tokens = {",
+        '  bgSurface: "var(--gyeol-bg-surface)",',
+        "  alpha: {",
+        '    90: "var(--gyeol-alpha-90)",',
+        "  },",
+        "  spacing: {",
+        '    4: "var(--gyeol-spacing-4)",',
+        "  },",
+        "} as const;",
+        "",
+        "/** Color Scheme별 Semantic의 실제 색. CSS 밖(예: 상태바 색을 브리지로 넘길 때)에서 쓴다 */",
+        "export const values = {",
+        "  light: {",
+        '    bgSurface: "#ffffff",',
+        "  },",
+        "  dark: {",
+        '    bgSurface: "#18181b",',
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
   });
 });

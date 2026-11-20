@@ -4,7 +4,7 @@ gyeol-ui의 Design Token 패키지입니다.
 
 > 🚧 아직 npm에 배포하지 않았습니다.
 >
-> 지금 들어 있는 토큰은 Figma에서 내보낸 것이 아니라 **손으로 쓴 임시 씨앗 토큰**입니다. 값과 이름은 Figma 플러그인이 토큰을 내보내기 시작하면 바뀔 수 있습니다. 지금은 Primitive Token(색, 간격, 모서리)과 Semantic Token만 있고, TS 상수는 [토큰 파이프라인 스펙](https://github.com/gyeol-ui/gyeol-ui/issues/16)에서 이어서 추가합니다.
+> 지금 들어 있는 토큰은 Figma에서 내보낸 것이 아니라 **손으로 쓴 임시 씨앗 토큰**입니다. 값과 이름은 Figma 플러그인이 토큰을 내보내기 시작하면 바뀔 수 있습니다. 지금은 Primitive Token(색, 간격, 모서리)과 Semantic Token만 있습니다.
 
 ## 사용법
 
@@ -74,13 +74,42 @@ Semantic 색은 Color Scheme(light/dark)에 따라 바뀝니다. 아무것도 �
 
 ### TS
 
-ESM만 제공합니다. 지금은 모노레포 확인용 자리 표시 함수만 있습니다.
+ESM만 제공합니다. `tokens`와 `values`를 내보냅니다. 키는 토큰 경로의 이름 칸을 camelCase로 바꾼 것이고(`bg-surface` → `bgSurface`), 그룹은 중첩 객체입니다(`alpha.90` → `alpha[90]`).
+
+#### `tokens`: CSS 변수 참조
+
+CSS 변수를 가리키는 `var()` 문자열입니다. 인라인 스타일처럼 TS에서 CSS 값을 쓸 때 이름을 틀리지 않게 해 줍니다. 값은 CSS 변수이므로 `tokens.css`를 함께 import해야 하고, Color Scheme이 바뀌면 CSS처럼 따라 바뀝니다.
+
+```tsx
+import "@gyeol-ui/tokens/tokens.css";
+import { tokens } from "@gyeol-ui/tokens";
+
+tokens.bgSurface; // "var(--gyeol-bg-surface)"
+tokens.alpha[90]; // "var(--gyeol-alpha-90)"
+tokens.spacing[4]; // "var(--gyeol-spacing-4)"
+tokens.radius.md; // "var(--gyeol-radius-md)"
+
+<div style={{ background: tokens.bgSurface, padding: tokens.spacing[4] }} />;
+```
+
+범위는 CSS의 공개 API와 같습니다: Semantic 색, `spacing`, `radius`. Primitive 색은 들어 있지 않습니다. 값은 리터럴 타입이라 `typeof tokens.bgSurface`는 `"var(--gyeol-bg-surface)"`입니다.
+
+#### `values`: Color Scheme별 실제 색
+
+CSS 밖에서 실제 색이 필요할 때 씁니다. 예를 들어 웹뷰에서 네이티브 앱의 상태바 색을 브리지로 넘길 때입니다. Semantic 색만 들어 있고, 값은 hex(`#rrggbb`)이거나, 투명도가 있으면 `rgba()`입니다.
 
 ```ts
-import { getPackageName } from "@gyeol-ui/tokens";
+import { values } from "@gyeol-ui/tokens";
 
-getPackageName(); // "@gyeol-ui/tokens"
+const colorScheme = matchMedia("(prefers-color-scheme: dark)").matches
+  ? "dark"
+  : "light";
+
+values[colorScheme].bgSurface; // light: "#ffffff", dark: "#09090b"
+values.dark.alpha[90]; // "rgba(9, 9, 11, 0.9)"
 ```
+
+투명도가 있는 값은 토큰 원본의 `$value`에 적힌 계산된 색("alias + 투명도", 아래 "토큰 원본" 참고)입니다. `values`는 빌드할 때 정해진 문자열이라 Color Scheme이 바뀌어도 스스로 바뀌지 않습니다. 지금 Color Scheme에 맞는 쪽을 직접 고르세요.
 
 ## 토큰 원본
 
@@ -133,9 +162,9 @@ TokenValidationError: 토큰 JSON이 규칙을 2곳에서 어겼다.
 
 | 명령 | 하는 일 |
 |---|---|
-| `pnpm build` | Style Dictionary로 `generated/tokens.css`를 만들고, tsdown으로 `dist/`에 ESM과 타입 선언을 만들며 `tokens.css`를 복사한다 |
+| `pnpm build` | Style Dictionary로 `generated/tokens.css`와 `generated/index.ts`를 만들고, tsdown으로 `generated/index.ts`에서 `dist/`에 ESM과 타입 선언을 만들며 `tokens.css`를 복사한다 |
 | `pnpm lint` | oxlint로 코드를 검사한다 |
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |
 
-빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다.
+빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트와 TS 소스를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 `generated/index.ts`를 패키지 진입점으로 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다. TS 소스를 쓰는 순수 함수 `formatTsModule`은 [`scripts/build-tokens.helper.ts`](./scripts/build-tokens.helper.ts)에 있습니다.

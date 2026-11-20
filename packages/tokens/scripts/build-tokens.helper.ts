@@ -1,5 +1,6 @@
 // build-tokens.ts가 쓰는 순수 변환 함수다. 입력과 출력은 build-tokens.helper.test.ts에서 볼 수 있다.
 import { join } from "node:path";
+import { camelCase } from "change-case";
 
 export const COLOR_SCHEMES = ["light", "dark"] as const;
 
@@ -41,6 +42,95 @@ export function formatColorMix({
 }
 
 const formatIndent = (depth: number): string => "  ".repeat(depth);
+
+/** TS 객체로 낼 토큰 하나. `path`는 토큰 경로이고 `value`는 낼 문자열이다 */
+export interface TsEntry {
+  path: readonly string[];
+  value: string;
+}
+
+/** 키를 camelCase로 바꾼 토큰 경로를 따라 중첩한 객체. 잎은 낼 문자열이다 */
+type TsTree = Map<string, string | TsTree>;
+
+/** 토큰 목록을 경로대로 중첩한다 */
+function toTsTree(entries: readonly TsEntry[]): TsTree {
+  const root: TsTree = new Map();
+  for (const { path, value } of entries) {
+    // 이름 칸(kebab-case)을 camelCase 키로 바꾼다(`bg-surface` → `bgSurface`).
+    // 옵션은 Style Dictionary의 name/camel transform과 같게 두어 숫자 앞에 `_`를 넣지 않는다(`gray-900` → `gray900`)
+    const keys = path.map((name) =>
+      camelCase(name, { mergeAmbiguousCharacters: true }),
+    );
+    const leafKey = keys.at(-1);
+    // 토큰 경로는 비어 있지 않다. 타입을 좁히는 가드다
+    if (leafKey === undefined) continue;
+    let node = root;
+    for (const key of keys.slice(0, -1)) {
+      const child = node.get(key);
+      const group: TsTree = child instanceof Map ? child : new Map();
+      node.set(key, group);
+      node = group;
+    }
+    node.set(leafKey, value);
+  }
+  return root;
+}
+
+/** 식별자나 0 이상의 정수면 따옴표 없이, 아니면 따옴표로 쓴다 */
+const formatTsKey = (key: string): string =>
+  /^[A-Za-z_$][\w$]*$/.test(key) || /^(0|[1-9]\d*)$/.test(key)
+    ? key
+    : JSON.stringify(key);
+
+/** 중첩한 객체를 TS 객체 리터럴로 쓴다. `depth`는 닫는 괄호의 들여쓰기 깊이다 */
+function formatTsObject({
+  tree,
+  depth,
+}: {
+  tree: TsTree;
+  depth: number;
+}): string {
+  const lines = [...tree].map(
+    ([key, value]) =>
+      `${formatIndent(depth + 1)}${formatTsKey(key)}: ${
+        typeof value === "string"
+          ? JSON.stringify(value)
+          : formatTsObject({ tree: value, depth: depth + 1 })
+      },`,
+  );
+  return `{\n${lines.join("\n")}\n${formatIndent(depth)}}`;
+}
+
+/**
+ * `@gyeol-ui/tokens`의 TS 소스를 쓴다. 경로의 이름 칸은 camelCase 키가 되고, 그룹은 중첩 객체가 된다.
+ * `as const`로 값의 리터럴 타입을 남긴다.
+ */
+export function formatTsModule({
+  tokens,
+  values,
+}: {
+  tokens: readonly TsEntry[];
+  values: Record<ColorScheme, readonly TsEntry[]>;
+}): string {
+  const valuesTree: TsTree = new Map(
+    COLOR_SCHEMES.map((colorScheme) => [
+      colorScheme,
+      toTsTree(values[colorScheme]),
+    ]),
+  );
+  return [
+    "/**",
+    " * Do not edit directly, this file was auto-generated.",
+    " */",
+    "",
+    "/** CSS 변수 참조. Semantic 색과 spacing, radius를 담는다 */",
+    `export const tokens = ${formatTsObject({ tree: toTsTree(tokens), depth: 0 })} as const;`,
+    "",
+    "/** Color Scheme별 Semantic의 실제 색. CSS 밖(예: 상태바 색을 브리지로 넘길 때)에서 쓴다 */",
+    `export const values = ${formatTsObject({ tree: valuesTree, depth: 0 })} as const;`,
+    "",
+  ].join("\n");
+}
 
 /**
  * 들여쓰기 없는 변수 줄을 `selectors` 블록 안에 넣는다.

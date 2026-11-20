@@ -10,16 +10,21 @@ import { formattedVariables } from "style-dictionary/utils";
 import {
   COLOR_SCHEMES,
   formatColorMix,
+  formatTsModule,
   wrapInColorSchemeBlock,
   resolveTokenFilePaths,
   type ColorScheme,
   type SelectorChain,
+  type TokenFilePaths,
+  type TsEntry,
 } from "./build-tokens.helper.ts";
 import { validateTokens } from "./validate-tokens.ts";
 
 export interface BuildResult {
   /** `tokens.css`의 내용 */
   css: string;
+  /** 패키지 TS 진입점(`tokens`, `values`)의 소스 */
+  ts: string;
 }
 
 const PREFIX = "gyeol";
@@ -136,8 +141,49 @@ const createColorSchemeFormat =
       }),
     });
 
-/** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
-const configureCssPlatform = (files: File[]): PlatformConfig => ({
+/**
+ * TS `tokens`에 넣을 토큰 목록을 낸다. 값은 CSS 변수 참조다.
+ * Style Dictionary의 JS/TS 기본 format은 참조를 내지 못하므로 직접 만든다.
+ * 문자열이 아니라 목록을 돌려주고, Primitive와 Semantic의 목록을 합쳐 TS로 쓰는 일은 formatTsModule이 한다.
+ */
+const listTsReferences: FormatFn = ({ dictionary }): TsEntry[] =>
+  dictionary.allTokens.map((token) => ({
+    path: token.path,
+    value: `var(--${token.name})`,
+  }));
+
+/**
+ * Semantic 토큰의 실제 색을 꺼낸다. Style Dictionary가 참조를 끝까지 풀어 `color/css`로 바꾼 `$value`(hex나 rgba())다.
+ * "alias + 투명도"는 원본 `$value`에 Figma가 계산한 색(alpha 포함)이 적혀 있으므로 그 색이 rgba()로 나온다.
+ */
+function getSemanticValue(token: TransformedToken): string {
+  const value: unknown = token.$value;
+  if (typeof value !== "string") {
+    throw new Error(`${token.path.join(".")}: 실제 색을 풀지 못했다`);
+  }
+  return value;
+}
+
+/** TS `values`의 Color Scheme 하나에 넣을 토큰 목록을 낸다. 값은 실제 색이다 */
+const listTsValues: FormatFn = ({ dictionary }): TsEntry[] =>
+  dictionary.allTokens.map((token) => ({
+    path: token.path,
+    value: getSemanticValue(token),
+  }));
+
+/** TS 토큰 목록을 내는 format의 등록 이름 */
+const TS_FORMAT = {
+  references: "gyeol/ts/references",
+  values: "gyeol/ts/values",
+} as const;
+
+const TS_FORMATS = {
+  [TS_FORMAT.references]: listTsReferences,
+  [TS_FORMAT.values]: listTsValues,
+};
+
+/** Primitive와 Semantic 빌드가 함께 쓰는 플랫폼 설정. CSS와 TS 모두 이름과 값을 같은 transform으로 만든다. 만들 파일 목록만 다르다 */
+const configurePlatform = (files: File[]): PlatformConfig => ({
   prefix: PREFIX,
   // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
   // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
@@ -157,37 +203,68 @@ const formatOutputs = async (sd: StyleDictionary): Promise<string[]> => {
   });
 };
 
+/** `ts` 플랫폼의 파일마다 TS format이 낸 토큰 목록을 모은다 */
+const collectTsEntries = async (sd: StyleDictionary): Promise<TsEntry[][]> => {
+  const files = await sd.formatPlatform("ts");
+  return files.map(({ output }) => {
+    if (!Array.isArray(output)) {
+      throw new Error("Style Dictionary가 TS 토큰 목록을 만들지 못했다");
+    }
+    return output;
+  });
+};
+
 /**
  * Primitive를 `:root`에 실제 값으로 낸다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
+ * TS `tokens`에는 색이 아닌 Primitive(spacing, radius)만 참조로 낸다. Primitive 색은 공개 API가 아니다.
  */
-async function buildPrimitiveCss(primitivePath: string): Promise<string> {
+async function buildPrimitive(
+  primitivePath: string,
+): Promise<{ css: string; tsReferences: TsEntry[] }> {
   const sd = new StyleDictionary({
     source: [primitivePath],
     log: { verbosity: "silent" },
+    hooks: { formats: TS_FORMATS },
     platforms: {
-      css: configureCssPlatform([{ format: "css/variables" }]),
+      css: configurePlatform([{ format: "css/variables" }]),
+      ts: configurePlatform([
+        {
+          format: TS_FORMAT.references,
+          filter: (token: TransformedToken) => token.$type !== "color",
+        },
+      ]),
     },
   });
-  return (await formatOutputs(sd)).join("");
+  const [css] = await formatOutputs(sd);
+  const [tsReferences] = await collectTsEntries(sd);
+  if (css === undefined || tsReferences === undefined) {
+    throw new Error("Style Dictionary가 Primitive 결과를 만들지 못했다");
+  }
+  return { css, tsReferences };
 }
 
+/** source(Semantic)에서 읽은 토큰만 고른다. include로 넘긴 Primitive는 빠진다 */
+const isSourceToken = (token: TransformedToken): boolean => token.isSource;
+
 /**
- * Color Scheme 하나의 Semantic을 `var()` 참조로 낸다.
+ * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 낸다.
  *
  * Primitive는 include로 참조를 풀 대상으로만 넘긴다. include로 읽은 토큰도 기본으로는 출력되므로,
  * filter로 source(Semantic)에서 읽은 토큰(isSource)만 낸다.
  * 출력에서 빠진 Primitive를 가리킨다는 "filtered out token references" 경고가 나지만 의도한 동작이고,
  * 로그를 silent로 꺼서 보이지 않는다.
  */
-async function buildSemanticCss({
-  primitivePath,
-  semanticPath,
+async function buildSemantic({
+  paths,
   colorScheme,
 }: {
-  primitivePath: string;
-  semanticPath: string;
+  paths: TokenFilePaths;
   colorScheme: ColorScheme;
-}): Promise<string[]> {
+}): Promise<{
+  cssBlocks: string[];
+  tsReferences: TsEntry[];
+  tsValues: TsEntry[];
+}> {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
   const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) => ({
@@ -196,27 +273,40 @@ async function buildSemanticCss({
   }));
 
   const sd = new StyleDictionary({
-    include: [primitivePath],
-    source: [semanticPath],
+    include: [paths.primitive],
+    source: [paths.semantic[colorScheme]],
     log: { verbosity: "silent" },
     hooks: {
-      formats: Object.fromEntries(formats.map((f) => [f.name, f.format])),
+      formats: {
+        ...Object.fromEntries(formats.map((f) => [f.name, f.format])),
+        ...TS_FORMATS,
+      },
     },
     platforms: {
-      css: configureCssPlatform(
+      css: configurePlatform(
         formats.map(({ name }) => ({
           format: name,
-          filter: (token: TransformedToken) => token.isSource,
+          filter: isSourceToken,
+        })),
+      ),
+      ts: configurePlatform(
+        [TS_FORMAT.references, TS_FORMAT.values].map((format) => ({
+          format,
+          filter: isSourceToken,
         })),
       ),
     },
   });
-  return formatOutputs(sd);
+  const [tsReferences, tsValues] = await collectTsEntries(sd);
+  if (tsReferences === undefined || tsValues === undefined) {
+    throw new Error("Style Dictionary가 Semantic 결과를 만들지 못했다");
+  }
+  return { cssBlocks: await formatOutputs(sd), tsReferences, tsValues };
 }
 
 /**
  * 토큰 폴더(`primitive.json`, `semantic/light.json`, `semantic/dark.json`이 들어 있는 폴더)를 읽어
- * CSS 텍스트를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
+ * CSS 텍스트와 TS 소스를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
   // Style Dictionary에 넘기기 전에 토큰 파일을 직접 읽어 검증 규칙을 검사한다. 위반이 있으면 모두 모아 던진다.
@@ -226,15 +316,25 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
 
   const paths = resolveTokenFilePaths(tokensDir);
 
-  const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
-  for (const colorScheme of COLOR_SCHEMES) {
-    cssBlocks.push(
-      ...(await buildSemanticCss({
-        primitivePath: paths.primitive,
-        semanticPath: paths.semantic[colorScheme],
-        colorScheme,
-      })),
-    );
-  }
-  return { css: cssBlocks.join("\n").trimEnd() + "\n" };
+  const primitive = await buildPrimitive(paths.primitive);
+  const semantic = {
+    light: await buildSemantic({ paths, colorScheme: "light" }),
+    dark: await buildSemantic({ paths, colorScheme: "dark" }),
+  };
+
+  const css = [
+    primitive.css,
+    ...COLOR_SCHEMES.flatMap((colorScheme) => semantic[colorScheme].cssBlocks),
+  ];
+  return {
+    css: css.join("\n").trimEnd() + "\n",
+    ts: formatTsModule({
+      // light와 dark의 Semantic 이름은 검증 규칙(semantic-names-match)으로 같으므로 참조는 light에서 가져온다
+      tokens: [...semantic.light.tsReferences, ...primitive.tsReferences],
+      values: {
+        light: semantic.light.tsValues,
+        dark: semantic.dark.tsValues,
+      },
+    }),
+  };
 }
