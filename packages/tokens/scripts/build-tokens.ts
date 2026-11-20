@@ -55,8 +55,13 @@ interface AliasWithAlpha {
  * 토큰 원본의 `gyeol.alias`를 읽는다. 변환 전 원본(`original`)에서 읽는 이유:
  * Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에, 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
  */
-const aliasWithAlpha = (token: TransformedToken): AliasWithAlpha | undefined =>
-  token.original.$extensions?.gyeol?.alias;
+const getAliasWithAlpha = (
+  token: TransformedToken,
+): AliasWithAlpha | undefined => token.original.$extensions?.gyeol?.alias;
+
+/** "alias + 투명도" 토큰인지 판단한다. 토큰 원본에 `gyeol.alias`가 있으면 그렇다 */
+const isAliasWithAlpha = (token: TransformedToken): boolean =>
+  getAliasWithAlpha(token) !== undefined;
 
 /**
  * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
@@ -68,7 +73,7 @@ function applyColorMix({
   token: TransformedToken;
   dictionary: Dictionary;
 }): TransformedToken {
-  const alias = aliasWithAlpha(token);
+  const alias = getAliasWithAlpha(token);
   if (!alias) return token;
   // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
   const target = dictionary.unfilteredTokenMap?.get(alias.ref);
@@ -125,7 +130,7 @@ const createColorSchemeFormat =
           ),
         },
         // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 applyColorMix가 만든 color-mix()를 그대로 낸다
-        outputReferences: (token) => !aliasWithAlpha(token),
+        outputReferences: (token) => !isAliasWithAlpha(token),
         usesDtcg: true,
         formatting: { indentation: "" },
       }),
