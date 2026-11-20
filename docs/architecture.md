@@ -59,7 +59,7 @@ tools/
   - `Component`: 필요할 때만 만든다
 - 토큰 파일은 DTCG 2025.10 형식으로 쓰고 Style Dictionary로 빌드한다. collection의 mode 하나를 파일 하나로 두고(`packages/tokens/tokens/primitive.json`, `semantic/light.json`, `semantic/dark.json`), Color Scheme마다 따로 빌드한다.
 - 토큰 빌드는 아래 규칙을 검사하고, 어기면 실패한다.
-  - Primitive는 실제 값만 둔다. alias와 투명도를 쓰지 않는다.
+  - Primitive는 실제 값만 둔다. alias와 투명도 확장("alias + 투명도")을 쓰지 않는다. 색 값 자체의 `alpha`는 실제 값이므로 허용한다.
   - Semantic은 모든 칸이 Primitive나 다른 Semantic을 가리키는 alias다. 투명도는 허용하고, 타입은 색만 허용한다.
   - 경로는 최대 3단계, 이름은 kebab-case다. 모든 토큰의 CSS 변수 이름이 서로 다르다. 색은 `srgb`, dimension은 `px`다. 참조 대상이 존재한다.
 - 토큰 원본은 플랫폼 중립으로 설계한다. 이름, 구조, 타입은 Figma와 DTCG 기준으로 정하고, 플랫폼 관례(CSS 변수 이름, Tailwind 네임스페이스 등)는 출력 변환에서만 다룬다.
