@@ -3,6 +3,10 @@ import { packageName } from "./index.ts";
 
 describe("packageName", () => {
   it("패키지 이름을 돌려준다", () => {
-    expect(packageName()).toBe("@gyeol-ui/tokens");
+    // when
+    const name = packageName();
+
+    // then
+    expect(name).toBe("@gyeol-ui/tokens");
   });
 });
