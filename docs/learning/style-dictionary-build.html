@@ -158,13 +158,15 @@
           </p>
 
           <h3>1. Color Scheme과 블록의 selector</h3>
-          <pre><code class="language-ts" data-lines="1 9-17">const COLOR_SCHEMES = ["light", "dark"] as const;
+          <pre><code class="language-ts" data-lines="2 11 12">// build-tokens.helper.ts
+export const COLOR_SCHEMES = ["light", "dark"] as const;
 
-type ColorScheme = (typeof COLOR_SCHEMES)[number];
+export type ColorScheme = (typeof COLOR_SCHEMES)[number];
 
 /** 바깥에서 안쪽 순서로 중첩하는 selector 목록. 예: `["@media …", ":root"]` */
-type SelectorChain = readonly string[];
+export type SelectorChain = readonly string[];
 
+// build-tokens.ts
 const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
   light: [[":root"]],
   dark: [
@@ -178,9 +180,10 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           <ul>
             <li>
               <code>COLOR_SCHEMES</code>는 빌드할 Color Scheme의 목록이자 CSS에
-              내는 순서다. <code>ColorScheme</code> 타입(<code
-                >"light" | "dark"</code
-              >)도 이 배열에서 끌어내서, 목록을 한 곳에만 적는다.
+              내는 순서다. 다른 helper도 쓰므로
+              <code>build-tokens.helper.ts</code>에 둔다.
+              <code>ColorScheme</code> 타입(<code>"light" | "dark"</code>)도 이
+              배열에서 끌어내서, 목록을 한 곳에만 적는다.
             </li>
             <li>
               <code>SCHEME_SELECTORS</code>는 Color Scheme마다 만들 CSS 블록의
@@ -193,23 +196,21 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           </ul>
 
           <h3>2. 파일을 확인하고, 세 번 빌드해 이어 붙인다</h3>
-          <pre><code class="language-ts" data-lines="2 9 12 13 15 22">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
-  const primitivePath = join(tokensDir, "primitive.json");
-  const semanticPath = (colorScheme: ColorScheme): string =&gt;
-    join(tokensDir, "semantic", `${colorScheme}.json`);
+          <pre><code class="language-ts" data-lines="2 7 10 11 13 20">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
+  const paths = tokenFilePaths(tokensDir);
 
   // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
   // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
-  for (const path of [primitivePath, ...COLOR_SCHEMES.map(semanticPath)]) {
+  for (const path of [paths.primitive, ...Object.values(paths.semantic)]) {
     await access(path);
   }
 
-  const cssBlocks = [await buildPrimitiveCss(primitivePath)];
+  const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
   for (const colorScheme of COLOR_SCHEMES) {
     cssBlocks.push(
       ...(await buildSemanticCss({
-        primitivePath,
-        semanticPath: semanticPath(colorScheme),
+        primitivePath: paths.primitive,
+        semanticPath: paths.semantic[colorScheme],
         colorScheme,
       })),
     );
@@ -220,8 +221,9 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           <ol class="steps blue">
             <li>
               <strong>파일이 있는지 확인한다</strong>
-              <code>primitive.json</code>, <code>semantic/light.json</code>,
-              <code>semantic/dark.json</code>의 경로를 만들고
+              helper <code>tokenFilePaths</code>가 <code>primitive.json</code>,
+              <code>semantic/light.json</code>,
+              <code>semantic/dark.json</code>의 경로를 만들고,
               <code>access</code>로 셋 다 있는지 본다. 읽는 일은 Style
               Dictionary가 하는데 왜 확인만 따로 하는지는
               <a href="#tokens-option">파일이 없을 때</a>에 있다.
@@ -977,7 +979,8 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
             도우미 함수 <code>formattedVariables</code>에 맡기고, 나머지를 직접
             짠다.
           </p>
-          <pre><code class="language-ts" data-lines="11-17 18 19-23">const colorSchemeFormat =
+          <pre><code class="language-ts" data-lines="14 19 34 37">// build-tokens.ts
+const colorSchemeFormat =
   ({
     colorScheme,
     selectors,
@@ -985,35 +988,53 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
     colorScheme: ColorScheme;
     selectors: SelectorChain;
   }): FormatFn =&gt;
-  ({ dictionary }) =&gt; {
-    const indent = indentAt(selectors.length);
-    const variables = formattedVariables({
-      format: "css",
-      dictionary,
-      outputReferences: true,
-      usesDtcg: true,
-      formatting: { indentation: indent },
+  ({ dictionary }) =&gt;
+    colorSchemeBlock({
+      colorScheme,
+      selectors,
+      variables: formattedVariables({
+        format: "css",
+        dictionary,
+        outputReferences: true,
+        usesDtcg: true,
+        formatting: { indentation: "" },
+      }),
     });
-    const body = `${indent}color-scheme: ${colorScheme};\n${variables}`;
-    const block = selectors.reduceRight(
-      (content, selector, depth) =&gt;
-        `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
-      body,
-    );
-    // css/variables처럼 줄바꿈으로 끝낸다
-    return `${block}\n`;
-  };</code></pre>
+
+// build-tokens.helper.ts
+export function colorSchemeBlock({
+  colorScheme,
+  selectors,
+  variables,
+}: {
+  colorScheme: ColorScheme;
+  selectors: SelectorChain;
+  variables: string;
+}): string {
+  const indent = indentAt(selectors.length);
+  const body = [`color-scheme: ${colorScheme};`, ...variables.split("\n")]
+    .map((line) =&gt; `${indent}${line}`)
+    .join("\n");
+  const block = selectors.reduceRight(
+    (content, selector, depth) =&gt;
+      `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
+    body,
+  );
+  return `${block}\n`;
+}</code></pre>
           <ol class="steps green">
             <li>
               <strong>변수 줄</strong>
-              <code>formattedVariables</code>가 <code>--이름: 값;</code> 줄을
-              만든다. <code>outputReferences: true</code>라 참조는
-              <code>var()</code>로 나온다. 중첩 깊이만큼 들여 쓴다.
+              <code>formattedVariables</code>가 들여쓰기 없는
+              <code>--이름: 값;</code> 줄을 만든다.
+              <code>outputReferences: true</code>라 참조는 <code>var()</code>로
+              나온다. 여기까지가 Style Dictionary가 하는 일이다.
             </li>
             <li>
-              <strong>color-scheme 줄</strong>
-              맨 앞에 <code>color-scheme: light;</code> 또는
-              <code>dark;</code>를 붙인다.
+              <strong>color-scheme 줄과 들여쓰기</strong>
+              helper <code>colorSchemeBlock</code>이 맨 앞에
+              <code>color-scheme: light;</code> 또는 <code>dark;</code>를
+              붙이고, 줄마다 중첩 깊이만큼 들여 쓴다.
             </li>
             <li>
               <strong>selector로 감싸기</strong>
@@ -1028,6 +1049,15 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
               Primitive 블록(파일 맨 위)에 한 번만 나온다.
             </li>
           </ol>
+          <p>
+            <code>colorSchemeBlock</code>이 어떤 입력을 어떤 블록으로 바꾸는지는
+            <code>scripts/build-tokens.helper.test.ts</code>에 입력과 출력
+            그대로 적혀 있다. 예를 들어 selector
+            <code>["@media (prefers-color-scheme: dark)", ':root:not(…)']</code
+            >와 변수 줄
+            <code>--gyeol-bg-surface: var(--gyeol-color-gray-900);</code>를
+            넣으면 위 Color Scheme 블록의 media query 블록이 나온다.
+          </p>
 
           <h3>format은 이름으로 등록한다</h3>
           <p>
@@ -1786,6 +1816,12 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
             <li>
               <code>packages/tokens/scripts/build-tokens.ts</code>: 이 노트가
               설명하는 <code>buildTokens</code>
+            </li>
+            <li>
+              <code>packages/tokens/scripts/build-tokens.helper.ts</code>와
+              <code>build-tokens.helper.test.ts</code>: 순수 변환 함수
+              <code>colorSchemeBlock</code>, <code>tokenFilePaths</code>와, 그
+              입력과 출력을 보여 주는 테스트
             </li>
             <li>
               <code>packages/tokens/scripts/build.ts</code>:
