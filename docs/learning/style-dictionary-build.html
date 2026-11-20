@@ -910,7 +910,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
               <thead>
                 <tr>
                   <th>OS 설정</th>
-                  <th><code>&lt;html&gt;</code> 속성</th>
+                  <th><code>&lt;html&gt;</code> 태그</th>
                   <th>맞는 블록</th>
                   <th>결과</th>
                 </tr>
@@ -918,19 +918,19 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
               <tbody>
                 <tr>
                   <td>light</td>
-                  <td>없음</td>
+                  <td><code>&lt;html&gt;</code></td>
                   <td>light <code>:root</code></td>
                   <td><span class="badge blue">light</span></td>
                 </tr>
                 <tr>
                   <td>light</td>
-                  <td><code>"light"</code></td>
+                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
                   <td>light <code>:root</code></td>
                   <td><span class="badge blue">light</span></td>
                 </tr>
                 <tr>
                   <td>light</td>
-                  <td><code>"dark"</code></td>
+                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
                   <td>
                     light <code>:root</code>,
                     <code>:root[data-color-scheme="dark"]</code>
@@ -940,7 +940,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                 </tr>
                 <tr>
                   <td>dark</td>
-                  <td>없음</td>
+                  <td><code>&lt;html&gt;</code></td>
                   <td>
                     light <code>:root</code>, media 블록
                     <small>명시도가 높은 media 블록이 이긴다</small>
@@ -949,7 +949,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                 </tr>
                 <tr>
                   <td>dark</td>
-                  <td><code>"light"</code></td>
+                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
                   <td>
                     light <code>:root</code>
                     <small
@@ -962,7 +962,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                 </tr>
                 <tr>
                   <td>dark</td>
-                  <td><code>"dark"</code></td>
+                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
                   <td>
                     light <code>:root</code>, media 블록, 속성 블록
                     <small>dark 두 블록의 내용이 같다</small>
