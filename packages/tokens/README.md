@@ -109,7 +109,7 @@ values[colorScheme].bgSurface; // light: "#ffffff", dark: "#09090b"
 values.dark.alpha[90]; // "rgba(9, 9, 11, 0.9)"
 ```
 
-투명도가 있는 값은 CSS의 `color-mix(in srgb, 색 N%, transparent)`와 같게 계산합니다: 가리키는 색의 RGB는 그대로 두고 불투명도에 N%를 곱합니다. `values`는 빌드할 때 정해진 문자열이라 Color Scheme이 바뀌어도 스스로 바뀌지 않습니다. 지금 Color Scheme에 맞는 쪽을 직접 고르세요.
+투명도가 있는 값은 토큰 원본의 `$value`에 적힌 계산된 색("alias + 투명도", 아래 "토큰 원본" 참고)입니다. `values`는 빌드할 때 정해진 문자열이라 Color Scheme이 바뀌어도 스스로 바뀌지 않습니다. 지금 Color Scheme에 맞는 쪽을 직접 고르세요.
 
 ## 토큰 원본
 
@@ -167,4 +167,4 @@ TokenValidationError: 토큰 JSON이 규칙을 2곳에서 어겼다.
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |
 
-빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트와 TS 소스를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 `generated/index.ts`를 패키지 진입점으로 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다. TS 소스를 쓰는 순수 함수(`formatTsModule`, `formatAlphaColor`)는 [`scripts/build-tokens.helper.ts`](./scripts/build-tokens.helper.ts)에 있습니다.
+빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트와 TS 소스를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 `generated/index.ts`를 패키지 진입점으로 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다. TS 소스를 쓰는 순수 함수 `formatTsModule`은 [`scripts/build-tokens.helper.ts`](./scripts/build-tokens.helper.ts)에 있습니다.

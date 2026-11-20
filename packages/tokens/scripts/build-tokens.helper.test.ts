@@ -1,7 +1,6 @@
 // 헬퍼의 입력과 출력을 보여 주는 문서용 테스트다. 기대값은 손으로 쓴 결과 그대로다.
 import { describe, expect, it } from "vitest";
 import {
-  formatAlphaColor,
   formatColorMix,
   formatTsModule,
   toCamelCase,
@@ -134,46 +133,6 @@ describe("resolveTokenFilePaths", () => {
         dark: "/repo/tokens/semantic/dark.json",
       },
     });
-  });
-});
-
-// alias + 투명도의 실제 색을 rgba()로 쓴다
-describe("formatAlphaColor", () => {
-  it("hex 색: RGB는 그대로 두고 불투명도를 alpha로 둔다", () => {
-    // given, when
-    const value = formatAlphaColor({ color: "#18181b", alpha: 0.9 });
-
-    // then
-    expect(value).toBe("rgba(24, 24, 27, 0.9)");
-  });
-
-  it("rgba() 색: 원래 불투명도에 alpha를 곱한다", () => {
-    // given, when
-    const value = formatAlphaColor({
-      color: "rgba(0, 0, 0, 0.5)",
-      alpha: 0.9,
-    });
-
-    // then
-    expect(value).toBe("rgba(0, 0, 0, 0.45)");
-  });
-
-  it("불투명도는 부동소수점 오차 없이 쓴다", () => {
-    // given, when: 0.7 * 0.1은 0.06999999999999999이다
-    const value = formatAlphaColor({
-      color: "rgba(255, 255, 255, 0.7)",
-      alpha: 0.1,
-    });
-
-    // then
-    expect(value).toBe("rgba(255, 255, 255, 0.07)");
-  });
-
-  it("hex나 rgba()가 아니면 실패한다", () => {
-    // given, when, then
-    expect(() => formatAlphaColor({ color: "white", alpha: 0.5 })).toThrow(
-      "white: hex나 rgba() 색이 아니다",
-    );
   });
 });
 

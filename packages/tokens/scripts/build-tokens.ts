@@ -9,7 +9,6 @@ import type {
 import { formattedVariables } from "style-dictionary/utils";
 import {
   COLOR_SCHEMES,
-  formatAlphaColor,
   formatColorMix,
   formatTsModule,
   wrapInColorSchemeBlock,
@@ -154,27 +153,22 @@ const listTsReferences: FormatFn = ({ dictionary }): TsEntry[] =>
   }));
 
 /**
- * Semantic 토큰의 실제 색을 쓴다. Style Dictionary가 참조를 끝까지 풀어 `color/css`로 바꾼 값(hex나 rgba())이다.
- * "alias + 투명도"는 원본 `$value`에 적힌 계산된 색 대신, CSS의 color-mix()와 같게 참조 대상의 색에 불투명도를 곱한다.
+ * Semantic 토큰의 실제 색을 꺼낸다. Style Dictionary가 참조를 끝까지 풀어 `color/css`로 바꾼 `$value`(hex나 rgba())다.
+ * "alias + 투명도"는 원본 `$value`에 Figma가 계산한 색(alpha 포함)이 적혀 있으므로 그 색이 rgba()로 나온다.
  */
-function formatSemanticValue(token: TransformedToken): string {
-  const alias = readAliasWithAlpha(token);
-  // Style Dictionary는 $extensions의 ref도 풀어 참조 대상의 색(color/css를 거친 값)으로 바꿔 둔다.
-  // 참조 대상이 다시 "alias + 투명도"면 그 토큰의 원본 $value(계산된 색)가 들어오고, 여기에 불투명도를 한 번 더 곱한다
-  const color: unknown = alias
-    ? token.$extensions?.gyeol?.alias?.ref
-    : token.$value;
-  if (typeof color !== "string") {
+function getSemanticValue(token: TransformedToken): string {
+  const value: unknown = token.$value;
+  if (typeof value !== "string") {
     throw new Error(`${token.path.join(".")}: 실제 색을 풀지 못했다`);
   }
-  return alias ? formatAlphaColor({ color, alpha: alias.alpha }) : color;
+  return value;
 }
 
 /** TS `values`의 Color Scheme 하나에 넣을 토큰 목록을 낸다. 값은 실제 색이다 */
 const listTsValues: FormatFn = ({ dictionary }): TsEntry[] =>
   dictionary.allTokens.map((token) => ({
     path: token.path,
-    value: formatSemanticValue(token),
+    value: getSemanticValue(token),
   }));
 
 /** TS 토큰 목록을 내는 format의 등록 이름 */

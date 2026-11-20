@@ -252,7 +252,7 @@ describe("buildTokens", () => {
       expect(values.dark.ringOffset).toBe("#18181b");
     });
 
-    it("투명도가 있으면 참조 대상의 색에 불투명도를 곱한 rgba()를 낸다", async () => {
+    it("투명도가 있으면 원본에 적힌 계산된 색을 rgba()로 낸다", async () => {
       // when
       const { ts } = await buildTokens(resolveFixturePath("valid"));
       const { values } = await importTsModule(ts);

@@ -42,41 +42,6 @@ export function formatColorMix({
 
 const formatIndent = (depth: number): string => "  ".repeat(depth);
 
-const HEX_COLOR = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i;
-const RGBA_COLOR = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/;
-
-/**
- * "alias + 투명도"의 실제 색을 `rgba()`로 쓴다. CSS의 `color-mix(in srgb, 색 N%, transparent)`와 같은 결과다:
- * 색의 RGB는 그대로 두고, 불투명도에 `alpha`(0–1)를 곱한다.
- * `color`는 Style Dictionary의 `color/css`가 내는 모양(`#rrggbb`나 `rgba(r, g, b, a)`)이다.
- */
-export function formatAlphaColor({
-  color,
-  alpha,
-}: {
-  color: string;
-  alpha: number;
-}): string {
-  const hex = HEX_COLOR.exec(color);
-  const rgba = RGBA_COLOR.exec(color);
-  const [r, g, b, a] = hex
-    ? [...hex.slice(1, 4).map((part) => parseInt(part, 16)), 1]
-    : rgba
-      ? rgba.slice(1, 5).map(Number)
-      : [];
-  if (
-    r === undefined ||
-    g === undefined ||
-    b === undefined ||
-    a === undefined
-  ) {
-    throw new Error(`${color}: hex나 rgba() 색이 아니다`);
-  }
-  // 0.07 * 100 같은 곱셈의 부동소수점 오차를 지운다
-  const opacity = Number((a * alpha).toFixed(4));
-  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-}
-
 /** 토큰 경로의 이름 칸(kebab-case)을 TS 키(camelCase)로 바꾼다. 예: `bg-surface` → `bgSurface` */
 export const toCamelCase = (name: string): string =>
   name.replace(/-([a-z0-9])/g, (_, char: string) => char.toUpperCase());
