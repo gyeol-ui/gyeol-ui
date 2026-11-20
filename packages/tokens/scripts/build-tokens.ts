@@ -27,7 +27,11 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
     platforms: {
       css: {
         prefix: PREFIX,
-        // name/kebab(이름), color/css(hex, rgba()), size/rem(적힌 unit을 그대로 둔다) 등이 들어 있다
+        // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
+        //
+        // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
+        // ({16, "px"} → "16px"), unit 없는 숫자에만 "rem"을 붙인다. 토큰은 모두 px로 쓰므로 px로 나온다.
+        // size/px를 직접 고르지 않는 이유: size/px는 unit을 무시해 {1.5, "rem"}도 "1.5px"로 낸다.
         transformGroup: "css",
         files: [
           {
