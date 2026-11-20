@@ -48,21 +48,56 @@ tools/
 - tsup은 유지보수가 중단되었고, tsup과 Vite 문서 모두 tsdown(0.23)을 권한다.
 - tsdown(0.23.7)의 타입 선언 생성은 TypeScript 7.0.2에서 동작한다. `isolatedDeclarations`를 켜면 TypeScript 컴파일러를 거치지 않는 빠른 경로로 만들고, 끄면 TypeScript 7로 만든다. 두 경로 모두 확인했다.
 
-## 스타일과 테마
+## 스타일과 토큰
 
-- 컴포넌트 내부는 Tailwind v4로 작성한다. 배포할 때는 빌드된 CSS를 함께 내보내고, 테마는 CSS 변수로 바꾼다. Tailwind 사용자를 위해 `@theme` CSS도 제공한다.
-- Theme 1개 × Color Scheme(light/dark)로 시작하고, Theme을 늘릴 수 있게 설계한다.
-- Token은 Primitive → Semantic → Component 3계층이다. Component Token은 Semantic만으로 표현할 수 없을 때만 만든다.
-- 토큰 파일은 DTCG 2025.10 형식으로 쓰고 Style Dictionary로 빌드한다. Style Dictionary가 DTCG Resolver를 지원하지 않으므로 Theme과 Color Scheme 조합은 파일 분리와 다중 빌드로 처리한다. 구조는 토큰 파이프라인 스펙에서 정하고 ADR로 남긴다.
+- 컴포넌트 내부는 Tailwind v4로 작성한다. 배포할 때는 빌드된 CSS를 함께 내보내고, 색과 크기는 CSS 변수로 표현한다. Tailwind 사용자를 위해 `@theme` CSS도 제공한다.
+- Theme(브랜드별 토큰 세트)은 지원하지 않는다. Color Scheme(light/dark)만 지원한다 ([ADR-0004](./adr/0004-no-theme-two-token-collections.md)).
+- Token은 Primitive → Semantic → Component 계층이다. Component Token은 Semantic만으로 표현할 수 없을 때만 만든다.
 - Figma Variables collection 구성:
-  - `Primitive`: mode = Theme
-  - `Semantic`: mode = Color Scheme. Primitive를 alias로 참조한다
+  - `Primitive`: mode 1개. 실제 값만 둔다 (색 이름, 간격, 모서리 등)
+  - `Semantic`: mode = Color Scheme. 칸은 Primitive나 같은 collection의 다른 Semantic Token을 가리킨다. Color Scheme에 따라 바뀌는 것만 둔다
   - `Component`: 필요할 때만 만든다
+- 토큰 파일은 DTCG 2025.10 형식으로 쓰고 Style Dictionary로 빌드한다. collection의 mode 하나를 파일 하나로 두고(`packages/tokens/tokens/primitive.json`, `semantic/light.json`, `semantic/dark.json`), Color Scheme마다 따로 빌드한다.
+- 토큰 빌드는 아래 규칙을 검사하고, 어기면 실패한다.
+  - Primitive는 실제 값만 둔다. alias와 투명도를 쓰지 않는다.
+  - Semantic은 모든 칸이 Primitive나 다른 Semantic을 가리키는 alias다. 투명도는 허용하고, 타입은 색만 허용한다.
+  - 경로는 최대 3단계, 이름은 kebab-case다. 모든 토큰의 CSS 변수 이름이 서로 다르다. 색은 `srgb`, dimension은 `px`다. 참조 대상이 존재한다.
+- 토큰 원본은 플랫폼 중립으로 설계한다. 이름, 구조, 타입은 Figma와 DTCG 기준으로 정하고, 플랫폼 관례(CSS 변수 이름, Tailwind 네임스페이스 등)는 출력 변환에서만 다룬다.
+  - 경로 규칙. Figma 변수 이름은 같은 경로를 `/`로 잇는다.
+    - Primitive: 범주 / 이름 (예: `color.gray.900`, `spacing.4`, `radius.md`)
+    - Semantic: (그룹) / 이름 (예: `bg-surface`, `alpha.bg-90`). 색만 담으므로 범주를 쓰지 않는다
+    - 이름은 kebab-case다. 그룹은 한 단계까지만 둔다.
+    - 모든 토큰의 CSS 변수 이름은 서로 달라야 한다.
+  - 색은 `srgb`로 쓰고 Figma 파일의 color profile도 sRGB로 둔다. dimension은 `px`로 쓴다.
+  - 간격의 단계 이름은 4px의 배수로 한다 (예: `spacing.4` = 16px). 모서리는 크기 단계로 이름 짓는다 (예: `radius.sm`, `radius.md`, `radius.full`).
+  - Semantic의 `alpha` 그룹은 `bg-surface`의 투명도 단계이고, 숫자는 불투명도다 (예: `alpha.90` = `bg-surface` 90%). 다른 색에 투명도를 건 토큰은 용도 이름을 붙인다.
+  - Figma의 "alias + 투명도"는 허용한다. `$value`에는 계산한 색을, `$extensions`에는 참조 대상과 투명도를 적고, CSS에는 `color-mix(in srgb, var(--…) N%, transparent)`로 낸다.
+- CSS 변수는 `--gyeol-` 접두사를 붙인다 (예: `--gyeol-bg-surface`). Primitive는 `:root`에, Semantic은 Primitive를 `var()`로 가리키는 Color Scheme 블록에 낸다.
+  - 공개 API는 Semantic 변수와, 색이 아닌 Primitive 변수(`--gyeol-spacing-*`, `--gyeol-radius-*`)다. Primitive 색 변수는 출력되지만 공개 API가 아니다. 컴포넌트는 색에 Semantic만 쓴다.
+- Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `data-color-scheme` 속성이 있으면 그 값을 따른다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
 
 확인한 사실(2026-11):
 
 - DTCG 안정판은 2025.10이다. 색 값은 `colorSpace`와 `components`를 가진 객체이고, 테마는 Resolver 모듈(`.resolver.json`)로 정의한다.
 - Style Dictionary(5.8)는 색 객체를 지원하지만 Resolver는 지원하지 않고(이슈 #1590), Tailwind `@theme` format이 내장되어 있지 않다. Terrazzo(2.10)는 둘 다 지원한다.
+- Style Dictionary(5.8.0)에서 직접 빌드해 확인했다.
+  - 기본 transform은 색 객체(5.3부터)와 dimension 객체(5.4부터)를 처리한다. color/size transform이 없으면 `[object Object]`가 나온다.
+  - `color/css`는 sRGB로만 낸다.
+  - `size/px`는 unit을 무시하고 px를 붙인다. 그래서 rem 값에는 쓰면 안 된다.
+  - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다.
+  - JS/TS 기본 format은 `outputReferences`를 지원하지 않는다.
+  - `$type`이 없는 alias는 참조 대상의 타입을 물려받지 못한다(이슈 #1811).
+- Figma는 DTCG import/export를 기본 기능으로 제공한다.
+  - 단위는 collection의 mode 하나당 파일 하나다.
+  - 색은 `srgb`/`hsl`만, dimension은 `px`만 받는다.
+  - export 결과의 정확한 모양(파일 이름, 메타데이터)은 확인하지 못했다.
+- Figma Plugin API의 색 값은 색공간 표시가 없는 0–1 float이다. 문서의 color profile에 따라 해석된다. FLOAT는 단위가 없다.
+- 웹뷰의 `prefers-color-scheme`은 네이티브 앱의 테마를 따른다(공식 문서와 엔진 소스로 확인, 실기기 미확인).
+  - iOS WKWebView는 웹뷰의 `traitCollection`(`overrideUserInterfaceStyle`)을 따르고, 바꾸면 리로드 없이 반영된다.
+  - Android WebView는 targetSdk 33 이상에서 앱 테마의 `isLightTheme`를 따른다.
+  - targetSdk 32 이하에서는 `<meta name="color-scheme" content="light dark">`가 없으면 dark media query가 무시될 수 있다.
+- shadcn/ui Figma kit(2026-10)은 collection 세 개로 나눈다. `Tailwind`(mode 1개, 팔레트), `Style`(mode = 스타일, `color/light/*`와 `color/dark/*`를 모두 가짐, radius·shadow·font 포함), `Mode`(Light/Dark, 같은 이름의 `color/light/*` 또는 `color/dark/*`를 가리킴)다. "alias + 투명도"를 여러 곳에 쓰고, `Style` 안의 토큰끼리도 가리킨다(예: `color/dark/alpha/5` → `color/dark/background` 95%).
+- DTCG 2025.10에는 "참조하면서 투명도만 바꾸기"를 적는 표준 방법이 없다. Style Dictionary(5.8)는 JSON Pointer `$ref`와 `color-mix()` 출력을 지원하지 않는다. `color-mix()`는 iOS Safari 16.2, Android WebView 111부터 쓸 수 있다.
 
 ## 컴포넌트
 
