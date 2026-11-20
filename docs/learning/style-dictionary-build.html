@@ -15,16 +15,15 @@
         <ol>
           <li><a href="#overview">한눈에 보기</a></li>
           <li><a href="#sd">Style Dictionary가 하는 일</a></li>
-          <li><a href="#walk">스크립트를 위에서부터</a></li>
-          <li><a href="#token">토큰 하나가 CSS 한 줄이 되기까지</a></li>
-          <li><a href="#tokens-option">tokens와 source</a></li>
+          <li><a href="#transforms">transform: 실제로 일하는 셋</a></li>
           <li><a href="#log">log.verbosity</a></li>
-          <li><a href="#platforms">platforms와 prefix</a></li>
-          <li><a href="#transforms">transformGroup과 transforms</a></li>
-          <li><a href="#size">size/rem과 size/px</a></li>
-          <li><a href="#files">files: format과 options</a></li>
           <li><a href="#format-platform">formatPlatform</a></li>
-          <li><a href="#cases">설정을 바꾸면 나오는 CSS</a></li>
+          <li><a href="#reference">참조가 var()가 되기까지</a></li>
+          <li><a href="#filter">Primitive는 참조 대상으로만</a></li>
+          <li><a href="#type">Semantic의 $type은 토큰마다</a></li>
+          <li><a href="#custom-format">직접 만든 format</a></li>
+          <li><a href="#walk">스크립트를 위에서부터</a></li>
+          <li><a href="#tokens-option">파일이 없을 때</a></li>
           <li><a href="#check">점검 문제</a></li>
           <li><a href="#code">쓰인 곳</a></li>
           <li><a href="#sources">출처</a></li>
@@ -36,15 +35,18 @@
         <p class="lead">
           <code>packages/tokens/scripts/build-tokens.ts</code>의
           <code>buildTokens</code>는 토큰 JSON을 읽어 CSS 텍스트를 돌려주는
-          함수다. 이 함수가 Style Dictionary에 넘기는 옵션을 하나씩 뜯어 보고,
-          옵션을 바꾸면 출력이 어떻게 달라지는지 직접 실행한 결과로 보여 준다.
+          함수다. Primitive는 실제 값으로, Semantic은 Color Scheme(light/dark)
+          블록마다 <code>var()</code> 참조로 낸다. 이 함수가 Style Dictionary에
+          넘기는 옵션을 하나씩 뜯어 보고, 옵션을 바꾸면 출력이 어떻게 달라지는지
+          직접 실행한 결과로 보여 준다.
         </p>
 
         <section id="overview">
           <h2>한눈에 보기</h2>
           <p>
-            파란 줄은 <code>buildTokens</code> 안에서 일어나는 일이다. 파일을
-            읽고 문자열을 돌려줄 뿐 파일을 기록하지 않는다. 초록 줄은
+            파란 줄은 <code>buildTokens</code> 안에서 일어나는 일이다. Style
+            Dictionary를 세 번 실행해 나온 CSS 블록을 이어 붙인다. 파일을 읽고
+            문자열을 돌려줄 뿐 파일을 기록하지 않는다. 초록 줄은
             <code>pnpm build</code>가 이 함수를 실제 토큰 폴더로 불러 결과를
             파일로 기록하고, tsdown이 <code>dist/</code>를 채우는 흐름이다.
           </p>
@@ -52,10 +54,19 @@
             <div class="lane blue">
               <div class="lane-title">buildTokens(토큰 폴더)</div>
               <ol class="chain">
-                <li><span>primitive.json을 읽어 객체로 만든다</span></li>
-                <li><span>new StyleDictionary(설정)</span></li>
-                <li><span>formatPlatform("css")</span></li>
-                <li><span>{ css: ":root { … }" }를 돌려준다</span></li>
+                <li><span>토큰 파일 3개가 있는지 확인한다</span></li>
+                <li><span>1번째 실행: Primitive → 헤더 + :root 블록</span></li>
+                <li>
+                  <span
+                    >2번째 실행: Primitive(include) + light → light 블록</span
+                  >
+                </li>
+                <li>
+                  <span
+                    >3번째 실행: Primitive(include) + dark → dark 블록 2개</span
+                  >
+                </li>
+                <li><span>블록 4개를 이어 { css }로 돌려준다</span></li>
               </ol>
             </div>
             <div class="lane green">
@@ -79,6 +90,60 @@
               문자열만 검사한다. 디스크에 아무것도 남기지 않는다.
             </p>
           </div>
+          <h3>만들어지는 tokens.css</h3>
+          <p>
+            fixture로 만든 <code>tokens.css</code> 전체다. 블록이 네 개이고,
+            위에서부터 Primitive, light, dark(OS 설정), dark(속성)다.
+          </p>
+          <pre><code class="language-css">/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --gyeol-color-white: #ffffff;
+  --gyeol-color-gray-900: #18181b;
+  --gyeol-color-overlay: rgba(0, 0, 0, 0.5);
+  --gyeol-spacing-4: 16px;
+  --gyeol-radius-md: 6px;
+}
+
+:root {
+  color-scheme: light;
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  --gyeol-fg-default: var(--gyeol-color-gray-900);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-scheme="light"]) {
+    color-scheme: dark;
+    --gyeol-bg-surface: var(--gyeol-color-gray-900);
+    --gyeol-fg-default: var(--gyeol-color-white);
+    --gyeol-ring-offset: var(--gyeol-bg-surface);
+  }
+}
+
+:root[data-color-scheme="dark"] {
+  color-scheme: dark;
+  --gyeol-bg-surface: var(--gyeol-color-gray-900);
+  --gyeol-fg-default: var(--gyeol-color-white);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}</code></pre>
+          <ul>
+            <li>
+              Primitive 블록은 Color Scheme과 관계없이 늘 같다. Semantic 블록만
+              Color Scheme마다 다른 Primitive를 가리킨다.
+            </li>
+            <li>
+              <code>ring-offset</code>은 세 블록 모두에서 다시 선언된다. 그래서
+              블록이 바뀔 때 그 블록의 <code>bg-surface</code>를 따라간다.
+            </li>
+            <li>
+              블록마다 CSS <code>color-scheme</code> 속성이 있다. 스크롤바, 폼
+              컨트롤 같은 브라우저 기본 UI가 이 값을 보고 밝게 또는 어둡게
+              그려진다.
+            </li>
+          </ul>
         </section>
 
         <section id="sd">
@@ -89,343 +154,349 @@
             도구다. 바꾸는 일은 아래 순서로 나뉘고, 설정의 옵션은 각 단계에
             무엇을 할지 알려 준다.
           </p>
+          <p>
+            단계마다 붙인 결과물은 fixture로 light Semantic 빌드(Primitive는
+            <code>include</code>, <code>semantic/light.json</code>은
+            <code>source</code>)를 실제로 돌리며 Style Dictionary가 가진 값을
+            꺼낸 것이다. 길어서 일부 토큰만 옮겼다.
+          </p>
           <ol class="steps blue">
             <li>
               <strong>토큰 읽기</strong>
-              <code>tokens</code>(객체)나 <code>source</code>(파일 경로)로 받은
-              JSON을 합친다. <code>$value</code>가 보이면 DTCG 형식으로
-              판단한다. 우리 설정에서 <code>sd.usesDtcg</code>는
-              <code>true</code>였다.
+              <code>source</code>와 <code>include</code>의 파일을 읽어 토큰 트리
+              하나로 합친다. <code>$value</code>가 보이면 DTCG 형식으로
+              판단한다(<code>sd.usesDtcg</code>가 <code>true</code>). 토큰마다
+              어느 파일에서 왔는지(<code>filePath</code>)와 <code>source</code>
+              파일인지(<code>isSource</code>)가 붙는다. 값은 아직 JSON에 적은
+              그대로다.
+              <div class="pipe">
+                <div class="pipe-row">
+                  <span class="pipe-label">파일 → 토큰</span>
+                  <span class="pipe-val"
+                    >"bg-surface": { "$value": "{color.white}" }<small
+                      >semantic/light.json</small
+                    ></span
+                  >
+                  <span class="pipe-fn">토큰 읽기</span>
+                  <span class="pipe-val ok"
+                    >"bg-surface": { "$value": "{color.white}", "isSource":
+                    true, "filePath": "…/light.json" }</span
+                  >
+                  <span class="pipe-note">값은 그대로, 출처 표시가 붙는다</span>
+                </div>
+              </div>
+              <pre><code class="language-json">// sd.tokens
+"color": { "gray": { "900": {
+  "$value": { "colorSpace": "srgb", "components": [0.0941, 0.0941, 0.1059] },
+  "$type": "color",
+  "isSource": false,
+  "filePath": "…/fixtures/valid/primitive.json"
+} } },
+"bg-surface": {
+  "$value": "{color.white}",
+  "$type": "color",
+  "isSource": true,
+  "filePath": "…/fixtures/valid/semantic/light.json"
+}</code></pre>
             </li>
             <li>
               <strong>플랫폼 고르기</strong>
               <code>platforms</code>의 키 하나(우리는 <code>css</code>)를 골라
               그 플랫폼의 설정으로 아래 단계를 돈다.
+              <code>transformGroup: "css"</code>는 이때 transform 목록으로
+              풀린다.
+              <pre><code class="language-json">// sd.getPlatformConfig("css")
+{
+  "prefix": "gyeol",
+  "transforms": [
+    "attribute/cti", "name/kebab", "time/seconds", "html/icon",
+    "size/rem", "color/css", "asset/url", "fontFamily/css",
+    "cubicBezier/css", "strokeStyle/css/shorthand", "border/css/shorthand",
+    "typography/css/shorthand", "transition/css/shorthand", "shadow/css/shorthand"
+  ]
+}</code></pre>
             </li>
             <li>
               <strong>transform</strong>
-              토큰마다 이름(name), 값(value), 속성(attribute)을 바꾼다. 예를
-              들어 색 객체를 <code>#18181b</code>로, 경로
-              <code>color.gray.900</code>을
-              <code>gyeol-color-gray-900</code>으로 바꾼다.
+              토큰마다 이름(name), 값(value), 속성(attribute)을 바꾼다. 참조가
+              없는 <code>color.gray.900</code>은 경로가 이름으로, 색 객체가
+              hex로 바뀐다. 바뀌기 전 값은 <code>original</code>에 남는다.
+              <div class="pipe">
+                <div class="pipe-row">
+                  <span class="pipe-label">이름</span>
+                  <span class="pipe-val"
+                    >["color", "gray", "900"]<small>경로</small></span
+                  >
+                  <span class="pipe-fn">name/kebab + prefix</span>
+                  <span class="pipe-val ok">gyeol-color-gray-900</span>
+                </div>
+                <div class="pipe-row">
+                  <span class="pipe-label">값</span>
+                  <span class="pipe-val"
+                    >{ "colorSpace": "srgb", "components": [0.0941, 0.0941,
+                    0.1059] }</span
+                  >
+                  <span class="pipe-fn">color/css</span>
+                  <span class="pipe-val ok">#18181b</span>
+                </div>
+              </div>
+              <pre><code class="language-json">// sd.getPlatformTokens("css")의 color.gray.900
+{
+  "path": ["color", "gray", "900"],
+  "name": "gyeol-color-gray-900",
+  "$value": "#18181b",
+  "original": { "$value": { "colorSpace": "srgb", "components": [0.0941, 0.0941, 0.1059] } }
+}</code></pre>
             </li>
             <li>
               <strong>참조 해석</strong>
-              <code>{color.gray.900}</code> 같은 참조를 실제 값으로 바꾼다.
-              Primitive에는 참조가 없어 이번 티켓에서는 일이 없다. 참조가 풀려야
-              transform할 수 있는 값이 있어서 transform과 번갈아 여러 번 돈다.
+              <code>{color.white}</code> 같은 참조를 가리키는 토큰의 값으로
+              푼다. 참조가 풀려야 transform할 수 있는 값이 있어서 transform과
+              번갈아 돈다. <code>$value</code>는 실제 색으로 풀리지만,
+              <code>original.$value</code>에는 참조가 남는다.
+              <code>outputReferences</code>를 켜면 format이 이 참조를 보고
+              <code>var()</code>를 낸다(<a href="#reference"
+                >참조가 var()가 되기까지</a
+              >).
+              <div class="pipe">
+                <div class="pipe-row">
+                  <span class="pipe-label">bg-surface</span>
+                  <span class="pipe-val">"{color.white}"</span>
+                  <span class="pipe-fn">참조 해석</span>
+                  <span class="pipe-val ok">$value: "#ffffff"</span>
+                  <span class="pipe-note"
+                    >original.$value는 "{color.white}" 그대로</span
+                  >
+                </div>
+                <div class="pipe-row">
+                  <span class="pipe-label">ring-offset</span>
+                  <span class="pipe-val">"{bg-surface}"</span>
+                  <span class="pipe-fn">참조 해석</span>
+                  <span class="pipe-val ok">$value: "#ffffff"</span>
+                  <span class="pipe-note"
+                    >Semantic → Semantic도 끝까지 푼다</span
+                  >
+                </div>
+              </div>
+              <pre><code class="language-json">// sd.getPlatformTokens("css")의 bg-surface, ring-offset
+{
+  "name": "gyeol-bg-surface",
+  "$value": "#ffffff",
+  "original": { "$value": "{color.white}" }
+}
+{
+  "name": "gyeol-ring-offset",
+  "$value": "#ffffff",
+  "original": { "$value": "{bg-surface}" }
+}</code></pre>
             </li>
             <li>
               <strong>format</strong>
               transform이 끝난 토큰 목록을 파일 내용(문자열) 하나로 만든다.
-              <code>css/variables</code>는 <code>:root { --이름: 값; }</code>을
-              만든다.
+              file의 <code>filter</code>(<code>isSource</code>)가 여기서 걸려
+              Primitive는 빠진다.
+              <div class="pipe">
+                <div class="pipe-row">
+                  <span class="pipe-label">토큰 하나</span>
+                  <span class="pipe-val"
+                    >name: "gyeol-bg-surface"<br />original.$value:
+                    "{color.white}"</span
+                  >
+                  <span class="pipe-fn"
+                    >css/variables<br />+ outputReferences</span
+                  >
+                  <span class="pipe-val ok"
+                    >--gyeol-bg-surface: var(--gyeol-color-white);</span
+                  >
+                  <span class="pipe-note"
+                    >참조는 가리키는 토큰의 변수 이름으로</span
+                  >
+                </div>
+                <div class="pipe-row">
+                  <span class="pipe-label">토큰 목록</span>
+                  <span class="pipe-val">filter를 통과한 토큰 3개</span>
+                  <span class="pipe-fn">css/variables</span>
+                  <span class="pipe-val ok">:root { 줄 3개 }</span>
+                  <span class="pipe-note">문자열 하나</span>
+                </div>
+              </div>
+              <pre><code class="language-json">// sd.formatPlatform("css")
+[{
+  "output": ":root {\n  --gyeol-bg-surface: var(--gyeol-color-white);\n  --gyeol-fg-default: var(--gyeol-color-gray-900);\n  --gyeol-ring-offset: var(--gyeol-bg-surface);\n}\n"
+}]</code></pre>
+              <p><code>output</code> 문자열을 펼치면 이렇다.</p>
+              <pre><code class="language-css">:root {
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  --gyeol-fg-default: var(--gyeol-color-gray-900);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}</code></pre>
             </li>
             <li>
               <strong>기록</strong>
-              문자열을 <code>buildPath + destination</code> 파일로 기록한다.
-              <code>buildTokens</code>는 이 단계를 부르지 않는다.
+              Style Dictionary의 <code>buildPlatform</code>은 문자열을
+              <code>buildPath + destination</code> 파일로 기록한다.
+              <code>buildTokens</code>는 이 단계를 부르지 않고 문자열만
+              돌려준다. 파일은 <code>pnpm build</code>의
+              <code>scripts/build.ts</code>가 쓴다.
+              <pre><code class="language-ts">// scripts/build.ts
+await writeFile(join(generatedDir, "tokens.css"), css);</code></pre>
             </li>
           </ol>
         </section>
 
-        <section id="walk">
-          <h2>스크립트를 위에서부터</h2>
-
-          <h3>1. 결과의 모양</h3>
-          <pre><code class="language-ts" data-lines="6-9 11">import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import StyleDictionary from "style-dictionary";
-import type { DesignTokens } from "style-dictionary/types";
-
-export interface BuildResult {
-  /** `tokens.css`의 내용 */
-  css: string;
-}
-
-const PREFIX = "gyeol";</code></pre>
-          <ul>
-            <li>
-              <code>BuildResult</code>는 돌려줄 값의 모양이다. 지금은
-              <code>css</code> 하나지만, spec(#16)은 TS 소스도 함께 돌려주도록
-              정했다(#22에서 <code>ts</code>가 더해진다). 그래서 문자열 대신
-              객체로 돌려준다.
-            </li>
-            <li>
-              <code>PREFIX</code>는 모든 CSS 변수 이름 앞에 붙는다.
-              <code>--gyeol-</code>은 <code>docs/architecture.md</code>의
-              규칙이다.
-            </li>
-            <li>
-              <code>DesignTokens</code>는 Style Dictionary가 내보내는 토큰 트리
-              타입이다. 런타임에는 사라지는 <code>import type</code>이다.
-            </li>
-          </ul>
-
-          <h3>2. 토큰 파일을 직접 읽는다</h3>
-          <pre><code class="language-ts" data-lines="2-8">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
-  // 파일 경로를 Style Dictionary의 source 옵션으로 넘기지 않고 직접 읽는다.
-  // source의 항목은 경로 하나라도 glob 패턴으로 풀리고, 맞는 파일이 0개여도 오류가 아니다.
-  // 그러면 토큰 없이 빌드가 끝나 빈 ":root {}"가 나온다. 직접 읽으면 파일이 없을 때 ENOENT로 실패한다.
-  const primitivePath = join(tokensDir, "primitive.json");
-  const primitive: DesignTokens = JSON.parse(
-    await readFile(primitivePath, "utf8"),
-  );</code></pre>
+        <section id="transforms">
+          <h2>transform: 실제로 일하는 셋</h2>
           <p>
-            Style Dictionary에 파일 경로를 넘겨도 읽어 준다. 그런데도 직접 읽는
-            이유는 <a href="#tokens-option">tokens와 source</a>에서 실험으로
-            보인다. 짧게 말하면, 경로가 틀려도 Style Dictionary는 오류 없이 빈
-            <code>:root</code>를 낸다. <code>readFile</code>은 파일이 없으면
-            <code>ENOENT</code>로 실패한다.
+            <code>transformGroup: "css"</code>는 transform 14개로 풀린다(앞의
+            2단계 결과물). transform마다 <code>filter</code>가 있어서 맞는
+            토큰에만 걸린다. 예를 들어 <code>color/css</code>는
+            <code>$type</code>이 <code>color</code>인 토큰에만 걸린다. 우리
+            토큰(색, dimension)에 실제로 걸리는 것은 셋뿐이고, 나머지는
+            typography나 shadow 토큰이 생길 때 쓰인다.
           </p>
-
-          <h3>3. Style Dictionary 설정</h3>
-          <pre><code class="language-ts" data-lines="2 3 5 6 12 15 16">  const sd = new StyleDictionary({
-    tokens: primitive,
-    log: { verbosity: "silent" },
-    platforms: {
-      css: {
-        prefix: PREFIX,
-        // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
-        //
-        // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
-        // ({16, "px"} → "16px"), unit 없는 숫자에만 "rem"을 붙인다. 토큰은 모두 px로 쓰므로 px로 나온다.
-        // size/px를 직접 고르지 않는 이유: size/px는 unit을 무시해 {1.5, "rem"}도 "1.5px"로 낸다.
-        transformGroup: "css",
-        files: [
-          {
-            destination: "tokens.css",
-            format: "css/variables",
-          },
-        ],
-      },
-    },
-  });</code></pre>
-          <p>칠한 줄이 옵션이다. 각 옵션이 하는 일은 아래 표와 같다.</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>옵션</th>
-                  <th>값</th>
-                  <th>하는 일</th>
+                  <th>transform</th>
+                  <th>바꾸는 것</th>
+                  <th>예</th>
+                  <th>빼면</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><code>tokens</code></td>
-                  <td>읽은 객체</td>
+                  <td><code>name/kebab</code></td>
+                  <td>이름</td>
                   <td>
-                    빌드할 토큰 트리
-                    <small><a href="#tokens-option">tokens와 source</a></small>
+                    <code>["color", "gray", "900"]</code> →
+                    <code>gyeol-color-gray-900</code>
+                  </td>
+                  <td>
+                    <code>--900</code>, <code>--4</code>처럼 경로의 마지막
+                    조각만 남고 prefix도 붙지 않는다
                   </td>
                 </tr>
                 <tr>
-                  <td><code>log.verbosity</code></td>
-                  <td><code>"silent"</code></td>
+                  <td><code>color/css</code></td>
+                  <td>색 값</td>
                   <td>
-                    Style Dictionary의 콘솔 출력을 끈다
-                    <small><a href="#log">log.verbosity</a></small>
+                    색 객체 → <code>#18181b</code>, alpha가 있으면
+                    <code>rgba(0, 0, 0, 0.5)</code>
                   </td>
+                  <td><code>[object Object]</code></td>
                 </tr>
                 <tr>
-                  <td><code>platforms.css</code></td>
-                  <td>설정 객체</td>
+                  <td><code>size/rem</code></td>
+                  <td>dimension 값</td>
                   <td>
-                    "css"라는 이름의 출력 하나. 이름은 우리가 정한다
-                    <small><a href="#platforms">platforms와 prefix</a></small>
+                    <code>{ value: 16, unit: "px" }</code> → <code>16px</code>
                   </td>
+                  <td><code>[object Object]</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout warn">
+            <p>
+              transform이 빠져도 오류가 나지 않는다. Style Dictionary는 객체를
+              그대로 문자열로 바꿔 <code>[object Object]</code>를 낸다. 출력을
+              봐야 알 수 있어서 fixture 출력 전체를 snapshot으로 고정해 둔다.
+            </p>
+          </div>
+
+          <h3>size/rem과 size/px</h3>
+          <p>
+            dimension은 모두 px로 쓰고 CSS에도 px로 내는데, 쓰는 transform
+            이름이 <code>size/rem</code>이라 반직관적이다. 이름과 달리 px를
+            rem으로 바꾸지 않는다. 처음 구현에서 이를 잘못 알고
+            <code>size/px</code>를 골랐다가 실행해 보고 바로잡았다. 두
+            transform에 같은 토큰 세 개를 넣은 결과다.
+          </p>
+          <div class="compare">
+            <div class="compare-card green">
+              <div class="compare-title">
+                size/rem<small>css group에 들어 있다</small>
+              </div>
+              <dl class="compare-facts">
+                <dt><code>{ 16, "px" }</code></dt>
+                <dd><strong>16px</strong></dd>
+                <dt><code>{ 1.5, "rem" }</code></dt>
+                <dd><strong>1.5rem</strong></dd>
+                <dt><code>{ 0, "px" }</code></dt>
+                <dd>0px</dd>
+                <dt>규칙</dt>
+                <dd>
+                  unit이 적혀 있으면 그대로 붙인다. unit 없는 숫자에만
+                  <code>rem</code>을 붙인다(16으로 나누지 않는다)
+                </dd>
+              </dl>
+              <p class="compare-result">적힌 unit이 그대로 나온다.</p>
+            </div>
+            <div class="compare-card">
+              <div class="compare-title">
+                size/px<small>직접 골라야 한다</small>
+              </div>
+              <dl class="compare-facts">
+                <dt><code>{ 16, "px" }</code></dt>
+                <dd><strong>16px</strong></dd>
+                <dt><code>{ 1.5, "rem" }</code></dt>
+                <dd>
+                  <strong>1.5px</strong> <span class="badge warn">틀림</span>
+                </dd>
+                <dt><code>{ 0, "px" }</code></dt>
+                <dd>0px</dd>
+                <dt>규칙</dt>
+                <dd>unit을 무시하고 숫자에 <code>px</code>를 붙인다</dd>
+              </dl>
+              <p class="compare-result">
+                rem 토큰이 들어오면 조용히 24배 작아진다.
+              </p>
+            </div>
+          </div>
+          <p>
+            지금은 검증 규칙이 dimension unit을 <code>px</code>로만 허용해 두
+            transform의 출력이 같다. 그래도 규칙이 바뀌는 날 깨지지 않는 쪽은
+            <code>size/rem</code>이다.
+          </p>
+
+          <h3>color/css와 color/hex</h3>
+          <p>
+            alpha가 있는 색을 내는 방식이 다르다. fixture의
+            <code>color.overlay</code>(검정, alpha 0.5)로 실행한 결과다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>transform</th>
+                  <th><code>color.gray.900</code></th>
+                  <th><code>color.overlay</code></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>color/css</code> (css group)</td>
+                  <td><code>#18181b</code></td>
+                  <td><code>rgba(0, 0, 0, 0.5)</code></td>
                 </tr>
                 <tr>
-                  <td><code>prefix</code></td>
-                  <td><code>"gyeol"</code></td>
-                  <td>변수 이름 앞에 붙일 말</td>
-                </tr>
-                <tr>
-                  <td><code>transformGroup</code></td>
-                  <td><code>"css"</code></td>
+                  <td><code>color/hex</code></td>
+                  <td><code>#18181b</code></td>
                   <td>
-                    CSS용으로 미리 묶어 둔 transform 14개를 쓴다
+                    <code>#00000080</code>
                     <small
-                      ><a href="#transforms"
-                        >transformGroup과 transforms</a
-                      ></small
+                      >alpha를 8자리 hex의 끝 두 자리로 낸다(80 = 128/255 ≈
+                      0.5)</small
                     >
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>files[].destination</code></td>
-                  <td><code>"tokens.css"</code></td>
-                  <td>
-                    Style Dictionary가 파일을 기록할 경로
-                    <small
-                      ><code>formatPlatform</code>은 파일을 기록하지 않아서
-                      돌려받는 값에 이름표로만 붙는다. 빼도 출력은 같다. 실제
-                      기록은 <code>build.ts</code>가 한다</small
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>files[].format</code></td>
-                  <td><code>"css/variables"</code></td>
-                  <td>
-                    토큰 목록을 <code>:root { … }</code> 문자열로 만든다
-                    <small><a href="#files">files: format과 options</a></small>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-
-          <h3>4. 문자열만 받아 돌려준다</h3>
-          <pre><code class="language-ts" data-lines="1-4">  const [file] = await sd.formatPlatform("css");
-  if (typeof file?.output !== "string") {
-    throw new Error("Style Dictionary가 tokens.css를 만들지 못했다");
-  }
-  return { css: file.output };
-}</code></pre>
           <p>
-            <code>formatPlatform</code>은 <code>files</code>의 항목마다
-            <code>{ output, destination }</code>을 담은 배열을 돌려준다. 우리는
-            파일이 하나라 첫 항목만 꺼낸다. <code>output</code>의 타입은
-            문자열이 아닐 수도 있게 넓게 선언되어 있어서, 문자열인지 확인한 뒤
-            돌려준다. 자세한 내용은
-            <a href="#format-platform">formatPlatform</a>에 있다.
-          </p>
-        </section>
-
-        <section id="token">
-          <h2>토큰 하나가 CSS 한 줄이 되기까지</h2>
-          <p>
-            <code>primitive.json</code>의 토큰 하나는 이름과 값이 따로 바뀐 뒤
-            <code>--이름: 값;</code> 한 줄로 합쳐진다. 아래 값은
-            <code>getPlatformTokens("css")</code>로 transform이 끝난 토큰을 꺼내
-            확인한 것이다.
-          </p>
-          <div class="pipe">
-            <div class="pipe-row">
-              <span class="pipe-label">이름</span>
-              <span class="pipe-val"
-                >["color", "gray", "900"]<small>경로</small></span
-              >
-              <span class="pipe-fn">name/kebab + prefix</span>
-              <span class="pipe-val ok">gyeol-color-gray-900</span>
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-label">색 값</span>
-              <span class="pipe-val"
-                >{ srgb, [0.0941, 0.0941, 0.1059] }<small
-                  >DTCG 색 객체</small
-                ></span
-              >
-              <span class="pipe-fn">color/css</span>
-              <span class="pipe-val ok">#18181b</span>
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-label">alpha 있는 색</span>
-              <span class="pipe-val">{ srgb, [0, 0, 0], alpha: 0.5 }</span>
-              <span class="pipe-fn">color/css</span>
-              <span class="pipe-val ok">rgba(0, 0, 0, 0.5)</span>
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-label">dimension</span>
-              <span class="pipe-val"
-                >{ value: 16, unit: "px" }<small
-                  >DTCG dimension 객체</small
-                ></span
-              >
-              <span class="pipe-fn">size/rem</span>
-              <span class="pipe-val ok">16px</span>
-              <span class="pipe-note">적힌 unit을 그대로 붙인다</span>
-            </div>
-            <div class="pipe-row">
-              <span class="pipe-label">합치기</span>
-              <span class="pipe-val">이름 + 값</span>
-              <span class="pipe-fn green">css/variables</span>
-              <span class="pipe-val ok">--gyeol-color-gray-900: #18181b;</span>
-            </div>
-          </div>
-          <p>완성된 변수 이름을 부분으로 나누면 이렇다.</p>
-          <div class="anatomy">
-            <span class="part dim" data-label="CSS 변수 표시">--</span
-            ><span class="part blue" data-label="prefix">gyeol</span
-            ><span class="part dim" data-label="kebab 구분자">-</span
-            ><span class="part green" data-label="경로 1: 범주">color</span
-            ><span class="part dim" data-label="">-</span
-            ><span class="part green" data-label="경로 2">gray</span
-            ><span class="part dim" data-label="">-</span
-            ><span class="part green" data-label="경로 3: 이름">900</span>
-            <span class="anatomy-caption"
-              ><code>--</code>는 <code>css/variables</code> format이 붙이고,
-              나머지는 <code>name/kebab</code> transform이 prefix와 경로를
-              <code>-</code>로 이어 만든다.</span
-            >
-          </div>
-          <div class="callout warn">
-            <p>
-              transform이 빠지면 Style Dictionary는 객체를 그대로 문자열로 바꿔
-              <code>[object Object]</code>를 낸다. 오류가 나지 않으니 출력을
-              봐야 안다. <a href="#cases">설정을 바꾸면 나오는 CSS</a>의 C 줄이
-              그 경우다.
-            </p>
-          </div>
-        </section>
-
-        <section id="tokens-option">
-          <h2>tokens와 source</h2>
-          <p>Style Dictionary에 토큰을 넘기는 방법은 두 가지다.</p>
-          <div class="compare">
-            <div class="compare-card">
-              <div class="compare-title">
-                파일 경로로 넘기기<small>source</small>
-              </div>
-              <dl class="compare-facts">
-                <dt>넘기는 것</dt>
-                <dd>glob 경로 배열 <code>["tokens/**/*.json"]</code></dd>
-                <dt>읽는 쪽</dt>
-                <dd>Style Dictionary</dd>
-                <dt>파일이 없으면</dt>
-                <dd>
-                  <strong>오류 없이</strong> 빈 결과
-                  <code>":root {\n\n}\n"</code>
-                </dd>
-              </dl>
-              <p class="compare-result">
-                경로를 잘못 적어도 빌드가 "성공"하고 빈 CSS가 배포된다.
-              </p>
-            </div>
-            <div class="compare-card green">
-              <div class="compare-title">
-                객체로 넘기기<small>tokens</small>
-              </div>
-              <dl class="compare-facts">
-                <dt>넘기는 것</dt>
-                <dd>이미 읽은 토큰 객체</dd>
-                <dt>읽는 쪽</dt>
-                <dd>
-                  우리 코드(<code>readFile</code> + <code>JSON.parse</code>)
-                </dd>
-                <dt>파일이 없으면</dt>
-                <dd><strong>ENOENT로 실패</strong></dd>
-              </dl>
-              <p class="compare-result">
-                경로가 틀리면 빌드가 바로 실패한다. 우리가 고른 방법이다.
-              </p>
-            </div>
-          </div>
-          <p>
-            "파일이 없으면 오류 없이 빈 결과"는 없는 경로를
-            <code>source</code>에 넣고 실행해 확인했다. Style Dictionary는
-            <code>source</code>의 항목마다 <code>globSync(패턴)</code>으로 맞는
-            파일 목록을 구한다(<code>lib/utils/combineJSON.js</code>).
-            와일드카드 없는 경로도 패턴 하나로 다루고, glob은 "맞는 파일이
-            0개"를 오류가 아닌 빈 목록으로 돌려준다. 이 동작은 테스트 "토큰
-            폴더에 primitive.json이 없으면 실패한다"가 지킨다.
-          </p>
-          <p>
-            나중에 <code>semantic/light.json</code>이 더해져도 같은 방식으로
-            직접 읽는다. 검증 규칙(#21)도 읽은 객체를 보고 판단해야 하므로, 읽는
-            일을 우리 코드가 갖는 편이 낫다.
+            spec이 "alpha가 있으면 <code>rgba()</code>"로 정해서
+            <code>color/css</code>가 맞다.
           </p>
         </section>
 
@@ -471,301 +542,12 @@ const PREFIX = "gyeol";</code></pre>
           </p>
           <div class="callout warn">
             <p>
-              <code>silent</code>는 경고도 숨긴다. Semantic을 빌드하는 #19에서
-              spec이 "의도한 동작"이라고 한 "filtered out token references"
-              경고도 보이지 않는다. 대신 규칙 위반은 #21에서 우리 코드가 직접
-              오류로 던진다. Style Dictionary의 경고에 기대지 않는다는 뜻이다.
+              <code>silent</code>는 경고도 숨긴다. Semantic 빌드에서 나는
+              "filtered out token references" 경고(spec이 "의도한 동작"이라고 한
+              것, <a href="#filter">Primitive는 참조 대상으로만</a>)도 보이지
+              않는다. 대신 규칙 위반은 #21에서 우리 코드가 직접 오류로 던진다.
+              Style Dictionary의 경고에 기대지 않는다는 뜻이다.
             </p>
-          </div>
-        </section>
-
-        <section id="platforms">
-          <h2>platforms와 prefix</h2>
-          <p>
-            <code>platforms</code>는 "같은 토큰으로 만들 출력"의 목록이다. 키는
-            우리가 정하는 이름이고, 값은 그 출력의 설정이다. CSS와 iOS를 함께
-            낸다면 <code>css</code>와 <code>ios</code> 두 키를 둔다. 지금은
-            CSS만 내므로 키가 하나다. <code>formatPlatform("css")</code>의
-            <code>"css"</code>가 이 키를 가리킨다.
-          </p>
-          <p>
-            <code>prefix</code>는 플랫폼 설정의 하나라 플랫폼마다 다르게 줄 수
-            있다. 이름을 만드는 transform(<code>name/kebab</code>)이 경로 앞에
-            붙인다.
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>설정</th>
-                  <th><code>color.gray.900</code>의 변수 이름</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <code>prefix: "gyeol"</code> + <code>name/kebab</code>
-                  </td>
-                  <td><code>--gyeol-color-gray-900</code></td>
-                </tr>
-                <tr>
-                  <td>prefix 없음 + <code>name/kebab</code></td>
-                  <td><code>--color-gray-900</code></td>
-                </tr>
-                <tr>
-                  <td>
-                    <code>prefix: "gyeol"</code> + <code>name/camel</code>
-                  </td>
-                  <td><code>--gyeolColorGray900</code></td>
-                </tr>
-                <tr>
-                  <td>
-                    <code>prefix: "gyeol"</code> + 이름 transform 없음
-                    <small>prefix도 붙지 않는다</small>
-                  </td>
-                  <td>
-                    <code>--900</code> <span class="badge warn">충돌 위험</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>
-            마지막 줄처럼 이름 transform이 없으면 경로의 마지막 조각만 이름이
-            되고, prefix도 쓰이지 않는다. <code>spacing.4</code>는
-            <code>--4</code>, <code>radius.md</code>는 <code>--md</code>가 되어
-            다른 범주의 같은 이름과 부딪힌다.
-          </p>
-        </section>
-
-        <section id="transforms">
-          <h2>transformGroup과 transforms</h2>
-          <p>
-            transform은 토큰 하나를 받아 이름, 값, 속성 중 하나를 바꾸는 함수다.
-            두 옵션 중 하나로 고른다.
-          </p>
-          <ul>
-            <li>
-              <code>transforms: ["name/kebab", "color/css", …]</code>: 쓸
-              transform을 직접 나열한다.
-            </li>
-            <li>
-              <code>transformGroup: "css"</code>: Style Dictionary가 CSS용으로
-              묶어 둔 목록을 쓴다. 우리가 고른 방법이다.
-            </li>
-          </ul>
-          <p>
-            transform마다 <code>filter</code>가 있어서, 맞는 토큰에만 걸린다.
-            예를 들어 <code>color/css</code>는 <code>$type</code>이
-            <code>color</code>인 토큰에만 걸린다. 그래서 group에 필요 없는
-            transform이 들어 있어도, 맞는 토큰이 없으면 아무 일도 하지 않는다.
-            아래 표는 css group의 14개 transform의 <code>filter</code>를 fixture
-            토큰에 직접 대 본 결과다.
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>transform</th>
-                  <th>바꾸는 것</th>
-                  <th>fixture에서 걸린 토큰</th>
-                  <th>빼면</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>attribute/cti</code></td>
-                  <td>속성</td>
-                  <td>모두</td>
-                  <td>
-                    CSS는 같다
-                    <small
-                      >경로를 <code>{category, type, item}</code>으로 적어 둘
-                      뿐이다</small
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>name/kebab</code></td>
-                  <td>이름</td>
-                  <td>모두</td>
-                  <td>
-                    <code>--white</code>, <code>--900</code>, <code>--4</code>
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>color/css</code></td>
-                  <td>값</td>
-                  <td>color 3개</td>
-                  <td>색이 <code>[object Object]</code></td>
-                </tr>
-                <tr>
-                  <td><code>size/rem</code></td>
-                  <td>값</td>
-                  <td>spacing.4, radius.md</td>
-                  <td>크기가 <code>[object Object]</code></td>
-                </tr>
-                <tr>
-                  <td>
-                    <code>time/seconds</code>, <code>html/icon</code>,
-                    <code>asset/url</code>, <code>fontFamily/css</code>,
-                    <code>cubicBezier/css</code>
-                  </td>
-                  <td>값</td>
-                  <td><span class="badge muted">없음</span></td>
-                  <td>CSS는 같다</td>
-                </tr>
-                <tr>
-                  <td>
-                    <code>strokeStyle</code>, <code>border</code>,
-                    <code>typography</code>, <code>transition</code>,
-                    <code>shadow</code>의 <code>/css/shorthand</code>
-                  </td>
-                  <td>값</td>
-                  <td><span class="badge muted">없음</span></td>
-                  <td>CSS는 같다</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p>
-            실제로 일을 하는 것은 <code>name/kebab</code>,
-            <code>color/css</code>, <code>size/rem</code> 세 개다. 나머지는
-            typography나 shadow 토큰이 생길 때 쓰인다. 직접 세 개만 나열해도
-            지금 출력은 같지만, 표준 묶음을 쓰면 Style Dictionary 문서와 바로
-            맞춰 읽을 수 있다.
-          </p>
-        </section>
-
-        <section id="size">
-          <h2>size/rem과 size/px</h2>
-          <p>
-            gyeol-ui는 dimension을 모두 px로 쓰고 CSS에도 px로 낸다. 그런데 쓰는
-            transform 이름이 <code>size/rem</code>이라 반직관적이다. 이름만 보면
-            px를 rem으로 바꿀 것 같지만 그렇지 않다. 처음 구현에서 이렇게 잘못
-            알고 <code>size/px</code>를 골랐다가, 실행해 보고 바로잡았다. 그래서
-            코드에도 이 내용을 주석으로 적어 두었다. 두 transform에 같은 토큰 세
-            개를 넣은 결과다.
-          </p>
-          <div class="compare">
-            <div class="compare-card green">
-              <div class="compare-title">
-                size/rem<small>css group에 들어 있다</small>
-              </div>
-              <dl class="compare-facts">
-                <dt><code>{ 16, "px" }</code></dt>
-                <dd><strong>16px</strong></dd>
-                <dt><code>{ 1.5, "rem" }</code></dt>
-                <dd><strong>1.5rem</strong></dd>
-                <dt><code>{ 0, "px" }</code></dt>
-                <dd>0px</dd>
-                <dt>규칙</dt>
-                <dd>
-                  unit이 적혀 있으면 그대로 붙인다. unit 없는 숫자에만
-                  <code>rem</code>을 붙인다(16으로 나누지 않는다)
-                </dd>
-              </dl>
-              <p class="compare-result">적힌 unit이 그대로 나온다.</p>
-            </div>
-            <div class="compare-card">
-              <div class="compare-title">
-                size/px<small>직접 골라야 한다</small>
-              </div>
-              <dl class="compare-facts">
-                <dt><code>{ 16, "px" }</code></dt>
-                <dd><strong>16px</strong></dd>
-                <dt><code>{ 1.5, "rem" }</code></dt>
-                <dd>
-                  <strong>1.5px</strong> <span class="badge warn">틀림</span>
-                </dd>
-                <dt><code>{ 0, "px" }</code></dt>
-                <dd>0px</dd>
-                <dt>규칙</dt>
-                <dd>unit을 무시하고 숫자에 <code>px</code>를 붙인다</dd>
-              </dl>
-              <p class="compare-result">
-                rem 토큰이 들어오면 조용히 24배 작아진다.
-              </p>
-            </div>
-          </div>
-          <p>
-            지금은 검증 규칙이 dimension unit을 <code>px</code>로만 허용하므로
-            두 transform의 출력이 같다. 그래도 규칙이 바뀌는 날 깨지지 않는 쪽은
-            <code>size/rem</code>이다.
-          </p>
-        </section>
-
-        <section id="files">
-          <h2>files: format과 options</h2>
-          <p>
-            <code>files</code>는 플랫폼 하나에서 만들 파일의 목록이다. 항목마다
-            어떤 format으로 만들지(<code>format</code>), 어디에 쓸지
-            (<code>destination</code>), format에 넘길
-            옵션(<code>options</code>)을 적는다. 같은 토큰으로 CSS 파일 두 개를
-            만들고 싶으면 항목을 두 개 둔다.
-          </p>
-          <h3>css/variables format</h3>
-          <p>
-            transform이 끝난 토큰을 하나씩 <code>--이름: 값;</code> 줄로 만들어
-            선택자 블록 하나에 담는다. 기본값 그대로 둔 옵션과, 다음 티켓에서 쓸
-            옵션은 아래와 같다.
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>옵션</th>
-                  <th>기본값</th>
-                  <th>바꾸면</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><code>showFileHeader</code></td>
-                  <td><code>true</code></td>
-                  <td>
-                    <code>false</code>면 맨 위의
-                    <code
-                      >/** Do not edit directly, this file was auto-generated.
-                      */</code
-                    >
-                    주석이 빠진다
-                    <small
-                      >기본값 그대로 둔다. 고정 문구라 snapshot이 빌드마다
-                      바뀌지 않고, 배포되는 <code>dist/tokens.css</code>를 직접
-                      고치지 말라는 표시가 된다. #19에서 Color Scheme별 결과를
-                      이어 붙이면 헤더가 반복되므로 첫 결과에만 남긴다</small
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>selector</code></td>
-                  <td><code>:root</code></td>
-                  <td>
-                    <code>"[data-x]"</code>를 주면 블록이
-                    <code>[data-x] { … }</code>로 나온다
-                    <small
-                      >#19의 Color Scheme 블록(<code
-                        >[data-color-scheme="dark"]</code
-                      >
-                      등)에 쓸 수 있다</small
-                    >
-                  </td>
-                </tr>
-                <tr>
-                  <td><code>outputReferences</code></td>
-                  <td><code>false</code></td>
-                  <td>
-                    <code>true</code>면 참조를 값으로 풀지 않고
-                    <code>var(--…)</code>로 낸다
-                    <small
-                      >#19에서 Semantic을 낼 때 쓴다. Primitive에는 참조가
-                      없다</small
-                    >
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </section>
 
@@ -812,124 +594,779 @@ const PREFIX = "gyeol";</code></pre>
           </div>
           <p>
             <code>buildTokens</code>는 "CSS 텍스트를 돌려주는" 함수라
-            <code>formatPlatform</code>이 맞다. 실험에서
+            <code>formatPlatform</code>이 맞다. dark 빌드처럼
+            <code>files</code>가 둘이면 배열에 항목도 둘이 온다. 실험에서
             <code>buildPath</code>를 빈 폴더로 주고
             <code>formatPlatform</code>만 불렀을 때 폴더가 생기지 않았다.
-            <code>getPlatformTokens</code>는 이 노트의
-            <a href="#token">토큰 하나가 CSS 한 줄이 되기까지</a>에서 transform
-            결과를 들여다볼 때 썼다.
+            <code>getPlatformTokens</code>는 앞의
+            <a href="#sd">Style Dictionary가 하는 일</a>에서 transform 결과를
+            꺼낼 때 썼다.
           </p>
         </section>
 
-        <section id="cases">
-          <h2>설정을 바꾸면 나오는 CSS</h2>
+        <section id="reference">
+          <h2>참조가 var()가 되기까지</h2>
           <p>
-            fixture(<code>scripts/fixtures/valid/primitive.json</code>)로 설정을
-            한 가지씩 바꿔 실행한 결과다. 바꾼 것 말고는 모두 지금 설정과 같다.
+            Semantic 토큰의 값은 실제 색이 아니라 다른 토큰을 가리키는 참조다.
+            <code>semantic/light.json</code>의 <code>bg-surface</code>는
+            <code>"{color.white}"</code>이고, <code>ring-offset</code>은 다른
+            Semantic인 <code>"{bg-surface}"</code>다. 이 참조를 CSS에서도
+            참조(<code>var()</code>)로 남기는 것이 Semantic 빌드의 핵심이다.
+          </p>
+          <div class="pipe">
+            <div class="pipe-row">
+              <span class="pipe-label">이름</span>
+              <span class="pipe-val">["bg-surface"]<small>경로</small></span>
+              <span class="pipe-fn">name/kebab + prefix</span>
+              <span class="pipe-val ok">gyeol-bg-surface</span>
+            </div>
+            <div class="pipe-row">
+              <span class="pipe-label">Primitive 참조</span>
+              <span class="pipe-val">"{color.white}"</span>
+              <span class="pipe-fn">outputReferences</span>
+              <span class="pipe-val ok">var(--gyeol-color-white)</span>
+            </div>
+            <div class="pipe-row">
+              <span class="pipe-label">Semantic 참조</span>
+              <span class="pipe-val">"{bg-surface}"</span>
+              <span class="pipe-fn">outputReferences</span>
+              <span class="pipe-val ok">var(--gyeol-bg-surface)</span>
+              <span class="pipe-note">Semantic → Semantic도 같다</span>
+            </div>
+            <div class="pipe-row">
+              <span class="pipe-label">합치기</span>
+              <span class="pipe-val">이름 + 값</span>
+              <span class="pipe-fn green">createColorSchemeFormat</span>
+              <span class="pipe-val ok"
+                >--gyeol-bg-surface: var(--gyeol-color-white);</span
+              >
+            </div>
+          </div>
+          <p>
+            <code>outputReferences</code>를 켜지 않으면 Style Dictionary는
+            참조를 끝까지 풀어 실제 값을 낸다. fixture의 light로 두 경우를
+            실행한 결과다.
+          </p>
+          <div class="compare">
+            <div class="compare-card green">
+              <div class="compare-title">
+                참조로 내기<small>outputReferences: true</small>
+              </div>
+              <dl class="compare-facts">
+                <dt>bg-surface</dt>
+                <dd><code>var(--gyeol-color-white)</code></dd>
+                <dt>ring-offset</dt>
+                <dd><code>var(--gyeol-bg-surface)</code></dd>
+              </dl>
+              <p class="compare-result">
+                <code>bg-surface</code>를 바꾸면 <code>ring-offset</code>도 따라
+                바뀐다. Figma에서 Semantic이 다른 Semantic을 가리키던 구조가
+                CSS에도 남는다. 우리가 고른 방법이다.
+              </p>
+            </div>
+            <div class="compare-card">
+              <div class="compare-title">
+                값으로 풀기<small>outputReferences: false</small>
+              </div>
+              <dl class="compare-facts">
+                <dt>bg-surface</dt>
+                <dd><code>#ffffff</code></dd>
+                <dt>ring-offset</dt>
+                <dd><code>#ffffff</code></dd>
+              </dl>
+              <p class="compare-result">
+                지금 보이는 색은 같지만 두 변수의 연결이 끊긴다. 누군가
+                <code>--gyeol-bg-surface</code>만 바꾸면
+                <code>ring-offset</code>은 옛 색에 남는다.
+              </p>
+            </div>
+          </div>
+          <div class="callout warn">
+            <p>
+              참조를 풀려면 가리키는 대상이 Style Dictionary에 함께 있어야 한다.
+              Semantic 파일만 넘기면
+              <code>Some token references (3) could not be found.</code>
+              오류로 빌드가 멈춘다. 그래서 Primitive를 함께 넘긴다. 다음 절은
+              함께 넘긴 Primitive가 출력에 섞이지 않게 하는 방법이다.
+            </p>
+          </div>
+        </section>
+
+        <section id="filter">
+          <h2>Primitive는 참조 대상으로만</h2>
+          <p>
+            Semantic 빌드는 Primitive를 <code>include</code>로, Semantic을
+            <code>source</code>로 넘긴다. 둘 다 Style Dictionary가 읽는 파일
+            목록이고, 차이는 읽은 토큰에 붙는 표시 하나다.
           </p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>경우</th>
-                  <th><code>color.gray.900</code></th>
-                  <th><code>color.overlay</code> (alpha 0.5)</th>
-                  <th><code>spacing.4</code></th>
+                  <th>옵션</th>
+                  <th>넘기는 파일</th>
+                  <th>토큰의 <code>isSource</code></th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
+                  <td><code>include</code></td>
+                  <td><code>primitive.json</code></td>
+                  <td><code>false</code></td>
+                </tr>
+                <tr>
+                  <td><code>source</code></td>
                   <td>
-                    A. 지금 설정<small
-                      >transformGroup "css", 맨 위에 자동 생성 헤더</small
+                    <code>semantic/light.json</code> 또는 <code>dark.json</code>
+                  </td>
+                  <td><code>true</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            이름만 보면 <code>include</code>로 넣은 토큰은 출력되지 않을 것
+            같지만, 기본으로는 출력된다. file의 <code>filter</code>를
+            <code>token.isSource</code>로 두어야 Semantic만 나온다. fixture의
+            light로 실행한 결과다.
+          </p>
+          <div class="compare">
+            <div class="compare-card">
+              <div class="compare-title">
+                include만<small>filter 없음</small>
+              </div>
+              <pre><code class="language-css">:root {
+  --gyeol-color-white: #ffffff;
+  --gyeol-color-gray-900: #18181b;
+  --gyeol-color-overlay: rgba(0, 0, 0, 0.5);
+  --gyeol-spacing-4: 16px;
+  --gyeol-radius-md: 6px;
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  --gyeol-fg-default: var(--gyeol-color-gray-900);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}</code></pre>
+              <p class="compare-result">
+                Primitive가 맨 위 <code>:root</code>와 Semantic 블록 세 개에
+                모두 나온다. 같은 변수가 네 번 정의된다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">
+                include + filter<small
+                  >filter: (token) =&gt; token.isSource</small
+                >
+              </div>
+              <pre><code class="language-css">:root {
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  --gyeol-fg-default: var(--gyeol-color-gray-900);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}</code></pre>
+              <p class="compare-result">
+                Semantic만 나오고, 값은 여전히 Primitive를 <code>var()</code>로
+                가리킨다. 우리가 고른 방법이다.
+              </p>
+            </div>
+          </div>
+          <p>
+            filter로 참조 대상을 빼면, Style Dictionary는 기본 로그에서
+            <code
+              >While building …, filtered out token references were found;
+              output may be unexpected.</code
+            >
+            경고를 찍는다. 출력에 없는 변수(Primitive)를 가리킨다는 뜻이다.
+            Primitive는 맨 위 <code>:root</code>에 따로 나오므로 의도한
+            동작이고, <code>log.verbosity: "silent"</code>라 보이지 않는다.
+          </p>
+        </section>
+
+        <section id="type">
+          <h2>Semantic의 $type은 토큰마다</h2>
+          <p>
+            Primitive는 <code>color</code> 그룹에 <code>$type: "color"</code>를
+            한 번 적고 안의 토큰이 물려받는다. Semantic은 <code>color</code>
+            같은 범주 그룹이 없어서 물려받을 곳이 없다. 그래서 토큰마다 적는다.
+          </p>
+          <pre><code class="language-json">{
+  "bg-surface": {
+    "$type": "color",
+    "$value": "{color.white}"
+  },
+  "ring-offset": {
+    "$type": "color",
+    "$value": "{bg-surface}"
+  }
+}</code></pre>
+          <p>
+            파일 맨 위에 <code>$type</code>을 한 번만 적는 방법도 검토했다. DTCG
+            2025.10은 "<code>$value</code>가 없는 객체는 group"이고 "group의
+            <code>$type</code>을 안의 토큰이 물려받는다"고 하지만, 파일 맨 위
+            객체가 group이라거나 거기에 <code>$type</code>을 둘 수 있다고 직접
+            말하지 않는다. 예시도 모두 이름 있는 group이나 토큰에 적는다. 도구가
+            받아 줄지 보장되지 않아 쓰지 않았다.
+          </p>
+          <p>
+            <code>$type</code>을 빼고 실행하면 CSS 출력은 같다. 하지만 Style
+            Dictionary가 본 토큰의 <code>$type</code>은
+            <code>undefined</code>다. 참조 대상(<code>color.white</code>)의
+            타입을 물려받지 못한다(Style Dictionary 이슈 #1811). 지금은 참조가
+            이미 변환된 Primitive 값으로 풀려서 티가 나지 않을 뿐이다.
+            <code>color/css</code>처럼 타입을 보고 걸리는 transform은
+            <code>$type</code>이 <code>"color"</code>인 토큰에만 걸리므로(<code
+              >isColor</code
+            >
+            filter), 타입이 필요한 빌드에서는 이 토큰을 색으로 다루지 못한다.
+          </p>
+        </section>
+
+        <section id="custom-format">
+          <h2>직접 만든 format</h2>
+          <p>
+            Semantic 블록은 기본 format <code>css/variables</code>로 만들 수
+            없다. <code>css/variables</code>도 <code>selector</code> 옵션에
+            배열을 주면 <code>@media</code> 안에 <code>:root</code>를 중첩해
+            준다. 하지만 블록 안에 토큰이 아닌 줄(<code
+              >color-scheme: dark;</code
+            >)을 넣을 방법이 없다. 그래서 변수 줄 만드는 일만 Style Dictionary의
+            도우미 함수 <code>formattedVariables</code>에 맡기고, 나머지를 직접
+            짠다.
+          </p>
+          <pre><code class="language-ts" data-lines="14 35 39 45">// build-tokens.ts
+const createColorSchemeFormat =
+  ({
+    colorScheme,
+    selectors,
+  }: {
+    colorScheme: ColorScheme;
+    selectors: SelectorChain;
+  }): FormatFn =&gt;
+  ({ dictionary }) =&gt;
+    colorSchemeBlock({
+      colorScheme,
+      selectors,
+      // ① 변수 줄: Style Dictionary가 들여쓰기 없는 --이름: 값; 줄을 만든다
+      variables: formattedVariables({
+        format: "css",
+        dictionary,
+        outputReferences: true,
+        usesDtcg: true,
+        formatting: { indentation: "" },
+      }),
+    });
+
+// build-tokens.helper.ts
+export function colorSchemeBlock({
+  colorScheme,
+  selectors,
+  variables,
+}: {
+  colorScheme: ColorScheme;
+  selectors: SelectorChain;
+  variables: string;
+}): string {
+  const indent = indentAt(selectors.length);
+  // ② color-scheme 줄을 맨 앞에 넣고, 줄마다 중첩 깊이만큼 들여 쓴다
+  const body = [`color-scheme: ${colorScheme};`, ...variables.split("\n")]
+    .map((line) =&gt; `${indent}${line}`)
+    .join("\n");
+  // ③ 안쪽 selector부터 감싼다
+  const block = selectors.reduceRight(
+    (content, selector, depth) =&gt;
+      `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
+    body,
+  );
+  // ④ 헤더 없이 블록만 돌려준다
+  return `${block}\n`;
+}</code></pre>
+          <p>코드의 ①~④ 주석이 아래 단계 번호와 같다.</p>
+          <ol class="steps green">
+            <li>
+              <strong>변수 줄</strong>
+              <code>formattedVariables</code>가 들여쓰기 없는
+              <code>--이름: 값;</code> 줄을 만든다.
+              <code>outputReferences: true</code>라 참조는 <code>var()</code>로
+              나온다. 여기까지가 Style Dictionary가 하는 일이다. dark의 OS 설정
+              블록(<code>gyeol/css/dark-0</code>)을 예로, 줄 하나만 따라가면
+              이렇다.
+              <pre><code class="language-css">--gyeol-bg-surface: var(--gyeol-color-gray-900);</code></pre>
+            </li>
+            <li>
+              <strong>color-scheme 줄과 들여쓰기</strong>
+              helper <code>colorSchemeBlock</code>이 맨 앞에
+              <code>color-scheme: light;</code> 또는 <code>dark;</code>를
+              붙이고, 줄마다 중첩 깊이만큼 들여 쓴다. selector가 둘이라 두
+              단계(공백 4칸) 들여 쓴다.
+              <pre><code class="language-css">    color-scheme: dark;
+    --gyeol-bg-surface: var(--gyeol-color-gray-900);</code></pre>
+            </li>
+            <li>
+              <strong>selector로 감싸기</strong>
+              <code>reduceRight</code>로 안쪽 selector부터 감싼다.
+              <code>["@media …", ":root:not(…)"]</code>면 먼저
+              <code>:root:not(…) { … }</code>를 만들고, 그것을 다시
+              <code>@media … { … }</code>로 감싼다.
+              <pre><code class="language-css">@media (prefers-color-scheme: dark) {
+  :root:not([data-color-scheme="light"]) {
+    color-scheme: dark;
+    --gyeol-bg-surface: var(--gyeol-color-gray-900);
+  }
+}</code></pre>
+            </li>
+            <li>
+              <strong>헤더 없음</strong>
+              <code>css/variables</code>와 달리 헤더를 붙이지 않는다. 헤더는
+              Primitive 블록(파일 맨 위)에 한 번만 나온다.
+            </li>
+          </ol>
+          <p>
+            <code>colorSchemeBlock</code>이 어떤 입력을 어떤 블록으로 바꾸는지는
+            <code>scripts/build-tokens.helper.test.ts</code>에 입력과 출력
+            그대로 적혀 있다. 예를 들어 selector
+            <code>["@media (prefers-color-scheme: dark)", ':root:not(…)']</code
+            >와 변수 줄
+            <code>--gyeol-bg-surface: var(--gyeol-color-gray-900);</code>를
+            넣으면 한눈에 보기의 <code>tokens.css</code>에 있는 media query
+            블록이 나온다.
+          </p>
+
+          <h3>format은 이름으로 등록한다</h3>
+          <p>
+            Style Dictionary의 타입 선언은 file의 <code>format</code>에 함수도
+            받는다고 되어 있다(<code>string | FormatFn</code>). 그런데 5.8.0은
+            실제로 등록된 이름만 찾는다. 함수를 넣으면
+            <code>Can't find format: …</code> 오류가 난다(타입 검사는 통과하고
+            실행에서 실패한다). 그래서 블록마다 만든 함수에
+            <code>gyeol/css/dark-0</code> 같은 이름을 붙여
+            <code>hooks.formats</code>에 등록하고, file에는 그 이름을 적는다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>selector</th>
+                  <th>만드는 블록</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>gyeol/css/light-0</code></td>
+                  <td><code>[":root"]</code></td>
+                  <td>light</td>
+                </tr>
+                <tr>
+                  <td><code>gyeol/css/dark-0</code></td>
+                  <td>
+                    <code
+                      >["@media (prefers-color-scheme: dark)",
+                      ':root:not([data-color-scheme="light"])']</code
                     >
                   </td>
-                  <td><code>--gyeol-color-gray-900: #18181b</code></td>
-                  <td><code>rgba(0, 0, 0, 0.5)</code></td>
-                  <td><code>--gyeol-spacing-4: 16px</code></td>
+                  <td>dark (OS 설정)</td>
                 </tr>
                 <tr>
+                  <td><code>gyeol/css/dark-1</code></td>
+                  <td><code>[':root[data-color-scheme="dark"]']</code></td>
+                  <td>dark (속성)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="walk">
+          <h2>스크립트를 위에서부터</h2>
+          <p>
+            <code>build-tokens.ts</code>는 아래 순서로 읽으면 된다. 함수가
+            여럿이지만 하는 일은 "Style Dictionary를 세 번 돌려 나온 CSS를 이어
+            붙인다" 하나다.
+          </p>
+
+          <h3>1. Color Scheme과 블록의 selector</h3>
+          <pre><code class="language-ts" data-lines="2 11 12">// build-tokens.helper.ts
+export const COLOR_SCHEMES = ["light", "dark"] as const;
+
+export type ColorScheme = (typeof COLOR_SCHEMES)[number];
+
+/** 바깥에서 안쪽 순서로 중첩하는 selector 목록. 예: `["@media …", ":root"]` */
+export type SelectorChain = readonly string[];
+
+// build-tokens.ts
+const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
+  light: [[":root"]],
+  dark: [
+    [
+      "@media (prefers-color-scheme: dark)",
+      ':root:not([data-color-scheme="light"])',
+    ],
+    [':root[data-color-scheme="dark"]'],
+  ],
+};</code></pre>
+          <ul>
+            <li>
+              <code>COLOR_SCHEMES</code>는 빌드할 Color Scheme의 목록이자 CSS에
+              내는 순서다. 다른 helper도 쓰므로
+              <code>build-tokens.helper.ts</code>에 둔다.
+              <code>ColorScheme</code> 타입(<code>"light" | "dark"</code>)도 이
+              배열에서 끌어내서, 목록을 한 곳에만 적는다.
+            </li>
+            <li>
+              <code>SCHEME_SELECTORS</code>는 Color Scheme마다 만들 CSS 블록의
+              selector다. light는 블록 1개, dark는 블록 2개(OS 설정, 속성)다.
+              <code>["@media …", ":root:not(…)"]</code>처럼 배열이면 앞의 것이
+              바깥, 뒤의 것이 안쪽인 중첩 블록이 된다. 이 selector가
+              브라우저에서 어떻게 적용되는지는 패키지 README의 "Color Scheme
+              고르기"에 있다.
+            </li>
+          </ul>
+
+          <h3>2. 파일을 확인하고, 세 번 빌드해 이어 붙인다</h3>
+          <pre><code class="language-ts" data-lines="2 11 13 23">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
+  // ① 파일이 있는지 확인한다: 토큰 파일 경로를 만들고 셋 다 있는지 본다
+  const paths = tokenFilePaths(tokensDir);
+
+  // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
+  // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
+  for (const path of [paths.primitive, ...Object.values(paths.semantic)]) {
+    await access(path);
+  }
+
+  // ② Primitive 블록을 만든다: 맨 위 헤더 + :root { 실제 값 }
+  const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
+  // ③ Color Scheme마다 Semantic 블록을 만든다: light 1개, dark 2개
+  for (const colorScheme of COLOR_SCHEMES) {
+    cssBlocks.push(
+      ...(await buildSemanticCss({
+        primitivePath: paths.primitive,
+        semanticPath: paths.semantic[colorScheme],
+        colorScheme,
+      })),
+    );
+  }
+  // ④ 이어 붙인다: 블록 4개를 빈 줄 하나씩 두고 CSS 텍스트 하나로
+  return { css: cssBlocks.join("\n").trimEnd() + "\n" };
+}</code></pre>
+          <p>
+            이 함수가 전체 흐름이다. 코드의 ①~④ 주석이 아래 단계 번호와 같다.
+          </p>
+          <ol class="steps blue">
+            <li>
+              <strong>파일이 있는지 확인한다</strong>
+              helper <code>tokenFilePaths</code>가 <code>primitive.json</code>,
+              <code>semantic/light.json</code>,
+              <code>semantic/dark.json</code>의 경로를 만들고,
+              <code>access</code>로 셋 다 있는지 본다. 읽는 일은 Style
+              Dictionary가 하는데 왜 확인만 따로 하는지는 바로 다음 절
+              <a href="#tokens-option">파일이 없을 때</a>에 있다.
+            </li>
+            <li>
+              <strong>Primitive 블록을 만든다</strong>
+              <code>buildPrimitiveCss</code>가 맨 위 헤더와
+              <code>:root { --gyeol-color-…: #…; }</code>를 만든다.
+            </li>
+            <li>
+              <strong>Color Scheme마다 Semantic 블록을 만든다</strong>
+              light, dark 순서로 Primitive 경로와 그 Color Scheme의 Semantic
+              경로를 <code>buildSemanticCss</code>에 넘긴다. light는 블록 1개,
+              dark는 블록 2개를 돌려준다.
+            </li>
+            <li>
+              <strong>이어 붙인다</strong>
+              블록 4개를 빈 줄 하나씩 두고 이어 붙여 CSS 텍스트 하나로 돌려준다.
+            </li>
+          </ol>
+
+          <h3>3. Primitive: 지난 티켓과 같은 설정</h3>
+          <pre><code class="language-ts" data-lines="3 8 9 14 15 17">/** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
+const cssPlatform = (files: File[]): PlatformConfig =&gt; ({
+  prefix: PREFIX,
+  // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
+  // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
+  // ({16, "px"} → "16px"), unit 없는 숫자에만 "rem"을 붙인다. 토큰은 모두 px로 쓰므로 px로 나온다.
+  // size/px를 직접 고르지 않는 이유: size/px는 unit을 무시해 {1.5, "rem"}도 "1.5px"로 낸다.
+  transformGroup: "css",
+  files,
+});
+
+async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
+  const sd = new StyleDictionary({
+    source: [primitivePath],
+    log: { verbosity: "silent" },
+    platforms: {
+      css: cssPlatform([{ format: "css/variables" }]),
+    },
+  });
+  return (await formatOutputs(sd)).join("");
+}</code></pre>
+          <p>
+            Primitive와 Semantic 빌드가 함께 쓰는 플랫폼
+            설정(<code>prefix</code>,
+            <code>transformGroup</code>)은 <code>cssPlatform</code>으로 뺐다.
+            Primitive 빌드는 기본 format <code>css/variables</code>를 그대로
+            써서, 파일 맨 위 헤더(<code>Do not edit directly…</code>)와
+            <code>:root</code> 블록을 만든다. 각 옵션이 하는 일은 아래 표와
+            같다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>옵션</th>
+                  <th>값</th>
+                  <th>하는 일</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>source</code></td>
+                  <td><code>[primitivePath]</code></td>
                   <td>
-                    B. 직접 나열<small>name/kebab, color/css, size/px</small>
+                    빌드할 토큰 파일. Style Dictionary가 읽는다
+                    <small><a href="#tokens-option">파일이 없을 때</a></small>
                   </td>
-                  <td>A와 같다</td>
-                  <td>A와 같다</td>
-                  <td>A와 같다</td>
                 </tr>
                 <tr>
-                  <td>C. transform 없음</td>
-                  <td><code>--900: [object Object]</code></td>
-                  <td><code>[object Object]</code></td>
-                  <td><code>--4: [object Object]</code></td>
-                </tr>
-                <tr>
-                  <td>D. prefix 없음</td>
-                  <td><code>--color-gray-900: #18181b</code></td>
-                  <td>A와 같다</td>
-                  <td><code>--spacing-4: 16px</code></td>
-                </tr>
-                <tr>
+                  <td><code>log.verbosity</code></td>
+                  <td><code>"silent"</code></td>
                   <td>
-                    E. <code>color/hex</code><small>color/css 대신</small>
-                  </td>
-                  <td>A와 같다</td>
-                  <td><code>#00000080</code> <small>8자리 hex</small></td>
-                  <td>A와 같다</td>
-                </tr>
-                <tr>
-                  <td>F. <code>selector: "[data-x]"</code></td>
-                  <td colspan="3">
-                    줄은 A와 같고 블록이 <code>[data-x] { … }</code>
+                    Style Dictionary의 콘솔 출력을 끈다
+                    <small><a href="#log">log.verbosity</a></small>
                   </td>
                 </tr>
                 <tr>
-                  <td>G. <code>showFileHeader: false</code></td>
-                  <td colspan="3">
-                    줄은 A와 같고 맨 위의 "Do not edit directly" 주석이 빠진다
+                  <td><code>platforms.css</code></td>
+                  <td>설정 객체</td>
+                  <td>
+                    "css"라는 이름의 출력 하나. 이름은 우리가 정한다
+                    <small><a href="#transforms">transform</a></small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>prefix</code></td>
+                  <td><code>"gyeol"</code></td>
+                  <td>변수 이름 앞에 붙일 말</td>
+                </tr>
+                <tr>
+                  <td><code>transformGroup</code></td>
+                  <td><code>"css"</code></td>
+                  <td>
+                    CSS용으로 미리 묶어 둔 transform 14개를 쓴다
+                    <small
+                      ><a href="#transforms"
+                        >transformGroup과 transforms</a
+                      ></small
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>files[].format</code></td>
+                  <td><code>"css/variables"</code></td>
+                  <td>
+                    토큰 목록을 <code>:root { … }</code> 문자열로 만든다
+                    <small><a href="#custom-format">직접 만든 format</a></small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>4. Semantic: Primitive를 함께 넘기고 Semantic만 낸다</h3>
+          <pre><code class="language-ts" data-lines="12 19 24 31">async function buildSemanticCss({
+  primitivePath,
+  semanticPath,
+  colorScheme,
+}: {
+  primitivePath: string;
+  semanticPath: string;
+  colorScheme: ColorScheme;
+}): Promise&lt;string[]&gt; {
+  // 블록마다 selector가 달라 format을 블록마다 만든다.
+  // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
+  // ① format: 블록마다 직접 만든 format을 이름 붙여 만든다
+  const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) =&gt; ({
+    name: `gyeol/css/${colorScheme}-${index}`,
+    format: createColorSchemeFormat({ colorScheme, selectors }),
+  }));
+
+  const sd = new StyleDictionary({
+    // ② 토큰: Primitive는 참조를 푸는 데만, Semantic은 출력할 토큰
+    include: [primitivePath],
+    source: [semanticPath],
+    log: { verbosity: "silent" },
+    hooks: {
+      // ① 만든 format을 이름으로 등록한다
+      formats: Object.fromEntries(formats.map((f) =&gt; [f.name, f.format])),
+    },
+    platforms: {
+      css: cssPlatform(
+        formats.map(({ name }) =&gt; ({
+          format: name,
+          // ③ filter: source(Semantic)에서 읽은 토큰만 낸다
+          filter: (token: TransformedToken) =&gt; token.isSource,
+        })),
+      ),
+    },
+  });
+  return formatOutputs(sd);
+}</code></pre>
+          <p>
+            Primitive 빌드와 다른 곳은 세 군데다. 코드의 ①~③ 주석이 아래 표의
+            번호와 같다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>다른 곳</th>
+                  <th>코드</th>
+                  <th>이유</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>① format</td>
+                  <td>
+                    <code>createColorSchemeFormat(…)</code>을
+                    <code>hooks.formats</code>에 이름 붙여 등록
+                  </td>
+                  <td>
+                    블록마다 <code>color-scheme</code> 속성을 넣고 헤더를 빼야
+                    해서 직접 만든 format을 쓴다
+                    <small><a href="#custom-format">직접 만든 format</a></small>
+                  </td>
+                </tr>
+                <tr>
+                  <td>② 토큰</td>
+                  <td>
+                    <code>include: [primitivePath]</code>,
+                    <code>source: [semanticPath]</code>
+                  </td>
+                  <td>
+                    Semantic은 <code>{color.white}</code>처럼 Primitive를
+                    가리킨다. 가리키는 대상이 함께 있어야 참조가 풀린다
+                    <small
+                      ><a href="#reference">참조가 var()가 되기까지</a></small
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>③ filter</td>
+                  <td>
+                    <code>(token) =&gt; token.isSource</code>
+                  </td>
+                  <td>
+                    include로 넣은 Primitive도 기본으로 출력되므로,
+                    source(Semantic)에서 읽은 토큰만 낸다
+                    <small
+                      ><a href="#filter">Primitive는 참조 대상으로만</a></small
+                    >
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p>
-            E는 alpha를 다르게 낸다. <code>color/css</code>는 alpha가 없으면
-            hex, 있으면 <code>rgba()</code>를 낸다. <code>color/hex</code>는
-            alpha를 8자리 hex의 끝 두 자리(<code>80</code> = 128/255 ≈ 0.5)로
-            낸다. 수용 기준이 "alpha가 있으면 <code>rgba()</code>"라서
-            <code>color/css</code>가 맞다.
+            dark는 <code>SCHEME_SELECTORS.dark</code>에 selector가 두 개라
+            <code>files</code>도 두 개가 된다. 한 번 실행으로 내용이 같은 블록
+            두 개(media query 블록, 속성 블록)를 받는다.
           </p>
+
+          <h3>5. 문자열만 받아 돌려준다</h3>
+          <pre><code class="language-ts" data-lines="2-6">const formatOutputs = async (sd: StyleDictionary): Promise&lt;string[]&gt; =&gt; {
+  const files = await sd.formatPlatform("css");
+  return files.map(({ output }) =&gt; {
+    if (typeof output !== "string") {
+      throw new Error("Style Dictionary가 CSS를 만들지 못했다");
+    }
+    return output;
+  });
+};</code></pre>
+          <p>
+            <code>formatPlatform</code>은 <code>files</code>의 항목마다
+            <code>{ output, destination }</code>을 담은 배열을 돌려준다.
+            dark처럼 파일이 둘이면 항목도 둘이다. <code>output</code>의 타입은
+            문자열이 아닐 수도 있게 넓게 선언되어 있어서, 문자열인지 확인한 뒤
+            돌려준다. 다른 메서드와의 차이는 앞의
+            <a href="#format-platform">formatPlatform</a>에서 보았다.
+          </p>
+        </section>
+
+        <section id="tokens-option">
+          <h2>파일이 없을 때</h2>
+          <p>
+            Style Dictionary는 <code>source</code>와 <code>include</code>의
+            항목마다 <code>globSync(패턴)</code>으로 맞는 파일 목록을
+            구한다(<code>lib/utils/combineJSON.js</code>). 와일드카드 없는
+            경로도 패턴 하나로 다루고, glob은 "맞는 파일이 0개"를 오류가 아닌 빈
+            목록으로 돌려준다. 그래서 파일 이름을 틀리거나 파일이 없어도 Style
+            Dictionary는 "파일이 없다"고 알려 주지 않는다. 없는 경로를 넣고
+            실행한 결과다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>없는 파일</th>
+                  <th>Style Dictionary만 쓰면</th>
+                  <th>먼저 <code>access</code>로 확인하면</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>primitive.json</code> (Primitive 빌드의 source)</td>
+                  <td>
+                    오류 없이 빈 <code>:root {}</code>
+                    <span class="badge warn">조용히 성공</span>
+                  </td>
+                  <td rowspan="3">
+                    <code
+                      >ENOENT: no such file or directory, access '…/파일'</code
+                    >
+                    <small>어떤 파일이 없는지 경로가 나온다</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>semantic/light.json</code> (source)</td>
+                  <td>
+                    filter에 맞는 토큰이 없어 결과가 비고, 우리 코드가 "Style
+                    Dictionary가 CSS를 만들지 못했다"로 실패
+                    <small>원인이 파일이라는 말이 없다</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>primitive.json</code> (Semantic 빌드의 include)</td>
+                  <td>
+                    <code>Some token references (3) could not be found.</code>
+                    <small>참조가 틀린 것처럼 보인다</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            그래서 <code>buildTokens</code>는 경로를 넘기기 전에
+            <code>access</code>로 세 파일이 있는지 확인한다. 이 동작은 테스트
+            "토큰 폴더에 primitive.json이 없으면 실패한다"와 "토큰 폴더에
+            Semantic 파일이 없으면 실패한다"가 지킨다.
+          </p>
+          <div class="callout">
+            <p>
+              처음 구현은 이 문제를 피하려고 파일을 직접 읽어
+              <code>tokens</code> 옵션에 객체로 넘기고, Semantic만 고르는 filter
+              함수도 직접 짰다. 지금은 파일이 있는지만 우리 코드가 확인하고,
+              읽기와 Semantic 고르기는 Style Dictionary의 <code>source</code>,
+              <code>include</code>, <code>isSource</code>에 맡긴다.
+            </p>
+          </div>
         </section>
 
         <section id="check">
           <h2>점검 문제</h2>
           <div class="quiz">
             <p class="quiz-q">
-              1. <code>buildTokens</code>에 오타 난 폴더를 넘기면 어떻게 되나?
-              <code>source</code>를 썼다면?
+              1. 아래처럼 바꾸면 <code>--gyeol-spacing-4</code>는 무엇이 되나?
             </p>
             <p class="quiz-context">
-              <a href="#tokens-option">tokens와 source</a>의 두 카드로 생각한다.
-            </p>
-            <details class="quiz-answer">
-              <summary>답 보기</summary>
-              <div class="fold-body">
-                <p>
-                  지금 코드는 <code>readFile</code>이 <code>ENOENT</code>로
-                  실패해 빌드가 멈춘다.
-                  <code>source: [join(dir, "primitive.json")]</code>를 썼다면
-                  glob이 파일 0개를 정상으로 보고, 빈 <code>:root {}</code>가
-                  <code>dist/tokens.css</code>에 기록된다. CI도 통과한다.
-                </p>
-              </div>
-            </details>
-          </div>
-          <div class="quiz">
-            <p class="quiz-q">
-              2. 아래처럼 바꾸면 <code>--gyeol-spacing-4</code>는 무엇이 되나?
-            </p>
-            <p class="quiz-context">
-              <a href="#transforms">transformGroup과 transforms</a>의 표로
-              생각한다.
+              <a href="#transforms">transform</a>의 표로 생각한다.
             </p>
             <pre><code class="language-diff">-        transformGroup: "css",
 +        transforms: ["name/kebab", "color/css"],</code></pre>
@@ -947,12 +1384,13 @@ const PREFIX = "gyeol";</code></pre>
           </div>
           <div class="quiz">
             <p class="quiz-q">
-              3. 나중에 <code>{ "value": 1.5, "unit": "rem" }</code> 토큰을
+              2. 나중에 <code>{ "value": 1.5, "unit": "rem" }</code> 토큰을
               허용하게 되면, <code>size/px</code>와 <code>size/rem</code> 중
               무엇이 맞게 내나?
             </p>
             <p class="quiz-context">
-              <a href="#size">size/rem과 size/px</a>의 비교 카드로 생각한다.
+              <a href="#transforms">transform</a>의 size/rem과 size/px 비교
+              카드로 생각한다.
             </p>
             <details class="quiz-answer">
               <summary>답 보기</summary>
@@ -967,20 +1405,46 @@ const PREFIX = "gyeol";</code></pre>
           </div>
           <div class="quiz">
             <p class="quiz-q">
-              4. <code>log: { verbosity: "silent" }</code>를 지우면 테스트는
-              실패하나?
+              3. <code>buildSemanticCss</code>에서 <code>filter</code> 줄을
+              지우면 <code>tokens.css</code>는 어떻게 되나?
             </p>
             <p class="quiz-context">
-              <a href="#log">log.verbosity</a>의 카드로 생각한다.
+              <a href="#filter">Primitive는 참조 대상으로만</a>의 두 카드로
+              생각한다.
             </p>
             <details class="quiz-answer">
               <summary>답 보기</summary>
               <div class="fold-body">
                 <p>
-                  실패하지 않는다. 출력 문자열은 같고 콘솔에
-                  <code>css</code>와 <code>✔︎ tokens.css</code>가 더 찍힐 뿐이다.
-                  다만 파일을 기록하지 않았는데 기록한 것처럼 보여 로그를 읽는
-                  사람을 헷갈리게 한다.
+                  Semantic 블록 세 개에 Primitive 변수 (<code
+                    >--gyeol-color-white</code
+                  >
+                  등)가 다시 나온다. 값이 같아 화면은 그대로지만 같은 변수가 네
+                  번 정의된다. 테스트 "Semantic 블록에는 Primitive 변수를 다시
+                  내지 않는다"가 이 변화를 잡는다.
+                </p>
+              </div>
+            </details>
+          </div>
+          <div class="quiz">
+            <p class="quiz-q">
+              4. <code>buildTokens</code>에 오타 난 폴더를 넘기면 어떻게 되나?
+              <code>access</code> 확인을 지우면?
+            </p>
+            <p class="quiz-context">
+              <a href="#tokens-option">파일이 없을 때</a>의 표로 생각한다.
+            </p>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  지금 코드는 <code>access</code>가 <code>ENOENT</code>로
+                  실패해, 어떤 파일이 없는지 경로와 함께 빌드가 멈춘다. 확인을
+                  지우면 Style Dictionary의 glob이 파일 0개를 정상으로 본다.
+                  Primitive 빌드는 빈 <code>:root {}</code>를 내고, 이어지는
+                  Semantic 빌드는 출력이 비어 우리 코드의 "Style Dictionary가
+                  CSS를 만들지 못했다" 오류로 멈춘다. 원인이 "폴더 이름
+                  오타"라는 것은 오류 어디에도 나오지 않는다.
                 </p>
               </div>
             </details>
@@ -995,6 +1459,12 @@ const PREFIX = "gyeol";</code></pre>
               설명하는 <code>buildTokens</code>
             </li>
             <li>
+              <code>packages/tokens/scripts/build-tokens.helper.ts</code>와
+              <code>build-tokens.helper.test.ts</code>: 순수 변환 함수
+              <code>colorSchemeBlock</code>, <code>tokenFilePaths</code>와, 그
+              입력과 출력을 보여 주는 테스트
+            </li>
+            <li>
               <code>packages/tokens/scripts/build.ts</code>:
               <code>pnpm build</code>에서 <code>buildTokens</code>를 실제
               <code>tokens/</code> 폴더로 불러 git에 넣지 않는
@@ -1007,11 +1477,19 @@ const PREFIX = "gyeol";</code></pre>
             </li>
             <li>
               <code>packages/tokens/scripts/build-tokens.test.ts</code>와
-              <code>scripts/fixtures/valid/primitive.json</code>: fixture로
-              출력을 검사하는 테스트
+              <code>scripts/fixtures/valid/</code>(<code>primitive.json</code>,
+              <code>semantic/light.json</code>,
+              <code>semantic/dark.json</code>): fixture로 출력을 검사하는
+              테스트. 출력 전체 snapshot과 블록, 참조, selector 단언이 있다
             </li>
             <li>
-              <code>packages/tokens/tokens/primitive.json</code>: 실제 씨앗 토큰
+              <code>packages/tokens/tokens/</code>(<code>primitive.json</code>,
+              <code>semantic/light.json</code>,
+              <code>semantic/dark.json</code>): 실제 씨앗 토큰
+            </li>
+            <li>
+              <code>packages/tokens/README.md</code> "Color Scheme 고르기":
+              사용자가 보는 블록 설명과 Android 웹뷰 meta 태그 안내
             </li>
             <li>
               <code>docs/architecture.md</code> "스타일과 토큰": 변수 이름 규칙,
@@ -1026,7 +1504,10 @@ const PREFIX = "gyeol";</code></pre>
             이 노트의 출력과 콘솔 로그는 모두 Style Dictionary 5.8.0을 직접
             실행해 확인했다. transform의 동작은 패키지 소스
             <code>lib/common/transforms.js</code>의 <code>size/rem</code>,
-            <code>size/px</code> 구현으로도 확인했다.
+            <code>size/px</code> 구현과
+            <code>lib/common/transform-utils/default-filters.js</code>의
+            <code>isColor</code>로, format을 이름으로만 찾는 동작은
+            <code>lib/transform/config.js</code>로도 확인했다.
           </p>
           <ul>
             <li>
@@ -1078,6 +1559,21 @@ const PREFIX = "gyeol";</code></pre>
               Style Dictionary,
               <a href="https://styledictionary.com/info/dtcg/">DTCG support</a>:
               <code>$value</code>로 DTCG 형식을 알아보는 동작
+            </li>
+            <li>
+              Style Dictionary,
+              <a
+                href="https://github.com/style-dictionary/style-dictionary/issues/1811"
+                >이슈 #1811</a
+              >: <code>$type</code> 없는 alias가 참조 대상의 타입을 물려받지
+              못하는 문제
+            </li>
+            <li>
+              Design Tokens Community Group,
+              <a href="https://www.designtokens.org/tr/2025.10/format/"
+                >Design Tokens Format Module 2025.10</a
+              >: group의 정의(§6.1), group의 <code>$type</code> 상속(§5.2.2,
+              §6.3)
             </li>
           </ul>
         </section>

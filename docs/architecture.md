@@ -2,7 +2,7 @@
 
 gyeol-ui를 어떻게 만들고, 검증하고, 내보내는지에 대한 현재 규칙이다. 어디로 가는지는 [로드맵](./roadmap.md)을, 용어는 [GLOSSARY.md](../GLOSSARY.md)를 따른다.
 
-- 규칙은 이 문서 한 곳에 적는다. Phase를 시작할 때 정한 Phase 전체 규칙도 여기에 더한다.
+- 구조와 도구의 규칙은 이 문서 한 곳에 적는다. Phase를 시작할 때 정한 Phase 전체 규칙도 여기에 더한다. 함수 인자 같은 코드 작성 규칙은 [코딩 규칙](./coding-standards.md)에 적는다.
 - 되돌리기 어렵고, 맥락 없이는 의아하고, 실제 trade-off가 있었던 결정은 이유를 [ADR](./adr/)로 남기고 여기서 링크한다.
 - 결정의 근거가 된 사실은 그 결정 바로 아래 "확인한 사실"에 확인 시점과 함께 적는다. 사실이 바뀌면 바로 위의 규칙을 다시 본다.
 
@@ -74,7 +74,7 @@ tools/
   - Figma의 "alias + 투명도"는 허용한다. `$value`에는 계산한 색을, `$extensions`에는 참조 대상과 투명도를 적고, CSS에는 `color-mix(in srgb, var(--…) N%, transparent)`로 낸다.
 - CSS 변수는 `--gyeol-` 접두사를 붙인다 (예: `--gyeol-bg-surface`). Primitive는 `:root`에, Semantic은 Primitive를 `var()`로 가리키는 Color Scheme 블록에 낸다.
   - 공개 API는 Semantic 변수와, 색이 아닌 Primitive 변수(`--gyeol-spacing-*`, `--gyeol-radius-*`)다. Primitive 색 변수는 출력되지만 공개 API가 아니다. 컴포넌트는 색에 Semantic만 쓴다.
-- Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `data-color-scheme` 속성이 있으면 그 값을 따른다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
+- Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `<html>`에 `data-color-scheme` 속성이 있으면 그 값을 따른다. 속성은 `<html>`에서만 지원하고, 페이지 일부의 Color Scheme을 따로 바꾸는 것은 지원하지 않는다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
 
 확인한 사실(2026-11):
 
@@ -85,7 +85,9 @@ tools/
   - `color/css`는 sRGB로만 낸다.
   - `size/px`는 unit을 무시하고 px를 붙인다. 그래서 rem 값에는 쓰면 안 된다.
   - 기본 `css` transformGroup의 `size/rem`은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고(`{16, px}` → `16px`), unit 없는 숫자에만 `rem`을 붙인다.
-  - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다.
+  - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다. `include`로 넣은 토큰도 기본으로 출력되므로, file `filter`를 `token.isSource`로 두어야 `source`의 토큰만 나온다.
+  - `source`와 `include`는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류 없이 빈 결과를 낸다.
+  - 파일 설정의 `format`은 타입 선언상 함수도 받지만, 실제로는 `hooks.formats`에 등록된 이름만 찾는다.
   - JS/TS 기본 format은 `outputReferences`를 지원하지 않는다.
   - `$type`이 없는 alias는 참조 대상의 타입을 물려받지 못한다(이슈 #1811).
 - Figma는 DTCG import/export를 기본 기능으로 제공한다.

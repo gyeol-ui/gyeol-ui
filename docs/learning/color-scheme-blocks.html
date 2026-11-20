@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>dark 블록이 두 개인 이유</title>
+    <link rel="stylesheet" href="learn.css" />
+    <script src="vendor/highlightjs/highlight.min.js" defer></script>
+    <script src="learn.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <nav aria-label="목차">
+        <strong>목차</strong>
+        <ol>
+          <li><a href="#overview">한눈에 보기</a></li>
+          <li><a href="#two-ways">dark가 되는 두 가지 상황</a></li>
+          <li><a href="#no-or">한 블록으로 합칠 수 없는 이유</a></li>
+          <li><a href="#cases">여섯 가지 경우</a></li>
+          <li><a href="#specificity">명시도</a></li>
+          <li><a href="#light-dark">다른 방법: light-dark()</a></li>
+          <li><a href="#check">점검 문제</a></li>
+          <li><a href="#code">쓰인 곳</a></li>
+          <li><a href="#sources">출처</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <h1>dark 블록이 두 개인 이유</h1>
+        <p class="lead">
+          <code>tokens.css</code>에는 dark Semantic 변수가 똑같은 내용으로 두 번
+          나온다. 한 번은 <code>@media (prefers-color-scheme: dark)</code> 안에,
+          한 번은 <code>:root[data-color-scheme="dark"]</code>에 있다. dark가
+          되어야 하는 상황이 두 가지인데 CSS는 미디어 쿼리와 selector를
+          "또는"으로 묶을 수 없어서다. OS 설정과
+          <code>&lt;html&gt;</code> 태그의 경우의 수를 모두 펼쳐 놓고 어느
+          블록이 적용되는지 본다.
+        </p>
+
+        <section id="overview">
+          <h2>한눈에 보기</h2>
+          <p>
+            <code>tokens.css</code>의 Semantic 부분은 블록 세 개다. 변수 줄은
+            줄였다.
+          </p>
+          <pre><code class="language-css">/* light 블록: 기본값 */
+:root {
+  color-scheme: light;
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  /* … */
+}
+
+/* media 블록: OS가 dark이고 사이트에서 light를 고르지 않았을 때 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-color-scheme="light"]) {
+    color-scheme: dark;
+    --gyeol-bg-surface: var(--gyeol-color-gray-950);
+    /* … */
+  }
+}
+
+/* 속성 블록: 사이트에서 dark를 골랐을 때 (OS 설정과 상관없음) */
+:root[data-color-scheme="dark"] {
+  color-scheme: dark;
+  --gyeol-bg-surface: var(--gyeol-color-gray-950);
+  /* … media 블록과 한 줄도 다르지 않다 */
+}</code></pre>
+          <p>
+            이 노트에서는 세 블록을 selector의 생김새대로
+            <strong>light 블록</strong>(<code>:root</code>),
+            <strong>media 블록</strong>(<code>@media</code> 안의 dark),
+            <strong>속성 블록</strong
+            >(<code>:root[data-color-scheme="dark"]</code>)으로 부른다.
+          </p>
+        </section>
+
+        <section id="two-ways">
+          <h2>dark가 되는 두 가지 상황</h2>
+          <p>
+            Color Scheme을 정하는 입력은 두 가지다. OS의 설정(웹뷰라면 네이티브
+            앱의 설정)과 <code>&lt;html&gt;</code>의
+            <code>data-color-scheme</code> 속성이다. 속성은 사이트가 "이
+            사이트는 이 Color Scheme으로 보여 달라"고 직접 고를 때 붙인다. 이 두
+            입력으로 dark가 되는 길이 두 갈래다.
+          </p>
+          <div class="flow">
+            <div class="lane blue">
+              <div class="lane-title">media 블록: OS 설정을 따른다</div>
+              <ol class="chain">
+                <li><span>OS가 dark</span></li>
+                <li>
+                  <span>사이트에서 light를 고르지 않음</span>
+                </li>
+                <li><span>dark</span></li>
+              </ol>
+            </div>
+            <div class="lane green">
+              <div class="lane-title">
+                속성 블록: 사이트에서 고른 값을 따른다
+              </div>
+              <ol class="chain">
+                <li><span>사이트에서 dark를 고름</span></li>
+                <li><span>OS 설정은 보지 않음</span></li>
+                <li><span>dark</span></li>
+              </ol>
+            </div>
+          </div>
+          <p>조건으로 쓰면 이렇다.</p>
+          <pre><code>dark = (OS가 dark 그리고 속성이 light가 아님) 또는 (속성이 dark)
+       └────────── media 블록 ──────────┘       └ 속성 블록 ┘</code></pre>
+          <ul>
+            <li>
+              <code>@media (prefers-color-scheme: dark)</code>는 "OS가 dark"를
+              뜻한다. 미디어 쿼리가 거짓이면 브라우저는 그 안의 규칙을 없는
+              것처럼 다룬다.
+            </li>
+            <li>
+              <code>:not([data-color-scheme="light"])</code>는 "속성이 light가
+              아님"을 뜻한다. 속성이 없거나 <code>dark</code>면 맞는다.
+            </li>
+            <li>
+              <code>:root[data-color-scheme="dark"]</code>는 미디어 쿼리 밖에
+              있어서 OS 설정과 상관없이 맞는다.
+            </li>
+          </ul>
+        </section>
+
+        <section id="no-or">
+          <h2>한 블록으로 합칠 수 없는 이유</h2>
+          <p>
+            CSS에서 "또는"을 만드는 방법은 두 가지다. 그런데 어느 것도 "미디어
+            쿼리 또는 selector"를 만들지 못한다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>쓰는 법</th>
+                  <th>묶을 수 있는 것</th>
+                  <th>여기서 쓸 수 있나</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>.a, .b { }</code></td>
+                  <td>selector끼리</td>
+                  <td>
+                    <span class="badge muted">없음</span>
+                    <small>"OS가 dark"는 selector로 쓸 수 없다</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>@media (a), (b) { }</code></td>
+                  <td>미디어 쿼리끼리</td>
+                  <td>
+                    <span class="badge muted">없음</span>
+                    <small>"속성이 dark"는 미디어 쿼리로 쓸 수 없다</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            미디어 쿼리는 selector가 아니라 규칙 전체를 감싸는 바깥 조건이다.
+            그래서 아래 같은 문법은 없다.
+          </p>
+          <pre><code class="language-css">/* 이런 문법은 없다 */
+@media (prefers-color-scheme: dark), :root[data-color-scheme="dark"] {
+  /* … */
+}</code></pre>
+          <p>
+            남는 방법은 미디어 쿼리 안의 규칙(media 블록)과 밖의 규칙(속성
+            블록)으로 나누는 것뿐이다. 그래서 dark 변수 목록이 두 번 나온다.
+          </p>
+          <div class="callout">
+            <p>
+              이 중복은 사람이 맞춰 고칠 대상이 아니다.
+              <code>tokens.css</code>는 빌드 결과물이고, 빌드 스크립트가
+              <code>semantic/dark.json</code>
+              하나를 읽어 두 블록에 같은 내용을 찍어 낸다. 원본은 한 곳뿐이다.
+            </p>
+          </div>
+        </section>
+
+        <section id="cases">
+          <h2>여섯 가지 경우</h2>
+          <p>
+            OS 설정 2가지 × <code>&lt;html&gt;</code> 태그
+            3가지(<code>&lt;html&gt;</code>,
+            <code>&lt;html data-color-scheme="light"&gt;</code>,
+            <code>&lt;html data-color-scheme="dark"&gt;</code>)로 경우는 모두
+            여섯 가지다. 경우마다 어느 블록이 맞고 왜 그 결과가 나오는지 표로
+            보면 이렇다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>OS 설정</th>
+                  <th><code>&lt;html&gt;</code> 태그</th>
+                  <th>맞는 블록</th>
+                  <th>결과</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>light</td>
+                  <td><code>&lt;html&gt;</code></td>
+                  <td>
+                    light 블록
+                    <small
+                      >media 블록은 미디어 쿼리가 거짓, 속성 블록은 속성이
+                      없다</small
+                    >
+                  </td>
+                  <td><span class="badge blue">light</span></td>
+                </tr>
+                <tr>
+                  <td>light</td>
+                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
+                  <td>light 블록</td>
+                  <td><span class="badge blue">light</span></td>
+                </tr>
+                <tr>
+                  <td>light</td>
+                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
+                  <td>
+                    light 블록, 속성 블록
+                    <small>명시도가 높은 속성 블록이 이긴다</small>
+                  </td>
+                  <td><span class="badge green">dark</span></td>
+                </tr>
+                <tr>
+                  <td>dark</td>
+                  <td><code>&lt;html&gt;</code></td>
+                  <td>
+                    light 블록, media 블록
+                    <small>명시도가 높은 media 블록이 이긴다</small>
+                  </td>
+                  <td><span class="badge green">dark</span></td>
+                </tr>
+                <tr>
+                  <td>dark</td>
+                  <td><code>&lt;html data-color-scheme="light"&gt;</code></td>
+                  <td>
+                    light 블록
+                    <small
+                      >media 블록은
+                      <code>:not([data-color-scheme="light"])</code>에 걸려
+                      빠진다</small
+                    >
+                  </td>
+                  <td><span class="badge blue">light</span></td>
+                </tr>
+                <tr>
+                  <td>dark</td>
+                  <td><code>&lt;html data-color-scheme="dark"&gt;</code></td>
+                  <td>
+                    light 블록, media 블록, 속성 블록
+                    <small
+                      >media 블록과 속성 블록의 내용이 같아 어느 쪽이 이겨도
+                      결과가 같다</small
+                    >
+                  </td>
+                  <td><span class="badge green">dark</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            한 문장으로 줄이면
+            <strong>속성이 있으면 속성을, 없으면 OS 설정을 따른다</strong>.
+          </p>
+          <p>
+            확인 방법: 실제 빌드한 <code>tokens.css</code>를 Chrome 155에 넣고
+            경우마다 <code>&lt;html&gt;</code>의
+            <code>--gyeol-bg-surface</code>와 <code>color-scheme</code>을
+            읽었다. light는 <code>#ffffff</code>, dark는 <code>#09090b</code>가
+            나왔다. OS 설정은 페이지에서 바꿀 수 없어서, OS light는
+            <code>@media</code> 블록을 지운 CSS로, OS dark는
+            <code>@media (…) {</code> 감싸기만 벗긴 CSS로 확인했다. 미디어
+            쿼리가 거짓일 때와 참일 때 브라우저가 보는 규칙과 같다.
+          </p>
+        </section>
+
+        <section id="specificity">
+          <h2>명시도</h2>
+          <p>
+            한 요소에 여러 블록이 맞으면 명시도(selector의 점수)가 높은 쪽이
+            이긴다. 명시도가 같으면 뒤에 나온 쪽이 이긴다. 미디어 쿼리는 점수에
+            들어가지 않는다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>블록</th>
+                  <th>selector</th>
+                  <th>명시도</th>
+                  <th>계산</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>light 블록</td>
+                  <td><code>:root</code></td>
+                  <td>(0,1,0)</td>
+                  <td>가상 클래스 1개</td>
+                </tr>
+                <tr>
+                  <td>media 블록</td>
+                  <td><code>:root:not([data-color-scheme="light"])</code></td>
+                  <td>(0,2,0)</td>
+                  <td>
+                    <code>:root</code> 1개 + <code>:not()</code> 안의 속성
+                    selector 1개
+                    <small
+                      ><code>:not()</code> 자체는 점수가 없고 괄호 안의 점수를
+                      가져온다</small
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>속성 블록</td>
+                  <td><code>:root[data-color-scheme="dark"]</code></td>
+                  <td>(0,2,0)</td>
+                  <td><code>:root</code> 1개 + 속성 selector 1개</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            dark 블록은 둘 다 (0,2,0)이라 light 블록(0,1,0)을 블록 순서와
+            관계없이 이긴다. media 블록과 속성 블록은 명시도가 같지만 내용이
+            같아서 어느 쪽이 이겨도 결과가 같다.
+          </p>
+          <p>
+            <code>:not()</code>이 media 블록의 명시도를 올려 주는 것은 덤이다.
+            미디어 쿼리는 점수에 들어가지 않으므로, <code>:not()</code>이 없다면
+            media 블록은 light 블록과 같은 (0,1,0)이 되고 뒤에 나온다는 이유로만
+            이긴다.
+          </p>
+        </section>
+
+        <section id="light-dark">
+          <h2>다른 방법: light-dark()</h2>
+          <p>
+            CSS <code>light-dark()</code> 함수를 쓰면 값을 한 번만 적을 수 있다.
+            이 함수는 요소의 <code>color-scheme</code>이 light면 첫 값, dark면
+            둘째 값을 쓴다. <code>color-scheme: light dark</code>는 "둘 다 되니
+            OS 설정을 따르라"는 뜻이다.
+          </p>
+          <pre><code class="language-css">:root {
+  color-scheme: light dark;
+  --gyeol-bg-surface: light-dark(var(--gyeol-color-white), var(--gyeol-color-gray-950));
+}
+:root[data-color-scheme="light"] { color-scheme: light; }
+:root[data-color-scheme="dark"] { color-scheme: dark; }</code></pre>
+          <p>
+            "또는"을 <code>color-scheme</code> 속성 하나가 대신 맡는 구조다.
+            Chrome 155에서 <code>&lt;html&gt;</code>,
+            <code>&lt;html data-color-scheme="light"&gt;</code>,
+            <code>&lt;html data-color-scheme="dark"&gt;</code>가 각각 OS
+            설정(확인한 기기는 light), light, dark로 나왔다.
+          </p>
+          <div class="compare">
+            <div class="compare-card blue">
+              <div class="compare-title">
+                지금 방식<small>media 블록 + 속성 블록</small>
+              </div>
+              <dl class="compare-facts">
+                <dt>dark 값을 적는 횟수</dt>
+                <dd><strong>두 번</strong> (빌드가 찍어 냄)</dd>
+                <dt>담을 수 있는 값</dt>
+                <dd>색, 크기 등 <strong>모든 값</strong></dd>
+                <dt>브라우저 지원</dt>
+                <dd>
+                  미디어 쿼리와 속성 selector라
+                  <strong>오래된 브라우저도</strong>
+                </dd>
+              </dl>
+              <p class="compare-result">
+                출력이 길어지는 대신 어디서나 같은 결과가 나온다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">
+                light-dark()<small>color-scheme 하나로 분기</small>
+              </div>
+              <dl class="compare-facts">
+                <dt>dark 값을 적는 횟수</dt>
+                <dd><strong>한 번</strong></dd>
+                <dt>담을 수 있는 값</dt>
+                <dd><strong>색만</strong></dd>
+                <dt>브라우저 지원</dt>
+                <dd><strong>2024년 5월</strong> 이후 주요 브라우저</dd>
+              </dl>
+              <p class="compare-result">
+                짧지만, 지원하지 않는 웹뷰에서는 그 변수를 쓰는 색이 무효가 되어
+                빠진다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="check">
+          <h2>점검 문제</h2>
+          <div class="quiz">
+            <p class="quiz-q">
+              1. 속성 블록의 selector를
+              <code>:root[data-color-scheme="dark"]</code>에서
+              <code>[data-color-scheme="dark"]</code>로 바꾸면 여섯 경우의
+              결과가 달라지나?
+            </p>
+            <p class="quiz-context">
+              "명시도" 절을 바탕으로,
+              <code>&lt;html&gt;</code>에 붙인 속성만 생각한다.
+            </p>
+            <pre><code class="language-diff">-:root[data-color-scheme="dark"] {
++[data-color-scheme="dark"] {
+   color-scheme: dark;</code></pre>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  여섯 경우의 결과는 같다.
+                  <code>[data-color-scheme="dark"]</code>의 명시도는 (0,1,0)으로
+                  light 블록과 같아지지만, 속성 블록이 light 블록보다 뒤에
+                  있어서 여전히 이긴다. 대신 블록 순서에 기대게 되고,
+                  <code>&lt;section data-color-scheme="dark"&gt;</code>처럼 하위
+                  요소에서 <code>dark</code>만 동작하고 <code>light</code>는
+                  동작하지 않는 비대칭이 생긴다. 지금 <code>:root</code>로 묶은
+                  이유다.
+                </p>
+              </div>
+            </details>
+          </div>
+          <div class="quiz">
+            <p class="quiz-q">
+              2. 사이트에 "OS 설정 따르기 / light / dark" 세 가지 선택지를
+              두려고 한다. "OS 설정 따르기"를 고르면 <code>&lt;html&gt;</code>을
+              어떻게 해야 하나?
+            </p>
+            <p class="quiz-context">"여섯 가지 경우" 절의 표를 본다.</p>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  <code>data-color-scheme</code> 속성을 지운다. 속성이 없으면 OS
+                  light에서는 light 블록, OS dark에서는 media 블록이 맞아 OS
+                  설정을 따른다. JS가 OS 설정을 읽을 필요가 없고, OS 설정이
+                  바뀌면 브라우저가 미디어 쿼리를 다시 판정해 바로 따라간다.
+                </p>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="code">
+          <h2>쓰인 곳</h2>
+          <ul>
+            <li>
+              <code>packages/tokens/scripts/build-tokens.ts</code>의
+              <code>SCHEME_SELECTORS</code>: Color Scheme마다 블록의 selector
+              목록. dark에 selector 묶음이 두 개 있어서 dark 블록이 두 번 나온다
+            </li>
+            <li>
+              <code>packages/tokens/scripts/build-tokens.helper.ts</code>의
+              <code>colorSchemeBlock</code>: 변수 줄을 selector 묶음 안에 넣고
+              <code>@media</code>처럼 중첩된 블록을 들여 쓴다
+            </li>
+            <li>
+              <code>packages/tokens/scripts/build-tokens.test.ts</code>: 세
+              블록의 selector와, <code>data-color-scheme</code> 속성이
+              <code>&lt;html&gt;</code>에서만 동작하는지 단언하는 테스트
+            </li>
+            <li>
+              <code>packages/tokens/README.md</code> "Color Scheme 고르기":
+              사용자가 보는 속성 사용법과 블록 표
+            </li>
+          </ul>
+        </section>
+
+        <section id="sources">
+          <h2>출처</h2>
+          <p>
+            여섯 경우와 <code>light-dark()</code> 예시는 실제 빌드한
+            <code>tokens.css</code>로 Chrome 155에서 직접 확인했다.
+          </p>
+          <ul>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-color-scheme"
+                >prefers-color-scheme</a
+              >: OS나 사용자 에이전트의 light/dark 설정을 읽는 미디어 기능
+            </li>
+            <li>
+              MDN,
+              <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/@media"
+                >@media</a
+              >: 미디어 쿼리 목록을 쉼표로 묶는 문법과, 조건이 거짓일 때 안의
+              규칙이 적용되지 않는 동작
+            </li>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity"
+                >Specificity</a
+              >: 명시도 계산과 <code>:not()</code>이 괄호 안의 명시도를 가져오는
+              규칙
+            </li>
+            <li>
+              MDN,
+              <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/:not"
+                >:not()</a
+              >: 괄호 안의 selector에 맞지 않는 요소를 고르는 가상 클래스
+            </li>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/light-dark"
+                >light-dark()</a
+              >: <code>color-scheme</code>에 따라 두 색 중 하나를 고르는 함수와
+              브라우저 지원
+            </li>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/color-scheme"
+                >color-scheme</a
+              >: 요소가 어느 Color Scheme으로 그려질 수 있는지 알리는 속성
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
