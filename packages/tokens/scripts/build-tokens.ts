@@ -1,8 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { join } from "node:path";
 import StyleDictionary from "style-dictionary";
 import type {
-  DesignTokens,
   File,
   FormatFn,
   PlatformConfig,
@@ -76,27 +75,6 @@ const colorSchemeFormat =
     return `${block}\n`;
   };
 
-const readJson = async (path: string): Promise<DesignTokens> =>
-  JSON.parse(await readFile(path, "utf8"));
-
-/** `tokens` 안에 `path` 경로의 토큰이 있는지 */
-const hasTokenAt = ({
-  tokens,
-  path,
-}: {
-  tokens: DesignTokens;
-  path: readonly string[];
-}): boolean => {
-  let node: unknown = tokens;
-  for (const key of path) {
-    if (typeof node !== "object" || node === null || !(key in node)) {
-      return false;
-    }
-    node = Reflect.get(node, key);
-  }
-  return typeof node === "object" && node !== null && "$value" in node;
-};
-
 /** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
 const cssPlatform = (files: File[]): PlatformConfig => ({
   prefix: PREFIX,
@@ -121,9 +99,9 @@ const formatOutputs = async (sd: StyleDictionary): Promise<string[]> => {
 /**
  * Primitive를 `:root`에 실제 값으로 낸다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
  */
-async function buildPrimitiveCss(primitive: DesignTokens): Promise<string> {
+async function buildPrimitiveCss(primitivePath: string): Promise<string> {
   const sd = new StyleDictionary({
-    tokens: primitive,
+    source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
       css: cssPlatform([
@@ -137,18 +115,18 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise<string> {
 /**
  * Color Scheme 하나의 Semantic을 `var()` 참조로 낸다.
  *
- * Primitive는 참조를 풀 대상으로만 함께 넘기고, filter로 Semantic만 출력한다.
- * include 옵션은 source처럼 경로를 glob으로 풀어 "파일을 직접 읽는다"는 방침과 맞지 않아 쓰지 않는다.
+ * Primitive는 include로 참조를 풀 대상으로만 넘긴다. include로 읽은 토큰도 기본으로는 출력되므로,
+ * filter로 source(Semantic)에서 읽은 토큰(isSource)만 낸다.
  * 출력에서 빠진 Primitive를 가리킨다는 "filtered out token references" 경고가 나지만 의도한 동작이고,
  * 로그를 silent로 꺼서 보이지 않는다.
  */
 async function buildSemanticCss({
-  primitive,
-  semantic,
+  primitivePath,
+  semanticPath,
   colorScheme,
 }: {
-  primitive: DesignTokens;
-  semantic: DesignTokens;
+  primitivePath: string;
+  semanticPath: string;
   colorScheme: ColorScheme;
 }): Promise<string[]> {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
@@ -158,9 +136,9 @@ async function buildSemanticCss({
     format: colorSchemeFormat({ colorScheme, selectors }),
   }));
 
-  // Semantic에는 범주 그룹이 없어 최상위 이름이 Primitive 범주(color, spacing, radius)와 겹치지 않는다
   const sd = new StyleDictionary({
-    tokens: { ...primitive, ...semantic },
+    include: [primitivePath],
+    source: [semanticPath],
     log: { verbosity: "silent" },
     hooks: {
       formats: Object.fromEntries(formats.map((f) => [f.name, f.format])),
@@ -170,8 +148,7 @@ async function buildSemanticCss({
         formats.map(({ name }) => ({
           destination: `${name}.css`,
           format: name,
-          filter: (token: TransformedToken) =>
-            hasTokenAt({ tokens: semantic, path: token.path }),
+          filter: (token: TransformedToken) => token.isSource,
         })),
       ),
     },
@@ -184,18 +161,24 @@ async function buildSemanticCss({
  * CSS 텍스트를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
-  // 파일 경로를 Style Dictionary의 source 옵션으로 넘기지 않고 직접 읽는다.
-  // source의 항목은 경로 하나라도 glob 패턴으로 풀리고, 맞는 파일이 0개여도 오류가 아니다.
-  // 그러면 토큰 없이 빌드가 끝나 빈 ":root {}"가 나온다. 직접 읽으면 파일이 없을 때 ENOENT로 실패한다.
-  const primitive = await readJson(join(tokensDir, "primitive.json"));
+  const primitivePath = join(tokensDir, "primitive.json");
+  const semanticPath = (colorScheme: ColorScheme): string =>
+    join(tokensDir, "semantic", `${colorScheme}.json`);
 
-  const cssBlocks = [await buildPrimitiveCss(primitive)];
+  // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
+  // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
+  for (const path of [primitivePath, ...COLOR_SCHEMES.map(semanticPath)]) {
+    await access(path);
+  }
+
+  const cssBlocks = [await buildPrimitiveCss(primitivePath)];
   for (const colorScheme of COLOR_SCHEMES) {
-    const semantic = await readJson(
-      join(tokensDir, "semantic", `${colorScheme}.json`),
-    );
     cssBlocks.push(
-      ...(await buildSemanticCss({ primitive, semantic, colorScheme })),
+      ...(await buildSemanticCss({
+        primitivePath,
+        semanticPath: semanticPath(colorScheme),
+        colorScheme,
+      })),
     );
   }
   return { css: cssBlocks.join("\n").trimEnd() + "\n" };
