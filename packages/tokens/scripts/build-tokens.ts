@@ -1,5 +1,4 @@
 import { access } from "node:fs/promises";
-import { join } from "node:path";
 import StyleDictionary from "style-dictionary";
 import type {
   File,
@@ -8,6 +7,13 @@ import type {
   TransformedToken,
 } from "style-dictionary/types";
 import { formattedVariables } from "style-dictionary/utils";
+import {
+  COLOR_SCHEMES,
+  colorSchemeBlock,
+  tokenFilePaths,
+  type ColorScheme,
+  type SelectorChain,
+} from "./build-tokens.helper.ts";
 
 export interface BuildResult {
   /** `tokens.css`의 내용 */
@@ -15,13 +21,6 @@ export interface BuildResult {
 }
 
 const PREFIX = "gyeol";
-
-const COLOR_SCHEMES = ["light", "dark"] as const;
-
-type ColorScheme = (typeof COLOR_SCHEMES)[number];
-
-/** 바깥에서 안쪽 순서로 중첩하는 selector 목록. 예: `["@media …", ":root"]` */
-type SelectorChain = readonly string[];
 
 /**
  * Color Scheme마다 Semantic을 내는 CSS 블록의 selector다.
@@ -42,11 +41,10 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
   ],
 };
 
-const indentAt = (depth: number): string => "  ".repeat(depth);
-
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
+ * 변수 줄은 Style Dictionary가 만들고, 블록으로 감싸는 일은 colorSchemeBlock이 한다.
  */
 const colorSchemeFormat =
   ({
@@ -56,24 +54,18 @@ const colorSchemeFormat =
     colorScheme: ColorScheme;
     selectors: SelectorChain;
   }): FormatFn =>
-  ({ dictionary }) => {
-    const indent = indentAt(selectors.length);
-    const variables = formattedVariables({
-      format: "css",
-      dictionary,
-      outputReferences: true,
-      usesDtcg: true,
-      formatting: { indentation: indent },
+  ({ dictionary }) =>
+    colorSchemeBlock({
+      colorScheme,
+      selectors,
+      variables: formattedVariables({
+        format: "css",
+        dictionary,
+        outputReferences: true,
+        usesDtcg: true,
+        formatting: { indentation: "" },
+      }),
     });
-    const body = `${indent}color-scheme: ${colorScheme};\n${variables}`;
-    const block = selectors.reduceRight(
-      (content, selector, depth) =>
-        `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
-      body,
-    );
-    // css/variables처럼 줄바꿈으로 끝낸다
-    return `${block}\n`;
-  };
 
 /** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
 const cssPlatform = (files: File[]): PlatformConfig => ({
@@ -161,22 +153,20 @@ async function buildSemanticCss({
  * CSS 텍스트를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
-  const primitivePath = join(tokensDir, "primitive.json");
-  const semanticPath = (colorScheme: ColorScheme): string =>
-    join(tokensDir, "semantic", `${colorScheme}.json`);
+  const paths = tokenFilePaths(tokensDir);
 
   // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
   // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
-  for (const path of [primitivePath, ...COLOR_SCHEMES.map(semanticPath)]) {
+  for (const path of [paths.primitive, ...Object.values(paths.semantic)]) {
     await access(path);
   }
 
-  const cssBlocks = [await buildPrimitiveCss(primitivePath)];
+  const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
   for (const colorScheme of COLOR_SCHEMES) {
     cssBlocks.push(
       ...(await buildSemanticCss({
-        primitivePath,
-        semanticPath: semanticPath(colorScheme),
+        primitivePath: paths.primitive,
+        semanticPath: paths.semantic[colorScheme],
         colorScheme,
       })),
     );
