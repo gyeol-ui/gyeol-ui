@@ -40,3 +40,32 @@ hasTokenAt({ tokens: semantic, path: token.path });
 ### 예외
 
 시그니처를 바깥에서 정한 콜백은 그 시그니처를 따른다. 예: `Array.prototype.map`, `reduce`의 콜백, Style Dictionary의 `FormatFn`, Vitest의 테스트 함수.
+
+## 테스트
+
+테스트는 Vitest로 쓰고, 소스 옆에 `*.test.ts`로 둔다.
+
+### 구조
+
+`describe`로 대상(함수나 모듈 이름)을 묶고, `it` 하나에 동작 하나를 쓴다. `it` 본문은 `// given`, `// when`, `// then` 주석으로 나눈다. 준비할 것이 없으면 `// given`을 생략한다.
+
+```ts
+describe("tokenFilePaths", () => {
+  it("Primitive 하나와 Color Scheme마다 Semantic 하나", () => {
+    // given
+    const tokensDir = "/repo/tokens";
+
+    // when
+    const paths = tokenFilePaths(tokensDir);
+
+    // then
+    expect(paths).toEqual({ … });
+  });
+});
+```
+
+### helper와 입출력 문서
+
+입력을 받아 값을 돌려주는 순수 변환 함수는 `<모듈>.helper.ts`로 빼고, `<모듈>.helper.test.ts`에서 입력과 출력을 그대로 보여 준다. 이 테스트는 함수가 무엇을 무엇으로 바꾸는지 보여 주는 문서다. 기대값은 코드로 계산하지 않고 손으로 쓴 결과를 적는다.
+
+모듈 자체의 테스트(`<모듈>.test.ts`)는 공개 함수의 바깥 동작만 본다.
