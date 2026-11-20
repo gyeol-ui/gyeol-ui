@@ -39,7 +39,6 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
           {
             destination: "tokens.css",
             format: "css/variables",
-            options: { showFileHeader: false },
           },
         ],
       },

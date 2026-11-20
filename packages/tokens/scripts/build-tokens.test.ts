@@ -41,7 +41,11 @@ test("fixture의 CSS 출력 전체", async () => {
   const { css } = await buildTokens(fixture("valid"));
 
   expect(css).toMatchInlineSnapshot(`
-    ":root {
+    "/**
+     * Do not edit directly, this file was auto-generated.
+     */
+
+    :root {
       --gyeol-color-white: #ffffff;
       --gyeol-color-gray-900: #18181b;
       --gyeol-color-overlay: rgba(0, 0, 0, 0.5);
