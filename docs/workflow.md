@@ -84,6 +84,11 @@ Phase를 시작할 때는 Phase 전체에 걸친 규칙(예: 컴포넌트 폴더
 
 - PR은 squash merge만 한다. `main`은 CI 통과를 필수로 보호한다.
 - 저장소 관리자는 `main` ruleset을 우회할 수 있다. 실수로 남은 설정이 아니라 일부러 둔 예외이므로 지우지 않는다. 관리자도 평소에는 PR로 merge한다.
+- merge하면 PR 브랜치를 로컬과 원격 모두에서 지운다.
+  - 원격: 저장소 설정 "Automatically delete head branches"가 켜져 있어 GitHub가 지운다.
+  - CLI로 merge할 때는 저장소 폴더 안에서 `gh pr merge <번호> --squash --delete-branch`를 실행한다. 로컬 브랜치를 지우고 `main`으로 옮겨 최신으로 맞춘다. `--repo`를 붙이면 `gh`가 로컬 저장소를 건드리지 않아 로컬 브랜치가 남으므로 붙이지 않는다.
+  - 웹에서 merge했으면 `git switch main && git pull`로 맞춘 뒤 `git branch -D <브랜치>`로 지운다. squash merge라 `main`의 이력에 브랜치 커밋이 없어서 `-d`는 거절된다.
+  - 원격에서 지워진 브랜치의 추적 ref(`origin/<브랜치>`)는 `git fetch --prune`이 정리한다. `git config fetch.prune true`를 켜 두면 `git pull`할 때마다 정리된다.
 - PR 제목은 Conventional Commit 형식으로 쓴다. release-please가 이 제목을 읽는다.
 - scope는 패키지나 앱 이름(`tokens`, `tailwind`, `react`, `figma-plugin`, `storybook`)이다. 저장소 전체 변경에는 scope를 쓰지 않는다.
 - PR 제목과 커밋 제목의 설명은 한국어로 쓰고, type과 scope는 영어 그대로 둔다(예: `ci: PR 제목 검사를 별도 워크플로로 분리`).
