@@ -28,6 +28,11 @@ const learnFolders = [
         title: "Figma Variables의 collection과 mode",
         tags: ["figma", "design-token"],
       },
+      {
+        file: "style-dictionary-build.html",
+        title: "Style Dictionary로 토큰을 CSS로 빌드하기",
+        tags: ["design-token"],
+      },
     ],
   },
 ];

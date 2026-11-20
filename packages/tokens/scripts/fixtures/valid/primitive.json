@@ -1,0 +1,44 @@
+{
+  "color": {
+    "$type": "color",
+    "white": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1]
+      }
+    },
+    "gray": {
+      "900": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [0.0941, 0.0941, 0.1059]
+        }
+      }
+    },
+    "overlay": {
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0, 0, 0],
+        "alpha": 0.5
+      }
+    }
+  },
+  "spacing": {
+    "$type": "dimension",
+    "4": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    }
+  },
+  "radius": {
+    "$type": "dimension",
+    "md": {
+      "$value": {
+        "value": 6,
+        "unit": "px"
+      }
+    }
+  }
+}

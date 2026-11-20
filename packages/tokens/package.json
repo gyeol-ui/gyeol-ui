@@ -9,7 +9,9 @@
     "directory": "packages/tokens"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "files": [
     "dist"
   ],
@@ -18,19 +20,22 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./tokens.css": "./dist/tokens.css",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "node scripts/build.ts && tsdown",
     "lint": "oxlint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/node": "26.6.6",
     "publint": "0.3.25",
+    "style-dictionary": "5.8.0",
     "tsdown": "0.23.7",
     "typescript": "7.0.2",
     "vitest": "5.1.0"
