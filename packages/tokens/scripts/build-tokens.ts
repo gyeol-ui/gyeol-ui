@@ -15,7 +15,9 @@ const PREFIX = "gyeol";
  * 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
-  // source glob은 파일이 없으면 조용히 빈 결과를 내므로, 직접 읽어 없을 때 실패시킨다
+  // 파일 경로를 Style Dictionary의 source 옵션으로 넘기지 않고 직접 읽는다.
+  // source의 항목은 경로 하나라도 glob 패턴으로 풀리고, 맞는 파일이 0개여도 오류가 아니다.
+  // 그러면 토큰 없이 빌드가 끝나 빈 ":root {}"가 나온다. 직접 읽으면 파일이 없을 때 ENOENT로 실패한다.
   const primitivePath = join(tokensDir, "primitive.json");
   const primitive: DesignTokens = JSON.parse(
     await readFile(primitivePath, "utf8"),
