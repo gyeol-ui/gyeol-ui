@@ -9,7 +9,9 @@
     "directory": "packages/tokens"
   },
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "*.css"
+  ],
   "files": [
     "dist"
   ],

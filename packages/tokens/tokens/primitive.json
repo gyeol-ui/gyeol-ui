@@ -79,6 +79,7 @@
     }
   },
   "spacing": {
+    "$type": "dimension",
     "1": {
       "$value": {
         "value": 4,
@@ -114,8 +115,7 @@
         "value": 32,
         "unit": "px"
       }
-    },
-    "$type": "dimension"
+    }
   },
   "radius": {
     "$type": "dimension",

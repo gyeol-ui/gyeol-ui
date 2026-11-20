@@ -25,9 +25,10 @@ test("실제 씨앗 토큰 폴더로 빌드가 성공한다", async () => {
   const tokensDir = fileURLToPath(new URL("../tokens", import.meta.url));
   const { css } = await buildTokens(tokensDir);
 
-  expect(css).toContain("--gyeol-color-gray-900:");
-  expect(css).toContain("--gyeol-spacing-4: 16px;");
-  expect(css).toContain("--gyeol-radius-md:");
+  // 값은 Figma에서 바뀔 수 있으므로 이름만 확인한다
+  expect(css).toMatch(/--gyeol-color-gray-900: \S+;/);
+  expect(css).toMatch(/--gyeol-spacing-4: \S+;/);
+  expect(css).toMatch(/--gyeol-radius-md: \S+;/);
 });
 
 test("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {
