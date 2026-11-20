@@ -85,7 +85,8 @@ tools/
   - `color/css`는 sRGB로만 낸다.
   - `size/px`는 unit을 무시하고 px를 붙인다. 그래서 rem 값에는 쓰면 안 된다.
   - 기본 `css` transformGroup의 `size/rem`은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고(`{16, px}` → `16px`), unit 없는 숫자에만 `rem`을 붙인다.
-  - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다.
+  - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다. `include` 대신 Primitive와 Semantic을 합친 객체를 `tokens`로 넘기고 file `filter`로 Semantic만 골라도 같은 결과가 나온다.
+  - 파일 설정의 `format`은 타입 선언상 함수도 받지만, 실제로는 `hooks.formats`에 등록된 이름만 찾는다.
   - JS/TS 기본 format은 `outputReferences`를 지원하지 않는다.
   - `$type`이 없는 alias는 참조 대상의 타입을 물려받지 못한다(이슈 #1811).
 - Figma는 DTCG import/export를 기본 기능으로 제공한다.

@@ -1,4 +1,4 @@
-import { cp, mkdtemp } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,8 +74,19 @@ test("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async 
   expect(css.match(/--gyeol-color-white:/g)).toHaveLength(1);
 });
 
-test("토큰 폴더에 Semantic 파일이 없으면 실패한다", async () => {
+test("data-color-scheme dark 블록은 명시도가 같은 light :root 블록보다 뒤에 나온다", async () => {
+  const { css } = await buildTokens(fixture("valid"));
+
+  expect(css.indexOf('[data-color-scheme="dark"] {')).toBeGreaterThan(
+    css.indexOf("color-scheme: light;"),
+  );
+});
+
+test("토큰 폴더에 Semantic 파일이 없으면 실패한다", async ({
+  onTestFinished,
+}) => {
   const dir = await mkdtemp(join(tmpdir(), "gyeol-tokens-"));
+  onTestFinished(() => rm(dir, { recursive: true, force: true }));
   await cp(fixture("valid/primitive.json"), join(dir, "primitive.json"));
 
   await expect(buildTokens(dir)).rejects.toThrow("light.json");

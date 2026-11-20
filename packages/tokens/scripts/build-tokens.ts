@@ -17,16 +17,22 @@ export interface BuildResult {
 
 const PREFIX = "gyeol";
 
-type ColorScheme = "light" | "dark";
+/** CSS에 내는 순서이기도 하다. 아래 SCHEME_SELECTORS의 주석 참고 */
+const COLOR_SCHEMES = ["light", "dark"] as const;
 
-const COLOR_SCHEMES: readonly ColorScheme[] = ["light", "dark"];
+type ColorScheme = (typeof COLOR_SCHEMES)[number];
+
+/** 바깥에서 안쪽 순서로 중첩하는 selector 목록. 예: `["@media …", ":root"]` */
+type SelectorChain = readonly string[];
 
 /**
  * Color Scheme마다 Semantic을 내는 CSS 블록의 selector다.
- * 배열은 바깥에서 안쪽 순서로 중첩한다.
  * dark는 OS 설정(media query)과 data-color-scheme 속성, 두 블록에 같은 내용을 낸다.
+ *
+ * 블록 순서에 기대는 cascade가 있다. `[data-color-scheme="dark"]`와 light의 `:root`는
+ * 명시도가 (0,1,0)으로 같아서, dark 블록이 light 블록보다 뒤에 나와야 속성이 OS 설정(light)을 이긴다.
  */
-const SCHEME_SELECTORS: Record<ColorScheme, readonly (readonly string[])[]> = {
+const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
   light: [[":root"]],
   dark: [
     [
@@ -37,14 +43,16 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly (readonly string[])[]> = {
   ],
 };
 
+const indentAt = (depth: number): string => "  ".repeat(depth);
+
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
  */
 const colorSchemeFormat =
-  (colorScheme: ColorScheme, selectors: readonly string[]): FormatFn =>
+  (colorScheme: ColorScheme, selectors: SelectorChain): FormatFn =>
   ({ dictionary }) => {
-    const indent = "  ".repeat(selectors.length);
+    const indent = indentAt(selectors.length);
     const variables = formattedVariables({
       format: "css",
       dictionary,
@@ -55,7 +63,7 @@ const colorSchemeFormat =
     const body = `${indent}color-scheme: ${colorScheme};\n${variables}`;
     const block = selectors.reduceRight(
       (content, selector, depth) =>
-        `${"  ".repeat(depth)}${selector} {\n${content}\n${"  ".repeat(depth)}}`,
+        `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
       body,
     );
     // css/variables처럼 줄바꿈으로 끝낸다
@@ -129,7 +137,7 @@ async function buildSemanticCss(
 ): Promise<string[]> {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
-  const blocks = SCHEME_SELECTORS[colorScheme].map((selectors, index) => ({
+  const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) => ({
     name: `gyeol/css/${colorScheme}-${index}`,
     format: colorSchemeFormat(colorScheme, selectors),
   }));
@@ -139,11 +147,11 @@ async function buildSemanticCss(
     tokens: { ...primitive, ...semantic },
     log: { verbosity: "silent" },
     hooks: {
-      formats: Object.fromEntries(blocks.map((b) => [b.name, b.format])),
+      formats: Object.fromEntries(formats.map((f) => [f.name, f.format])),
     },
     platforms: {
       css: cssPlatform(
-        blocks.map(({ name }) => ({
+        formats.map(({ name }) => ({
           destination: `${name}.css`,
           format: name,
           filter: (token: TransformedToken) => hasTokenAt(semantic, token.path),
@@ -164,12 +172,14 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
   // 그러면 토큰 없이 빌드가 끝나 빈 ":root {}"가 나온다. 직접 읽으면 파일이 없을 때 ENOENT로 실패한다.
   const primitive = await readJson(join(tokensDir, "primitive.json"));
 
-  const blocks = [await buildPrimitiveCss(primitive)];
+  const cssBlocks = [await buildPrimitiveCss(primitive)];
   for (const colorScheme of COLOR_SCHEMES) {
     const semantic = await readJson(
       join(tokensDir, "semantic", `${colorScheme}.json`),
     );
-    blocks.push(...(await buildSemanticCss(primitive, semantic, colorScheme)));
+    cssBlocks.push(
+      ...(await buildSemanticCss(primitive, semantic, colorScheme)),
+    );
   }
-  return { css: blocks.join("\n").trimEnd() + "\n" };
+  return { css: cssBlocks.join("\n").trimEnd() + "\n" };
 }
