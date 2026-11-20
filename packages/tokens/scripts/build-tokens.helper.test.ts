@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatColorMix,
   formatTsModule,
-  toCamelCase,
   wrapInColorSchemeBlock,
   resolveTokenFilePaths,
 } from "./build-tokens.helper.ts";
@@ -133,21 +132,6 @@ describe("resolveTokenFilePaths", () => {
         dark: "/repo/tokens/semantic/dark.json",
       },
     });
-  });
-});
-
-// 토큰 경로의 이름 칸을 TS 키로 바꾼다
-describe("toCamelCase", () => {
-  it("- 뒤의 글자를 대문자로 바꾸고 -를 지운다", () => {
-    // given, when, then
-    expect(toCamelCase("bg-surface")).toBe("bgSurface");
-    expect(toCamelCase("fg-on-accent")).toBe("fgOnAccent");
-  });
-
-  it("- 없는 이름과 숫자는 그대로 둔다", () => {
-    // given, when, then
-    expect(toCamelCase("md")).toBe("md");
-    expect(toCamelCase("90")).toBe("90");
   });
 });
 

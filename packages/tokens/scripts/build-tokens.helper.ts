@@ -1,5 +1,6 @@
 // build-tokens.ts가 쓰는 순수 변환 함수다. 입력과 출력은 build-tokens.helper.test.ts에서 볼 수 있다.
 import { join } from "node:path";
+import { camelCase } from "change-case";
 
 export const COLOR_SCHEMES = ["light", "dark"] as const;
 
@@ -42,10 +43,6 @@ export function formatColorMix({
 
 const formatIndent = (depth: number): string => "  ".repeat(depth);
 
-/** 토큰 경로의 이름 칸(kebab-case)을 TS 키(camelCase)로 바꾼다. 예: `bg-surface` → `bgSurface` */
-export const toCamelCase = (name: string): string =>
-  name.replace(/-([a-z0-9])/g, (_, char: string) => char.toUpperCase());
-
 /** TS 객체로 낼 토큰 하나. `path`는 토큰 경로이고 `value`는 낼 문자열이다 */
 export interface TsEntry {
   path: readonly string[];
@@ -59,7 +56,11 @@ type TsTree = Map<string, string | TsTree>;
 function toTsTree(entries: readonly TsEntry[]): TsTree {
   const root: TsTree = new Map();
   for (const { path, value } of entries) {
-    const keys = path.map(toCamelCase);
+    // 이름 칸(kebab-case)을 camelCase 키로 바꾼다(`bg-surface` → `bgSurface`).
+    // 옵션은 Style Dictionary의 name/camel transform과 같게 두어 숫자 앞에 `_`를 넣지 않는다(`gray-900` → `gray900`)
+    const keys = path.map((name) =>
+      camelCase(name, { mergeAmbiguousCharacters: true }),
+    );
     const leafKey = keys.at(-1);
     // 토큰 경로는 비어 있지 않다. 타입을 좁히는 가드다
     if (leafKey === undefined) continue;
