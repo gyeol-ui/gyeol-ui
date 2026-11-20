@@ -22,7 +22,7 @@
           <li><a href="#type">Semantic의 $type은 토큰마다</a></li>
           <li><a href="#color-scheme">Color Scheme 블록</a></li>
           <li><a href="#custom-format">직접 만든 format</a></li>
-          <li><a href="#tokens-option">tokens와 source</a></li>
+          <li><a href="#tokens-option">파일이 없을 때</a></li>
           <li><a href="#log">log.verbosity</a></li>
           <li><a href="#platforms">platforms와 prefix</a></li>
           <li><a href="#transforms">transformGroup과 transforms</a></li>
@@ -60,13 +60,17 @@
             <div class="lane blue">
               <div class="lane-title">buildTokens(토큰 폴더)</div>
               <ol class="chain">
-                <li><span>primitive.json을 읽는다</span></li>
+                <li><span>토큰 파일 3개가 있는지 확인한다</span></li>
                 <li><span>1번째 실행: Primitive → 헤더 + :root 블록</span></li>
                 <li>
-                  <span>2번째 실행: Primitive + light → light 블록</span>
+                  <span
+                    >2번째 실행: Primitive(include) + light → light 블록</span
+                  >
                 </li>
                 <li>
-                  <span>3번째 실행: Primitive + dark → dark 블록 2개</span>
+                  <span
+                    >3번째 실행: Primitive(include) + dark → dark 블록 2개</span
+                  >
                 </li>
                 <li><span>블록 4개를 이어 { css }로 돌려준다</span></li>
               </ol>
@@ -188,20 +192,26 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
             </li>
           </ul>
 
-          <h3>2. 토큰 파일을 직접 읽고, 세 번 빌드해 이어 붙인다</h3>
-          <pre><code class="language-ts" data-lines="5 7 9-11 15">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
-  // 파일 경로를 Style Dictionary의 source 옵션으로 넘기지 않고 직접 읽는다.
-  // source의 항목은 경로 하나라도 glob 패턴으로 풀리고, 맞는 파일이 0개여도 오류가 아니다.
-  // 그러면 토큰 없이 빌드가 끝나 빈 ":root {}"가 나온다. 직접 읽으면 파일이 없을 때 ENOENT로 실패한다.
-  const primitive = await readJson(join(tokensDir, "primitive.json"));
+          <h3>2. 파일을 확인하고, 세 번 빌드해 이어 붙인다</h3>
+          <pre><code class="language-ts" data-lines="2 9 12 13 15 22">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
+  const primitivePath = join(tokensDir, "primitive.json");
+  const semanticPath = (colorScheme: ColorScheme): string =&gt;
+    join(tokensDir, "semantic", `${colorScheme}.json`);
 
-  const cssBlocks = [await buildPrimitiveCss(primitive)];
+  // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
+  // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
+  for (const path of [primitivePath, ...COLOR_SCHEMES.map(semanticPath)]) {
+    await access(path);
+  }
+
+  const cssBlocks = [await buildPrimitiveCss(primitivePath)];
   for (const colorScheme of COLOR_SCHEMES) {
-    const semantic = await readJson(
-      join(tokensDir, "semantic", `${colorScheme}.json`),
-    );
     cssBlocks.push(
-      ...(await buildSemanticCss({ primitive, semantic, colorScheme })),
+      ...(await buildSemanticCss({
+        primitivePath,
+        semanticPath: semanticPath(colorScheme),
+        colorScheme,
+      })),
     );
   }
   return { css: cssBlocks.join("\n").trimEnd() + "\n" };
@@ -209,10 +219,12 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           <p>이 함수가 전체 흐름이다. 칠한 줄을 차례로 읽으면 이렇다.</p>
           <ol class="steps blue">
             <li>
-              <strong>Primitive를 읽는다</strong>
-              <code>primitive.json</code>을 직접 읽는다. 왜 Style Dictionary에
-              경로를 넘기지 않는지는
-              <a href="#tokens-option">tokens와 source</a>에 있다.
+              <strong>파일이 있는지 확인한다</strong>
+              <code>primitive.json</code>, <code>semantic/light.json</code>,
+              <code>semantic/dark.json</code>의 경로를 만들고
+              <code>access</code>로 셋 다 있는지 본다. 읽는 일은 Style
+              Dictionary가 하는데 왜 확인만 따로 하는지는
+              <a href="#tokens-option">파일이 없을 때</a>에 있다.
             </li>
             <li>
               <strong>Primitive 블록을 만든다</strong>
@@ -221,10 +233,9 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
             </li>
             <li>
               <strong>Color Scheme마다 Semantic 블록을 만든다</strong>
-              light, dark 순서로 <code>semantic/light.json</code>,
-              <code>semantic/dark.json</code>을 읽어
-              <code>buildSemanticCss</code>에 넘긴다. light는 블록 1개, dark는
-              블록 2개를 돌려준다.
+              light, dark 순서로 Primitive 경로와 그 Color Scheme의 Semantic
+              경로를 <code>buildSemanticCss</code>에 넘긴다. light는 블록 1개,
+              dark는 블록 2개를 돌려준다.
             </li>
             <li>
               <strong>이어 붙인다</strong>
@@ -244,9 +255,9 @@ const cssPlatform = (files: File[]): PlatformConfig =&gt; ({
   files,
 });
 
-async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt; {
+async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
   const sd = new StyleDictionary({
-    tokens: primitive,
+    source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
       css: cssPlatform([
@@ -276,11 +287,11 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
               </thead>
               <tbody>
                 <tr>
-                  <td><code>tokens</code></td>
-                  <td>읽은 객체</td>
+                  <td><code>source</code></td>
+                  <td><code>[primitivePath]</code></td>
                   <td>
-                    빌드할 토큰 트리
-                    <small><a href="#tokens-option">tokens와 source</a></small>
+                    빌드할 토큰 파일. Style Dictionary가 읽는다
+                    <small><a href="#tokens-option">파일이 없을 때</a></small>
                   </td>
                 </tr>
                 <tr>
@@ -341,10 +352,40 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
           </div>
 
           <h3>4. Semantic: Primitive를 함께 넘기고 Semantic만 낸다</h3>
-          <pre><code class="language-ts" data-lines="12-15 19 22 28-30">async function buildSemanticCss({
-  primitive,
-  semantic,
+          <pre><code class="language-ts" data-lines="12 18 19 22 28 29">async function buildSemanticCss({
+  primitivePath,
+  semanticPath,
   colorScheme,
+}: {
+  primitivePath: string;
+  semanticPath: string;
+  colorScheme: ColorScheme;
+}): Promise&lt;string[]&gt; {
+  // 블록마다 selector가 달라 format을 블록마다 만든다.
+  // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
+  const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) =&gt; ({
+    name: `gyeol/css/${colorScheme}-${index}`,
+    format: colorSchemeFormat({ colorScheme, selectors }),
+  }));
+
+  const sd = new StyleDictionary({
+    include: [primitivePath],
+    source: [semanticPath],
+    log: { verbosity: "silent" },
+    hooks: {
+      formats: Object.fromEntries(formats.map((f) =&gt; [f.name, f.format])),
+    },
+    platforms: {
+      css: cssPlatform(
+        formats.map(({ name }) =&gt; ({
+          destination: `${name}.css`,
+          format: name,
+          filter: (token: TransformedToken) =&gt; token.isSource,
+        })),
+      ),
+    },
+  });
+  return formatOutputs(sd);
 }</code></pre>
           <p>Primitive 빌드와 다른 곳은 세 군데다.</p>
           <div class="table-wrap">
@@ -359,7 +400,10 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
               <tbody>
                 <tr>
                   <td>토큰</td>
-                  <td><code>{ ...primitive, ...semantic }</code></td>
+                  <td>
+                    <code>include: [primitivePath]</code>,
+                    <code>source: [semanticPath]</code>
+                  </td>
                   <td>
                     Semantic은 <code>{color.white}</code>처럼 Primitive를
                     가리킨다. 가리키는 대상이 함께 있어야 참조가 풀린다
@@ -371,13 +415,11 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
                 <tr>
                   <td>filter</td>
                   <td>
-                    <code
-                      >hasTokenAt({ tokens: semantic, path: token.path })</code
-                    >
+                    <code>(token) =&gt; token.isSource</code>
                   </td>
                   <td>
-                    함께 넘긴 Primitive가 Semantic 블록에 다시 나오지 않게,
-                    Semantic 파일에 있는 토큰만 낸다
+                    include로 넣은 Primitive도 기본으로 출력되므로,
+                    source(Semantic)에서 읽은 토큰만 낸다
                     <small
                       ><a href="#filter">Primitive는 참조 대상으로만</a></small
                     >
@@ -592,15 +634,46 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
         <section id="filter">
           <h2>Primitive는 참조 대상으로만</h2>
           <p>
-            Semantic 빌드에는 Primitive와 Semantic을 합친 객체를 넘긴다. 그대로
-            두면 Primitive도 출력 대상이라, Semantic 블록마다 Primitive 변수가
-            다시 나온다. file의 <code>filter</code>로 "Semantic 파일에 있는
-            토큰만" 고르면 Primitive는 참조를 푸는 데만 쓰이고 출력에서 빠진다.
-            fixture의 light로 실행한 결과다.
+            Semantic 빌드는 Primitive를 <code>include</code>로, Semantic을
+            <code>source</code>로 넘긴다. 둘 다 Style Dictionary가 읽는 파일
+            목록이고, 차이는 읽은 토큰에 붙는 표시 하나다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>옵션</th>
+                  <th>넘기는 파일</th>
+                  <th>토큰의 <code>isSource</code></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>include</code></td>
+                  <td><code>primitive.json</code></td>
+                  <td><code>false</code></td>
+                </tr>
+                <tr>
+                  <td><code>source</code></td>
+                  <td>
+                    <code>semantic/light.json</code> 또는 <code>dark.json</code>
+                  </td>
+                  <td><code>true</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            이름만 보면 <code>include</code>로 넣은 토큰은 출력되지 않을 것
+            같지만, 기본으로는 출력된다. file의 <code>filter</code>를
+            <code>token.isSource</code>로 두어야 Semantic만 나온다. fixture의
+            light로 실행한 결과다.
           </p>
           <div class="compare">
             <div class="compare-card">
-              <div class="compare-title">filter 없음</div>
+              <div class="compare-title">
+                include만<small>filter 없음</small>
+              </div>
               <pre><code class="language-css">:root {
   --gyeol-color-white: #ffffff;
   --gyeol-color-gray-900: #18181b;
@@ -618,8 +691,8 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
             </div>
             <div class="compare-card green">
               <div class="compare-title">
-                filter 있음<small
-                  >hasTokenAt({ tokens: semantic, path: token.path })</small
+                include + filter<small
+                  >filter: (token) =&gt; token.isSource</small
                 >
               </div>
               <pre><code class="language-css">:root {
@@ -632,22 +705,6 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
                 가리킨다. 우리가 고른 방법이다.
               </p>
             </div>
-          </div>
-          <p>
-            <code>hasTokenAt</code>은 토큰의 경로(<code>["bg-surface"]</code>,
-            <code>["color", "white"]</code>)를 따라 Semantic 파일 객체를
-            내려가서, 그 자리에 <code>$value</code>가 있는 토큰이 있는지 본다.
-            <code>["color", "white"]</code>는 Semantic 파일에 없으므로 빠진다.
-          </p>
-          <div class="callout">
-            <p>
-              Style Dictionary에는 "참조 대상으로만 읽을 파일"을 받는
-              <code>include</code> 옵션이 있다. 하지만 <code>include</code>는
-              <code>source</code>처럼 경로를 glob으로 풀어, 파일이 없어도 오류를
-              내지 않는다(<a href="#tokens-option">tokens와 source</a>). 토큰
-              파일을 직접 읽는다는 방침과 맞지 않아 <code>tokens</code> +
-              <code>filter</code>를 쓴다. 출력은 같다.
-            </p>
           </div>
           <p>
             filter로 참조 대상을 빼면, Style Dictionary는 기본 로그에서
@@ -1018,62 +1075,72 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
         </section>
 
         <section id="tokens-option">
-          <h2>tokens와 source</h2>
-          <p>Style Dictionary에 토큰을 넘기는 방법은 두 가지다.</p>
-          <div class="compare">
-            <div class="compare-card">
-              <div class="compare-title">
-                파일 경로로 넘기기<small>source</small>
-              </div>
-              <dl class="compare-facts">
-                <dt>넘기는 것</dt>
-                <dd>glob 경로 배열 <code>["tokens/**/*.json"]</code></dd>
-                <dt>읽는 쪽</dt>
-                <dd>Style Dictionary</dd>
-                <dt>파일이 없으면</dt>
-                <dd>
-                  <strong>오류 없이</strong> 빈 결과
-                  <code>":root {\n\n}\n"</code>
-                </dd>
-              </dl>
-              <p class="compare-result">
-                경로를 잘못 적어도 빌드가 "성공"하고 빈 CSS가 배포된다.
-              </p>
-            </div>
-            <div class="compare-card green">
-              <div class="compare-title">
-                객체로 넘기기<small>tokens</small>
-              </div>
-              <dl class="compare-facts">
-                <dt>넘기는 것</dt>
-                <dd>이미 읽은 토큰 객체</dd>
-                <dt>읽는 쪽</dt>
-                <dd>
-                  우리 코드(<code>readFile</code> + <code>JSON.parse</code>)
-                </dd>
-                <dt>파일이 없으면</dt>
-                <dd><strong>ENOENT로 실패</strong></dd>
-              </dl>
-              <p class="compare-result">
-                경로가 틀리면 빌드가 바로 실패한다. 우리가 고른 방법이다.
-              </p>
-            </div>
+          <h2>파일이 없을 때</h2>
+          <p>
+            Style Dictionary는 <code>source</code>와 <code>include</code>의
+            항목마다 <code>globSync(패턴)</code>으로 맞는 파일 목록을
+            구한다(<code>lib/utils/combineJSON.js</code>). 와일드카드 없는
+            경로도 패턴 하나로 다루고, glob은 "맞는 파일이 0개"를 오류가 아닌 빈
+            목록으로 돌려준다. 그래서 파일 이름을 틀리거나 파일이 없어도 Style
+            Dictionary는 "파일이 없다"고 알려 주지 않는다. 없는 경로를 넣고
+            실행한 결과다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>없는 파일</th>
+                  <th>Style Dictionary만 쓰면</th>
+                  <th>먼저 <code>access</code>로 확인하면</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>primitive.json</code> (Primitive 빌드의 source)</td>
+                  <td>
+                    오류 없이 빈 <code>:root {}</code>
+                    <span class="badge warn">조용히 성공</span>
+                  </td>
+                  <td rowspan="3">
+                    <code
+                      >ENOENT: no such file or directory, access '…/파일'</code
+                    >
+                    <small>어떤 파일이 없는지 경로가 나온다</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>semantic/light.json</code> (source)</td>
+                  <td>
+                    filter에 맞는 토큰이 없어 결과가 비고, 우리 코드가 "Style
+                    Dictionary가 CSS를 만들지 못했다"로 실패
+                    <small>원인이 파일이라는 말이 없다</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>primitive.json</code> (Semantic 빌드의 include)</td>
+                  <td>
+                    <code>Some token references (3) could not be found.</code>
+                    <small>참조가 틀린 것처럼 보인다</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <p>
-            "파일이 없으면 오류 없이 빈 결과"는 없는 경로를
-            <code>source</code>에 넣고 실행해 확인했다. Style Dictionary는
-            <code>source</code>의 항목마다 <code>globSync(패턴)</code>으로 맞는
-            파일 목록을 구한다(<code>lib/utils/combineJSON.js</code>).
-            와일드카드 없는 경로도 패턴 하나로 다루고, glob은 "맞는 파일이
-            0개"를 오류가 아닌 빈 목록으로 돌려준다. 이 동작은 테스트 "토큰
-            폴더에 primitive.json이 없으면 실패한다"가 지킨다.
+            그래서 <code>buildTokens</code>는 경로를 넘기기 전에
+            <code>access</code>로 세 파일이 있는지 확인한다. 이 동작은 테스트
+            "토큰 폴더에 primitive.json이 없으면 실패한다"와 "토큰 폴더에
+            Semantic 파일이 없으면 실패한다"가 지킨다.
           </p>
-          <p>
-            <code>semantic/light.json</code>, <code>semantic/dark.json</code>도
-            같은 방식으로 직접 읽는다. 테스트 "토큰 폴더에 Semantic 파일이
-            없으면 실패한다"가 지킨다. 검증 규칙(#21)도 읽은 객체를 보고
-            판단해야 하므로, 읽는 일을 우리 코드가 갖는 편이 낫다.
-          </p>
+          <div class="callout">
+            <p>
+              처음 구현은 이 문제를 피하려고 파일을 직접 읽어
+              <code>tokens</code> 옵션에 객체로 넘기고, Semantic만 고르는 filter
+              함수도 직접 짰다. 지금은 파일이 있는지만 우리 코드가 확인하고,
+              읽기와 Semantic 고르기는 Style Dictionary의 <code>source</code>,
+              <code>include</code>, <code>isSource</code>에 맡긴다.
+            </p>
+          </div>
         </section>
 
         <section id="log">
@@ -1560,20 +1627,22 @@ async function buildPrimitiveCss(primitive: DesignTokens): Promise&lt;string&gt;
           <div class="quiz">
             <p class="quiz-q">
               1. <code>buildTokens</code>에 오타 난 폴더를 넘기면 어떻게 되나?
-              <code>source</code>를 썼다면?
+              <code>access</code> 확인을 지우면?
             </p>
             <p class="quiz-context">
-              <a href="#tokens-option">tokens와 source</a>의 두 카드로 생각한다.
+              <a href="#tokens-option">파일이 없을 때</a>의 표로 생각한다.
             </p>
             <details class="quiz-answer">
               <summary>답 보기</summary>
               <div class="fold-body">
                 <p>
-                  지금 코드는 <code>readFile</code>이 <code>ENOENT</code>로
-                  실패해 빌드가 멈춘다.
-                  <code>source: [join(dir, "primitive.json")]</code>를 썼다면
-                  glob이 파일 0개를 정상으로 보고, 빈 <code>:root {}</code>가
-                  <code>dist/tokens.css</code>에 기록된다. CI도 통과한다.
+                  지금 코드는 <code>access</code>가 <code>ENOENT</code>로
+                  실패해, 어떤 파일이 없는지 경로와 함께 빌드가 멈춘다. 확인을
+                  지우면 Style Dictionary의 glob이 파일 0개를 정상으로 본다.
+                  Primitive 빌드는 빈 <code>:root {}</code>를 내고, 이어지는
+                  Semantic 빌드는 출력이 비어 우리 코드의 "Style Dictionary가
+                  CSS를 만들지 못했다" 오류로 멈춘다. 원인이 "폴더 이름
+                  오타"라는 것은 오류 어디에도 나오지 않는다.
                 </p>
               </div>
             </details>
