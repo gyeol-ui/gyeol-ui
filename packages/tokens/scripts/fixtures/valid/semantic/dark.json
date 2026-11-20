@@ -1,0 +1,14 @@
+{
+  "bg-surface": {
+    "$type": "color",
+    "$value": "{color.gray.900}"
+  },
+  "fg-default": {
+    "$type": "color",
+    "$value": "{color.white}"
+  },
+  "ring-offset": {
+    "$type": "color",
+    "$value": "{bg-surface}"
+  }
+}
