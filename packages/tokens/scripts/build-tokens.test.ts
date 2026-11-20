@@ -58,6 +58,21 @@ async function createTokensDir(
   return tokensDir;
 }
 
+/** 생성된 TS 모듈의 모양. 테스트에서 값을 꺼내 보려고 느슨하게 적는다 */
+interface TsModule {
+  tokens: Record<string, any>;
+  values: Record<"light" | "dark", Record<string, any>>;
+}
+
+/** 빌드가 돌려준 TS 소스를 임시 파일로 써서 import한다. 폴더는 테스트가 끝나면 지운다 */
+async function importTsModule(ts: string): Promise<TsModule> {
+  const dir = await mkdtemp(join(tmpdir(), "gyeol-tokens-ts-"));
+  onTestFinished(() => rm(dir, { recursive: true, force: true }));
+  const file = join(dir, "index.ts");
+  await writeFile(file, ts);
+  return import(file);
+}
+
 /** 빌드가 TokenValidationError로 실패하면 위반의 파일, 경로, 규칙을 돌려준다 */
 async function collectViolations(
   tokensDir: string,
@@ -199,15 +214,76 @@ describe("buildTokens", () => {
     });
   });
 
+  describe("TS tokens", () => {
+    it("Semantic, spacing, radius를 camelCase 키의 CSS 변수 참조로 낸다", async () => {
+      // when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+      const { tokens } = await importTsModule(ts);
+
+      // then
+      expect(tokens.bgSurface).toBe("var(--gyeol-bg-surface)");
+      expect(tokens.ringOffset).toBe("var(--gyeol-ring-offset)");
+      expect(tokens.alpha[90]).toBe("var(--gyeol-alpha-90)");
+      expect(tokens.spacing[4]).toBe("var(--gyeol-spacing-4)");
+      expect(tokens.radius.md).toBe("var(--gyeol-radius-md)");
+    });
+
+    it("Primitive 색은 내지 않는다", async () => {
+      // when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+      const { tokens } = await importTsModule(ts);
+
+      // then
+      expect(tokens).not.toHaveProperty("color");
+      expect(ts).not.toContain("--gyeol-color-");
+    });
+  });
+
+  describe("TS values", () => {
+    it("Color Scheme마다 Semantic의 실제 색을 낸다", async () => {
+      // when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+      const { values } = await importTsModule(ts);
+
+      // then: Semantic → Semantic 참조도 실제 색으로 푼다
+      expect(values.light.bgSurface).toBe("#ffffff");
+      expect(values.light.ringOffset).toBe("#ffffff");
+      expect(values.dark.bgSurface).toBe("#18181b");
+      expect(values.dark.ringOffset).toBe("#18181b");
+    });
+
+    it("투명도가 있으면 참조 대상의 색에 불투명도를 곱한 rgba()를 낸다", async () => {
+      // when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+      const { values } = await importTsModule(ts);
+
+      // then
+      expect(values.light.alpha[90]).toBe("rgba(255, 255, 255, 0.9)");
+      expect(values.dark.alpha[90]).toBe("rgba(24, 24, 27, 0.9)");
+      expect(values.dark.borderDefault).toBe("rgba(255, 255, 255, 0.1)");
+    });
+
+    it("spacing과 radius는 values에 넣지 않는다", async () => {
+      // when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+      const { values } = await importTsModule(ts);
+
+      // then
+      expect(values.light).not.toHaveProperty("spacing");
+      expect(values.light).not.toHaveProperty("radius");
+    });
+  });
+
   describe("토큰 폴더", () => {
     it("실제 씨앗 토큰 폴더로 빌드가 성공한다", async () => {
       // given
       const tokensDir = fileURLToPath(new URL("../tokens", import.meta.url));
 
       // when
-      const { css } = await buildTokens(tokensDir);
+      const { css, ts } = await buildTokens(tokensDir);
+      const { tokens, values } = await importTsModule(ts);
 
-      // then: 값은 Figma에서 바뀔 수 있으므로 이름만 확인한다
+      // then: 값은 Figma에서 바뀔 수 있으므로 이름과 모양만 확인한다
       expect(css).toMatch(/--gyeol-color-gray-900: \S+;/);
       expect(css).toMatch(/--gyeol-spacing-4: \S+;/);
       expect(css).toMatch(/--gyeol-radius-md: \S+;/);
@@ -219,6 +295,11 @@ describe("buildTokens", () => {
       expect(css).toMatch(
         /--gyeol-border-default: color-mix\(in srgb, var\(--gyeol-color-\S+\) \d+%, transparent\);/,
       );
+      expect(tokens.fgOnAccent).toBe("var(--gyeol-fg-on-accent)");
+      expect(tokens.spacing[4]).toBe("var(--gyeol-spacing-4)");
+      expect(tokens.radius.full).toBe("var(--gyeol-radius-full)");
+      expect(values.light.bgSurface).toMatch(/^#[0-9a-f]{6}$/);
+      expect(values.dark.alpha[90]).toMatch(/^rgba\(\d+, \d+, \d+, 0\.9\)$/);
     });
 
     it("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {
@@ -819,6 +900,58 @@ describe("buildTokens", () => {
   });
 
   describe("전체 출력", () => {
+    it("fixture의 TS 출력 전체", async () => {
+      // given, when
+      const { ts } = await buildTokens(resolveFixturePath("valid"));
+
+      // then: as const로 값의 리터럴 타입을 남긴다
+      expect(ts).toMatchInlineSnapshot(`
+        "/**
+         * Do not edit directly, this file was auto-generated.
+         */
+
+        /** CSS 변수 참조. Semantic 색과 spacing, radius를 담는다 */
+        export const tokens = {
+          bgSurface: "var(--gyeol-bg-surface)",
+          fgDefault: "var(--gyeol-fg-default)",
+          borderDefault: "var(--gyeol-border-default)",
+          ringOffset: "var(--gyeol-ring-offset)",
+          alpha: {
+            90: "var(--gyeol-alpha-90)",
+          },
+          spacing: {
+            4: "var(--gyeol-spacing-4)",
+          },
+          radius: {
+            md: "var(--gyeol-radius-md)",
+          },
+        } as const;
+
+        /** Color Scheme별 Semantic의 실제 색. CSS 밖(예: 상태바 색을 브리지로 넘길 때)에서 쓴다 */
+        export const values = {
+          light: {
+            bgSurface: "#ffffff",
+            fgDefault: "#18181b",
+            borderDefault: "#18181b",
+            ringOffset: "#ffffff",
+            alpha: {
+              90: "rgba(255, 255, 255, 0.9)",
+            },
+          },
+          dark: {
+            bgSurface: "#18181b",
+            fgDefault: "#ffffff",
+            borderDefault: "rgba(255, 255, 255, 0.1)",
+            ringOffset: "#18181b",
+            alpha: {
+              90: "rgba(24, 24, 27, 0.9)",
+            },
+          },
+        } as const;
+        "
+      `);
+    });
+
     it("fixture의 CSS 출력 전체", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));

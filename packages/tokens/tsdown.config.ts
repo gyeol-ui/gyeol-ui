@@ -1,7 +1,8 @@
 import { defineConfig, type UserConfig } from "tsdown";
 
 const config: UserConfig = defineConfig({
-  entry: ["src/index.ts"],
+  // scripts/build.ts가 generated/에 만든 TS 소스가 패키지 진입점이다. dist/index.js로 나온다
+  entry: { index: "generated/index.ts" },
   format: "esm",
   platform: "neutral",
   dts: true,

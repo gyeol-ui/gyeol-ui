@@ -4,5 +4,5 @@
     // scripts/는 Node에서 도는 빌드 스크립트다
     "types": ["node"]
   },
-  "include": ["src", "scripts", "tsdown.config.ts"]
+  "include": ["scripts", "tsdown.config.ts"]
 }
