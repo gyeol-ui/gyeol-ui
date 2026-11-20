@@ -72,6 +72,7 @@ const withColorMix =
     if (!alias) return token;
     // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
     const target = dictionary.unfilteredTokenMap?.get(alias.ref);
+    // 참조 대상이 없으면 Style Dictionary가 ref를 풀다가 먼저 실패하므로 여기에는 오지 않는다. 타입을 좁히는 가드다
     if (!target) {
       throw new Error(
         `${token.path.join(".")}: gyeol.alias의 참조 대상 ${alias.ref}가 없다`,

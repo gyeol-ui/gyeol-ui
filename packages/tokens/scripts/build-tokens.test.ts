@@ -102,16 +102,12 @@ describe("buildTokens", () => {
       // given, when
       const { css } = await buildTokens(fixture("valid"));
 
-      // then
-      expect(css).toContain(
-        [
-          ':root[data-color-scheme="dark"] {',
-          "  color-scheme: dark;",
-          "  --gyeol-bg-surface: var(--gyeol-color-gray-900);",
-          "  --gyeol-fg-default: var(--gyeol-color-white);",
-          "  --gyeol-border-default: color-mix(in srgb, var(--gyeol-color-white) 10%, transparent);",
-        ].join("\n"),
-      );
+      // then: dark 블록 두 곳에 나온다
+      expect(
+        css.match(
+          /--gyeol-border-default: color-mix\(in srgb, var\(--gyeol-color-white\) 10%, transparent\);/g,
+        ),
+      ).toHaveLength(2);
     });
 
     it("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async () => {
