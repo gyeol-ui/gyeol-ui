@@ -17,7 +17,6 @@ export interface BuildResult {
 
 const PREFIX = "gyeol";
 
-/** CSS에 내는 순서이기도 하다. 아래 SCHEME_SELECTORS의 주석 참고 */
 const COLOR_SCHEMES = ["light", "dark"] as const;
 
 type ColorScheme = (typeof COLOR_SCHEMES)[number];
@@ -29,8 +28,9 @@ type SelectorChain = readonly string[];
  * Color Scheme마다 Semantic을 내는 CSS 블록의 selector다.
  * dark는 OS 설정(media query)과 data-color-scheme 속성, 두 블록에 같은 내용을 낸다.
  *
- * 블록 순서에 기대는 cascade가 있다. `[data-color-scheme="dark"]`와 light의 `:root`는
- * 명시도가 (0,1,0)으로 같아서, dark 블록이 light 블록보다 뒤에 나와야 속성이 OS 설정(light)을 이긴다.
+ * data-color-scheme 속성은 `<html>`에서만 지원하므로 모든 selector를 `:root`로 묶는다.
+ * 하위 요소에 붙인 속성은 어느 블록에도 맞지 않아 부모의 값을 물려받는다.
+ * `:root[data-color-scheme="dark"]`는 명시도가 (0,2,0)이라 light `:root`(0,1,0)를 블록 순서와 관계없이 이긴다.
  */
 const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
   light: [[":root"]],
@@ -39,7 +39,7 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
       "@media (prefers-color-scheme: dark)",
       ':root:not([data-color-scheme="light"])',
     ],
-    ['[data-color-scheme="dark"]'],
+    [':root[data-color-scheme="dark"]'],
   ],
 };
 

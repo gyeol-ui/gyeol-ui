@@ -50,12 +50,12 @@ test("dark Semantic을 OS 설정 media query 블록에 color-scheme: dark로 낸
   );
 });
 
-test("dark Semantic을 data-color-scheme 속성 블록에도 color-scheme: dark로 낸다", async () => {
+test("dark Semantic을 <html>의 data-color-scheme 속성 블록에도 color-scheme: dark로 낸다", async () => {
   const { css } = await buildTokens(fixture("valid"));
 
   expect(css).toContain(
     [
-      '[data-color-scheme="dark"] {',
+      ':root[data-color-scheme="dark"] {',
       "  color-scheme: dark;",
       "  --gyeol-bg-surface: var(--gyeol-color-gray-900);",
     ].join("\n"),
@@ -74,12 +74,19 @@ test("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async 
   expect(css.match(/--gyeol-color-white:/g)).toHaveLength(1);
 });
 
-test("data-color-scheme dark 블록은 명시도가 같은 light :root 블록보다 뒤에 나온다", async () => {
+test("data-color-scheme 속성은 <html>에서만 Color Scheme을 바꾼다", async () => {
   const { css } = await buildTokens(fixture("valid"));
 
-  expect(css.indexOf('[data-color-scheme="dark"] {')).toBeGreaterThan(
-    css.indexOf("color-scheme: light;"),
+  // 모든 블록의 selector가 :root로 시작하므로 하위 요소의 속성은 아무 블록에도 맞지 않는다
+  const selectors = [...css.matchAll(/^\s*([^\s@/*].*) \{$/gm)].map(
+    ([, selector]) => selector,
   );
+  expect(selectors).toEqual([
+    ":root",
+    ":root",
+    ':root:not([data-color-scheme="light"])',
+    ':root[data-color-scheme="dark"]',
+  ]);
 });
 
 test("토큰 폴더에 Semantic 파일이 없으면 실패한다", async ({
@@ -142,7 +149,7 @@ test("fixture의 CSS 출력 전체", async () => {
       }
     }
 
-    [data-color-scheme="dark"] {
+    :root[data-color-scheme="dark"] {
       color-scheme: dark;
       --gyeol-bg-surface: var(--gyeol-color-gray-900);
       --gyeol-fg-default: var(--gyeol-color-white);

@@ -52,7 +52,9 @@ Semantic 색은 Color Scheme(light/dark)에 따라 바뀝니다. 아무것도 �
 |---|---|
 | 기본 | `:root` (light) |
 | OS 설정이 dark이고 `data-color-scheme="light"`가 아님 | `@media (prefers-color-scheme: dark) { :root:not([data-color-scheme="light"]) }` (dark) |
-| `data-color-scheme="dark"` | `[data-color-scheme="dark"]` (dark) |
+| `data-color-scheme="dark"` | `:root[data-color-scheme="dark"]` (dark) |
+
+`data-color-scheme`은 `<html>`에서만 동작합니다. 페이지 일부(`<section>` 등)에 붙이면 아무 효과가 없고, 그 요소는 `<html>`의 Color Scheme을 그대로 따릅니다. 페이지 안에서 영역마다 Color Scheme을 다르게 하는 것은 지원하지 않습니다.
 
 블록마다 CSS `color-scheme` 속성도 함께 정의하므로 스크롤바와 폼 컨트롤 같은 브라우저 기본 UI도 같은 Color Scheme을 따릅니다.
 

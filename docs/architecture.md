@@ -74,7 +74,7 @@ tools/
   - Figma의 "alias + 투명도"는 허용한다. `$value`에는 계산한 색을, `$extensions`에는 참조 대상과 투명도를 적고, CSS에는 `color-mix(in srgb, var(--…) N%, transparent)`로 낸다.
 - CSS 변수는 `--gyeol-` 접두사를 붙인다 (예: `--gyeol-bg-surface`). Primitive는 `:root`에, Semantic은 Primitive를 `var()`로 가리키는 Color Scheme 블록에 낸다.
   - 공개 API는 Semantic 변수와, 색이 아닌 Primitive 변수(`--gyeol-spacing-*`, `--gyeol-radius-*`)다. Primitive 색 변수는 출력되지만 공개 API가 아니다. 컴포넌트는 색에 Semantic만 쓴다.
-- Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `data-color-scheme` 속성이 있으면 그 값을 따른다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
+- Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `<html>`에 `data-color-scheme` 속성이 있으면 그 값을 따른다. 속성은 `<html>`에서만 지원하고, 페이지 일부의 Color Scheme을 따로 바꾸는 것은 지원하지 않는다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
 
 확인한 사실(2026-11):
 
