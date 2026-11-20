@@ -27,8 +27,8 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
     platforms: {
       css: {
         prefix: PREFIX,
-        // 기본 css transformGroup의 size/rem은 px 값을 rem으로 바꾸므로 쓰지 않는다
-        transforms: ["name/kebab", "color/css", "size/px"],
+        // name/kebab(이름), color/css(hex, rgba()), size/rem(적힌 unit을 그대로 둔다) 등이 들어 있다
+        transformGroup: "css",
         files: [
           {
             destination: "tokens.css",
