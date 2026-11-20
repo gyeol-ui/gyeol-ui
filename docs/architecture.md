@@ -84,6 +84,7 @@ tools/
   - 기본 transform은 색 객체(5.3부터)와 dimension 객체(5.4부터)를 처리한다. color/size transform이 없으면 `[object Object]`가 나온다.
   - `color/css`는 sRGB로만 낸다.
   - `size/px`는 unit을 무시하고 px를 붙인다. 그래서 rem 값에는 쓰면 안 된다.
+  - 기본 `css` transformGroup의 `size/rem`은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고(`{16, px}` → `16px`), unit 없는 숫자에만 `rem`을 붙인다.
   - 참조 대상을 `include`로 넣고 `outputReferences: true`로 빌드하면 Semantic을 `var(--…)` 참조로 낼 수 있다.
   - JS/TS 기본 format은 `outputReferences`를 지원하지 않는다.
   - `$type`이 없는 alias는 참조 대상의 타입을 물려받지 못한다(이슈 #1811).
