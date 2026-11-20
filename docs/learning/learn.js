@@ -33,6 +33,11 @@ const learnFolders = [
         title: "Style Dictionary로 토큰을 CSS로 빌드하기",
         tags: ["design-token"],
       },
+      {
+        file: "color-scheme-blocks.html",
+        title: "dark 블록이 두 개인 이유",
+        tags: ["design-token"],
+      },
     ],
   },
 ];
