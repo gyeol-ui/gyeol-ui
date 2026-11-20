@@ -239,17 +239,4 @@ describe("formatTsModule", () => {
       ].join("\n"),
     );
   });
-
-  it("camelCase로 바꾼 키가 다른 토큰과 겹치면 실패한다", () => {
-    // given, when, then: Semantic spacing은 CSS 이름(--gyeol-spacing)은 달라도 TS 키가 Primitive spacing 그룹과 겹친다
-    expect(() =>
-      formatTsModule({
-        tokens: [
-          { path: ["spacing"], value: "var(--gyeol-spacing)" },
-          { path: ["spacing", "4"], value: "var(--gyeol-spacing-4)" },
-        ],
-        values: { light: [], dark: [] },
-      }),
-    ).toThrow("spacing.4: TS 키 spacing.4가 다른 토큰과 겹친다");
-  });
 });

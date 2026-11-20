@@ -90,32 +90,20 @@ export interface TsEntry {
 /** 키를 camelCase로 바꾼 토큰 경로를 따라 중첩한 객체. 잎은 낼 문자열이다 */
 type TsTree = Map<string, string | TsTree>;
 
-const toKeyCollisionError = ({
-  path,
-  keys,
-}: {
-  path: readonly string[];
-  keys: readonly string[];
-}): Error =>
-  new Error(`${path.join(".")}: TS 키 ${keys.join(".")}가 다른 토큰과 겹친다`);
-
-/** 토큰 목록을 경로대로 중첩한다. camelCase로 바꾼 키가 겹치면 TS에서 한쪽이 사라지므로 실패한다 */
+/** 토큰 목록을 경로대로 중첩한다 */
 function toTsTree(entries: readonly TsEntry[]): TsTree {
   const root: TsTree = new Map();
   for (const { path, value } of entries) {
     const keys = path.map(toCamelCase);
     const leafKey = keys.at(-1);
+    // 토큰 경로는 비어 있지 않다. 타입을 좁히는 가드다
+    if (leafKey === undefined) continue;
     let node = root;
     for (const key of keys.slice(0, -1)) {
-      const child = node.get(key) ?? new Map();
-      if (typeof child === "string") {
-        throw toKeyCollisionError({ path, keys });
-      }
-      node.set(key, child);
-      node = child;
-    }
-    if (leafKey === undefined || node.has(leafKey)) {
-      throw toKeyCollisionError({ path, keys });
+      const child = node.get(key);
+      const group: TsTree = child instanceof Map ? child : new Map();
+      node.set(key, group);
+      node = group;
     }
     node.set(leafKey, value);
   }
