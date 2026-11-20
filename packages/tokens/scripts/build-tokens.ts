@@ -65,25 +65,29 @@ const aliasWithAlpha = (token: TransformedToken): AliasWithAlpha | undefined =>
  * - `original.$value`: `ref`. outputReferences의 정렬(sortByReference)은 `original.$value`만 보고 참조를 판단하므로,
  *   그대로 두면 참조가 없는 토큰으로 여겨 블록 맨 앞으로 올라간다. `ref`를 넣으면 다른 참조 토큰처럼 순서가 정해진다.
  */
-const withColorMix =
-  (dictionary: Dictionary) =>
-  (token: TransformedToken): TransformedToken => {
-    const alias = aliasWithAlpha(token);
-    if (!alias) return token;
-    // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
-    const target = dictionary.unfilteredTokenMap?.get(alias.ref);
-    // 참조 대상이 없으면 Style Dictionary가 ref를 풀다가 먼저 실패하므로 여기에는 오지 않는다. 타입을 좁히는 가드다
-    if (!target) {
-      throw new Error(
-        `${token.path.join(".")}: gyeol.alias의 참조 대상 ${alias.ref}가 없다`,
-      );
-    }
-    return {
-      ...token,
-      $value: colorMix({ variable: target.name, alpha: alias.alpha }),
-      original: { ...token.original, $value: alias.ref },
-    };
+function applyColorMix({
+  token,
+  dictionary,
+}: {
+  token: TransformedToken;
+  dictionary: Dictionary;
+}): TransformedToken {
+  const alias = aliasWithAlpha(token);
+  if (!alias) return token;
+  // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
+  const target = dictionary.unfilteredTokenMap?.get(alias.ref);
+  // 참조 대상이 없으면 Style Dictionary가 ref를 풀다가 먼저 실패하므로 여기에는 오지 않는다. 타입을 좁히는 가드다
+  if (!target) {
+    throw new Error(
+      `${token.path.join(".")}: gyeol.alias의 참조 대상 ${alias.ref}가 없다`,
+    );
+  }
+  return {
+    ...token,
+    $value: colorMix({ variable: target.name, alpha: alias.alpha }),
+    original: { ...token.original, $value: alias.ref },
   };
+}
 
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
@@ -106,9 +110,11 @@ const createColorSchemeFormat =
         format: "css",
         dictionary: {
           ...dictionary,
-          allTokens: dictionary.allTokens.map(withColorMix(dictionary)),
+          allTokens: dictionary.allTokens.map((token) =>
+            applyColorMix({ token, dictionary }),
+          ),
         },
-        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 withColorMix가 만든 color-mix()를 그대로 낸다
+        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 applyColorMix가 만든 color-mix()를 그대로 낸다
         outputReferences: (token) => !aliasWithAlpha(token),
         usesDtcg: true,
         formatting: { indentation: "" },
