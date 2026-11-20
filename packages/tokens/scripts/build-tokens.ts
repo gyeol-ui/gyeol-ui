@@ -84,9 +84,9 @@ function applyColorMix({
     $value: colorMix({ variable: target.name, alpha: alias.alpha }),
     // 블록 안에서 변수 줄의 순서를 다른 참조 토큰과 같은 규칙으로 정하려고 원본 값을 ref로 바꾼다.
     //
-    // formattedVariables는 outputReferences를 켜면, 변수를 쓰는 줄보다 그 변수를 정의하는 줄이 먼저 나오도록
-    // 토큰을 정렬한다(sortByReference). 이때 토큰이 참조하는지는 original.$value가 "{bg-surface}" 같은
-    // 참조 문자열인지로만 판단한다.
+    // formattedVariables는 outputReferences를 켜면, 참조되는 토큰을 참조하는 토큰보다 앞에 두도록 정렬한다(sortByReference).
+    //   예: --gyeol-ring-offset: var(--gyeol-bg-surface)는 --gyeol-bg-surface 뒤에 나온다.
+    // 이때 토큰이 참조하는지는 original.$value가 "{bg-surface}" 같은 참조 문자열인지로만 판단한다.
     //
     // "alias + 투명도"의 original.$value는 계산된 색 객체다. 그대로 두면 참조가 없는 토큰으로 여겨,
     // 참조하는 토큰 모두보다 앞, 즉 블록 맨 앞으로 옮겨진다.
