@@ -36,6 +36,8 @@ pnpm learning
 | `git` | git과 GitHub의 브랜치, merge, 저장소 설정 |
 | `release` | 버전, CHANGELOG, 배포 자동화 |
 | `lint` | lint와 형식 검사 도구의 설정과 동작 |
+| `figma` | Figma Variables, 플러그인, Figma와 코드의 동기화 |
+| `design-token` | Design Token의 형식, 계층, 빌드 |
 
 ## 모듈
 
@@ -65,6 +67,8 @@ pnpm learning
 | 나머지 격자 | `modgrid`, `modgrid-caption` | 값의 범위를 나머지(`%`)로 접었을 때 결과마다 몇 번 대응하는지(모듈로 편향, 거부 샘플링). 아래 "나머지 격자" 참고 |
 | 관문 | `gates`, `gate-check`, `gate-fail`, `pass` | 차례로 확인하다 하나라도 걸리면 옆으로 빠지는 흐름(가드, 검증). 아래 "관문" 참고 |
 | 테이블 관계도 | `erd`, `erd-table`, `erd-title`, `erd-constraints`, `erd-mark`, `erd-note` | 테이블을 칸 목록 상자로 그리고 외래 키를 선으로 잇는 ERD. 아래 "테이블 관계도" 참고 |
+| 변수 표 | `vartable`, `vt-active`, `vt-warn`, `vt-new`, `vt-swatch`, `vt-alias`, `vartable-note` | Figma Variables 창처럼 collection 하나를 행(Variable)과 열(Mode)로 그리기. 아래 "변수 표" 참고 |
+| 화면 미리보기 | `frames`, `frame`, `frame-mode`, `frame-screen`, `frame-card`, `frame-btn` | 같은 화면을 Mode나 값 조합마다 나란히 그려, 무엇이 바뀌는지 보이기. 아래 "화면 미리보기" 참고 |
 | 표 | `table-wrap` | 좁은 화면에서 가로로 스크롤되는 표. 칸 안의 `small`은 다음 줄에 흐리게 보이는 보충 설명이다 |
 | 배지 | `badge`, `blue`, `green`, `warn`, `muted` | 표나 문장 안의 짧은 분류. `muted`는 해당 없음, 결과 없음 |
 | 강조 상자 | `callout`, `callout warn` | 핵심 정의, 주의할 점 |
@@ -138,6 +142,21 @@ pnpm learning
 - 안의 `p.modgrid-caption`에 읽는 법을 적는다. 칸에 마우스를 올리면 값과 대응하는 글자가 보인다.
 
 관문(`gates`)은 `ol.gates` 안에 확인 하나마다 `li`를 둔다. `li` 안에 `div.gate-check`(확인할 내용, 예시 값은 `small`)와 `div.gate-fail`(걸렸을 때 일어나는 일, 결과는 `strong`)을 둔다. 번호와 "↓ 통과" 화살표는 CSS가 그린다. 마지막 통과 단계는 `li.pass`로 두고 `gate-fail`을 생략한다.
+
+변수 표(`table.vartable`)는 `table-wrap` 없이 표에 바로 `vartable`을 붙인다. 그리는 일은 CSS만 한다.
+
+- `caption`에 collection 이름을, 그 안 `small`에 열이 무엇인지(예: "열 = Theme")를 적는다.
+- 첫 열 머리글은 `Variable`이고, 나머지 머리글은 `<th><small>mode</small>light</th>`처럼 Mode 이름 위에 `mode`를 작게 붙인다.
+- 색 값은 `<span class="vt-swatch" style="--c: #fafafa"></span>#FAFAFA`처럼 견본과 함께 적는다. 다른 Variable을 가리키는 칸은 `<span class="vt-alias">color/gray/50</span>`로 쓰고, 가리킨 끝의 색을 보이려면 안에 `vt-swatch`를 넣는다.
+- 지금 적용된 Mode의 열은 머리글과 칸에 `vt-active`(파랑)를 붙인다. 같은 값을 되풀이해 적어야 하는 칸처럼 구조가 어색한 칸은 `vt-warn`(주황, "같은 값 반복" 표시)을 붙인다. 열이나 행을 더한 뒤 새로 채워야 하는 머리글과 칸은 `vt-new`(초록)를 붙이고 칸에는 "채워야 함"처럼 짧게 적는다. 기존 열을 줄여 보일 때는 머리글을 "기존 4열"처럼 쓰고 칸에 `…`를 적는다.
+- 표 바로 아래 `p.vartable-note`에 읽는 법을 적는다.
+
+화면 미리보기(`frames`)는 경우마다 `figure.frame`을 하나씩 둔다. 화면은 본문 폭에 맞춰 나란히 놓이고, 좁으면 아래로 쌓인다.
+
+- `figcaption`에 경우 이름을, 그 경우의 Mode나 값을 `span.frame-mode`로 적는다.
+- `div.frame-screen`에 `style="--f-bg: …; --f-fg: …; --f-border: …; --f-brand: …; --f-on-brand: …"`로 그 경우의 실제 색을 준다. 안에는 `div.frame-card`(제목 `strong`, 설명 `p`)와 `span.frame-btn`을 둔다.
+- 비교하는 화면끼리 내용을 똑같이 두고 색만 바꾼다.
+- 두 축의 조합(예: Theme × Color Scheme)을 가로와 세로로 읽게 하려면 `.frames`에 `style="--frames-cols: 2"`로 열 수를 고정한다.
 
 자가 점검 문제는 `quiz`로 쓴다. `quiz-q`에 질문을, `quiz-context`에 어느 절의 무엇을 묻는지를 적고, 바꾸는 코드는 `language-diff` 코드 블록으로, 필요한 데이터는 표로 질문 아래에 둔다. 답만 `<details class="quiz-answer">` 안의 `fold-body`에 접는다. 질문 한 줄만으로 무엇을 묻는지 분명할 때만 클래스 없는 `<details>`를 쓴다. 그 밖에 문단만 접어 둘 때도 클래스 없이 `<details>`를 쓴다. 코드나 표가 든 선택 읽기 내용을 접을 때는 `<details class="fold">` 안에 `<div class="fold-body">`를 두고, 접어도 흐름이 이어지도록 결론은 접기 밖에 적는다.
 

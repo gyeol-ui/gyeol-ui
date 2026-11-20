@@ -23,6 +23,11 @@ const learnFolders = [
         title: "oxlint 규칙 범주",
         tags: ["lint"],
       },
+      {
+        file: "figma-collection-and-mode.html",
+        title: "Figma Variables의 collection과 mode",
+        tags: ["figma", "design-token"],
+      },
     ],
   },
 ];

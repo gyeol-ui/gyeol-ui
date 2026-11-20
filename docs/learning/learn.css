@@ -1711,6 +1711,177 @@ table.breach td.safe small {
   content: "✓";
   background: var(--green);
 }
+/* 변수 표: Figma Variables 창처럼 collection 하나를 표로 그린다. 행이 Variable, 열이 Mode다. */
+table.vartable {
+  margin: 1.25rem 0 0.4rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.88rem;
+}
+.vartable caption {
+  padding: 0 0 0.4rem;
+  text-align: left;
+  font-weight: 700;
+}
+.vartable caption small {
+  margin-left: 0.4rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.vartable th,
+.vartable td {
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.vartable tr:last-child td {
+  border-bottom: 0;
+}
+.vartable th + th,
+.vartable td + td {
+  border-left: 1px solid var(--border);
+}
+/* 열 머리글 위에 작게 "mode"를 붙여 열이 Mode라는 것을 보인다. */
+.vartable thead th small {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.vartable td:first-child code {
+  background: none;
+  padding: 0;
+}
+/* 지금 화면에 적용된 Mode의 열 */
+.vartable th.vt-active {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.vartable td.vt-active {
+  background: var(--blue-bg);
+}
+/* 같은 값을 되풀이해 적어야 하는 칸처럼, 구조가 어색하다는 표시 */
+.vartable td.vt-warn {
+  background: var(--warn-bg);
+}
+.vartable td.vt-warn::after {
+  content: " 같은 값 반복";
+  font-size: 0.72rem;
+  color: var(--warn);
+}
+/* 열이나 행을 더한 뒤 새로 채워야 하는 칸 */
+.vartable th.vt-new {
+  background: var(--green-bg);
+  color: var(--green);
+}
+.vartable td.vt-new {
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 0.8rem;
+}
+.vt-swatch {
+  display: inline-block;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-right: 0.4rem;
+  border: 1px solid rgb(0 0 0 / 0.2);
+  border-radius: 3px;
+  background: var(--c);
+  vertical-align: -0.15rem;
+}
+/* 값을 직접 적지 않고 다른 Variable을 가리키는 칸(alias) */
+.vt-alias {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--code-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.vt-alias::before {
+  content: "→";
+  margin-right: 0.35rem;
+  color: var(--blue);
+}
+.vt-alias .vt-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  margin-right: 0.3rem;
+}
+.vartable-note {
+  margin: 0 0 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* 화면 미리보기: 같은 화면을 Mode 조합마다 나란히 그린다. 색은 화면마다 --f-* 변수로 준다. */
+.frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.9rem;
+  margin: 1.25rem 0;
+}
+/* 두 축의 조합을 가로(한 축)와 세로(다른 축)로 읽게 할 때 열 수를 고정한다. */
+.frames[style*="--frames-cols"] {
+  grid-template-columns: repeat(var(--frames-cols), minmax(0, 1fr));
+}
+.frame {
+  margin: 0;
+}
+.frame figcaption {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.frame-mode {
+  display: inline-block;
+  margin: 0.15rem 0.25rem 0 0;
+  padding: 0 0.4rem;
+  border-radius: 4px;
+  background: var(--code-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+.frame-screen {
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--f-bg);
+  color: var(--f-fg);
+}
+.frame-card {
+  padding: 0.75rem;
+  border: 1px solid var(--f-border);
+  border-radius: 8px;
+}
+.frame-card strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.frame-card p {
+  margin: 0.15rem 0 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.frame-btn {
+  display: inline-block;
+  padding: 0.25rem 0.85rem;
+  border-radius: 6px;
+  background: var(--f-brand);
+  color: var(--f-on-brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 @media (max-width: 640px) {
   .gates > li {
     grid-template-columns: minmax(0, 1fr);
