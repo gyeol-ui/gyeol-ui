@@ -106,45 +106,113 @@
             도구다. 바꾸는 일은 아래 순서로 나뉘고, 설정의 옵션은 각 단계에
             무엇을 할지 알려 준다.
           </p>
+          <p>
+            단계마다 붙인 결과물은 fixture로 light Semantic 빌드(Primitive는
+            <code>include</code>, <code>semantic/light.json</code>은
+            <code>source</code>)를 실제로 돌리며 Style Dictionary가 가진 값을
+            꺼낸 것이다. 길어서 일부 토큰만 옮겼다.
+          </p>
           <ol class="steps blue">
             <li>
               <strong>토큰 읽기</strong>
-              <code>tokens</code>(객체)나 <code>source</code>(파일 경로)로 받은
-              JSON을 합친다. <code>$value</code>가 보이면 DTCG 형식으로
-              판단한다. 우리 설정에서 <code>sd.usesDtcg</code>는
-              <code>true</code>였다.
+              <code>source</code>와 <code>include</code>의 파일을 읽어 토큰 트리
+              하나로 합친다. <code>$value</code>가 보이면 DTCG 형식으로
+              판단한다(<code>sd.usesDtcg</code>가 <code>true</code>). 토큰마다
+              어느 파일에서 왔는지(<code>filePath</code>)와 <code>source</code>
+              파일인지(<code>isSource</code>)가 붙는다. 값은 아직 JSON에 적은
+              그대로다.
+              <pre><code class="language-json">// sd.tokens
+"color": { "gray": { "900": {
+  "$value": { "colorSpace": "srgb", "components": [0.0941, 0.0941, 0.1059] },
+  "$type": "color",
+  "isSource": false,
+  "filePath": "…/fixtures/valid/primitive.json"
+} } },
+"bg-surface": {
+  "$value": "{color.white}",
+  "$type": "color",
+  "isSource": true,
+  "filePath": "…/fixtures/valid/semantic/light.json"
+}</code></pre>
             </li>
             <li>
               <strong>플랫폼 고르기</strong>
               <code>platforms</code>의 키 하나(우리는 <code>css</code>)를 골라
               그 플랫폼의 설정으로 아래 단계를 돈다.
+              <code>transformGroup: "css"</code>는 이때 transform 목록으로
+              풀린다.
+              <pre><code class="language-json">// sd.getPlatformConfig("css")
+{
+  "prefix": "gyeol",
+  "transforms": [
+    "attribute/cti", "name/kebab", "time/seconds", "html/icon",
+    "size/rem", "color/css", "asset/url", "fontFamily/css",
+    "cubicBezier/css", "strokeStyle/css/shorthand", "border/css/shorthand",
+    "typography/css/shorthand", "transition/css/shorthand", "shadow/css/shorthand"
+  ]
+}</code></pre>
             </li>
             <li>
               <strong>transform</strong>
-              토큰마다 이름(name), 값(value), 속성(attribute)을 바꾼다. 예를
-              들어 색 객체를 <code>#18181b</code>로, 경로
-              <code>color.gray.900</code>을
-              <code>gyeol-color-gray-900</code>으로 바꾼다.
+              토큰마다 이름(name), 값(value), 속성(attribute)을 바꾼다. 참조가
+              없는 <code>color.gray.900</code>은 경로가 이름으로, 색 객체가
+              hex로 바뀐다. 바뀌기 전 값은 <code>original</code>에 남는다.
+              <pre><code class="language-json">// sd.getPlatformTokens("css")의 color.gray.900
+{
+  "path": ["color", "gray", "900"],
+  "name": "gyeol-color-gray-900",
+  "$value": "#18181b",
+  "original": { "$value": { "colorSpace": "srgb", "components": [0.0941, 0.0941, 0.1059] } }
+}</code></pre>
             </li>
             <li>
               <strong>참조 해석</strong>
-              <code>{color.gray.900}</code> 같은 참조를 찾아 가리키는 토큰과
-              잇는다. Primitive에는 참조가 없고, Semantic은 모든 값이 참조다.
-              <code>outputReferences</code>를 켜면 값으로 풀지 않고
-              <code>var()</code>로 남긴다(<a href="#reference"
+              <code>{color.white}</code> 같은 참조를 가리키는 토큰의 값으로
+              푼다. 참조가 풀려야 transform할 수 있는 값이 있어서 transform과
+              번갈아 돈다. <code>$value</code>는 실제 색으로 풀리지만,
+              <code>original.$value</code>에는 참조가 남는다.
+              <code>outputReferences</code>를 켜면 format이 이 참조를 보고
+              <code>var()</code>를 낸다(<a href="#reference"
                 >참조가 var()가 되기까지</a
               >).
+              <pre><code class="language-json">// sd.getPlatformTokens("css")의 bg-surface, ring-offset
+{
+  "name": "gyeol-bg-surface",
+  "$value": "#ffffff",
+  "original": { "$value": "{color.white}" }
+}
+{
+  "name": "gyeol-ring-offset",
+  "$value": "#ffffff",
+  "original": { "$value": "{bg-surface}" }
+}</code></pre>
             </li>
             <li>
               <strong>format</strong>
               transform이 끝난 토큰 목록을 파일 내용(문자열) 하나로 만든다.
-              <code>css/variables</code>는 <code>:root { --이름: 값; }</code>을
-              만든다.
+              file의 <code>filter</code>(<code>isSource</code>)가 여기서 걸려
+              Primitive는 빠진다.
+              <pre><code class="language-json">// sd.formatPlatform("css")
+[{
+  "output": ":root {\n  --gyeol-bg-surface: var(--gyeol-color-white);\n  --gyeol-fg-default: var(--gyeol-color-gray-900);\n  --gyeol-ring-offset: var(--gyeol-bg-surface);\n}\n",
+  "destination": "light.css"
+}]</code></pre>
+              <p><code>output</code> 문자열을 펼치면 이렇다.</p>
+              <pre><code class="language-css">:root {
+  --gyeol-bg-surface: var(--gyeol-color-white);
+  --gyeol-fg-default: var(--gyeol-color-gray-900);
+  --gyeol-ring-offset: var(--gyeol-bg-surface);
+}</code></pre>
             </li>
             <li>
               <strong>기록</strong>
-              문자열을 <code>buildPath + destination</code> 파일로 기록한다.
-              <code>buildTokens</code>는 이 단계를 부르지 않는다.
+              Style Dictionary의 <code>buildPlatform</code>은 문자열을
+              <code>buildPath + destination</code> 파일로 기록한다.
+              <code>buildTokens</code>는 이 단계를 부르지 않고 문자열만
+              돌려준다. 파일은 <code>pnpm build</code>의
+              <code>scripts/build.ts</code>가 쓴다.
+              <pre><code class="language-ts">// scripts/build.ts
+await writeFile(join(generatedDir, "tokens.css"), css);</code></pre>
             </li>
           </ol>
         </section>
