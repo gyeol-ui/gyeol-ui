@@ -64,7 +64,7 @@ tools/
   - 경로는 최대 3단계, 이름은 kebab-case다. 모든 토큰의 CSS 변수 이름이 서로 다르다. 색은 `srgb`, dimension은 `px`다. 참조 대상이 존재한다.
 - 토큰 원본은 플랫폼 중립으로 설계한다. 이름, 구조, 타입은 Figma와 DTCG 기준으로 정하고, 플랫폼 관례(CSS 변수 이름, Tailwind 네임스페이스 등)는 출력 변환에서만 다룬다.
   - 경로 규칙. Figma 변수 이름은 같은 경로를 `/`로 잇는다.
-    - Primitive: 범주 / 이름 (예: `color.gray.900`, `spacing.4`, `radius.md`)
+    - Primitive: 범주 / (그룹) / 이름 (예: `color.gray.900`, `spacing.4`, `radius.md`)
     - Semantic: (그룹) / 이름 (예: `bg-surface`, `alpha.90`). 색만 담으므로 범주를 쓰지 않는다
     - 이름은 kebab-case다. 그룹은 한 단계까지만 둔다.
     - 모든 토큰의 CSS 변수 이름은 서로 달라야 한다.

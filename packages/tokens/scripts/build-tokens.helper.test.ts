@@ -1,16 +1,16 @@
 // 헬퍼의 입력과 출력을 보여 주는 문서용 테스트다. 기대값은 손으로 쓴 결과 그대로다.
 import { describe, expect, it } from "vitest";
 import {
-  colorMix,
-  colorSchemeBlock,
-  tokenFilePaths,
+  formatColorMix,
+  wrapInColorSchemeBlock,
+  resolveTokenFilePaths,
 } from "./build-tokens.helper.ts";
 
 // alias + 투명도를 CSS color-mix()로 쓴다
-describe("colorMix", () => {
+describe("formatColorMix", () => {
   it("참조 대상 변수를 불투명도 %만큼 transparent와 섞는다", () => {
     // given, when
-    const value = colorMix({ variable: "gyeol-bg-surface", alpha: 0.9 });
+    const value = formatColorMix({ variable: "gyeol-bg-surface", alpha: 0.9 });
 
     // then
     expect(value).toBe(
@@ -20,7 +20,10 @@ describe("colorMix", () => {
 
   it("%는 부동소수점 오차 없이 쓴다", () => {
     // given, when: 0.07 * 100은 7.000000000000001이다
-    const value = colorMix({ variable: "gyeol-color-white", alpha: 0.07 });
+    const value = formatColorMix({
+      variable: "gyeol-color-white",
+      alpha: 0.07,
+    });
 
     // then
     expect(value).toBe(
@@ -30,7 +33,10 @@ describe("colorMix", () => {
 
   it("소수점 아래 %도 쓴다", () => {
     // given, when
-    const value = colorMix({ variable: "gyeol-color-white", alpha: 0.125 });
+    const value = formatColorMix({
+      variable: "gyeol-color-white",
+      alpha: 0.125,
+    });
 
     // then
     expect(value).toBe(
@@ -40,10 +46,10 @@ describe("colorMix", () => {
 });
 
 // 변수 줄을 Color Scheme 블록으로 감싼다
-describe("colorSchemeBlock", () => {
+describe("wrapInColorSchemeBlock", () => {
   it("selector 하나: 블록 맨 앞에 color-scheme 줄을 넣고 들여 쓴다", () => {
     // given, when
-    const block = colorSchemeBlock({
+    const block = wrapInColorSchemeBlock({
       colorScheme: "light",
       selectors: [":root"],
       variables: "--gyeol-bg-surface: var(--gyeol-color-white);",
@@ -63,7 +69,7 @@ describe("colorSchemeBlock", () => {
 
   it("selector 여럿: 앞의 것이 바깥인 중첩 블록이 되고, 깊이만큼 들여 쓴다", () => {
     // given, when
-    const block = colorSchemeBlock({
+    const block = wrapInColorSchemeBlock({
       colorScheme: "dark",
       selectors: [
         "@media (prefers-color-scheme: dark)",
@@ -88,7 +94,7 @@ describe("colorSchemeBlock", () => {
 
   it("변수 줄이 여럿이면 줄마다 들여 쓴다", () => {
     // given, when
-    const block = colorSchemeBlock({
+    const block = wrapInColorSchemeBlock({
       colorScheme: "dark",
       selectors: [':root[data-color-scheme="dark"]'],
       variables: [
@@ -112,10 +118,10 @@ describe("colorSchemeBlock", () => {
 });
 
 // 토큰 폴더에서 토큰 파일 경로를 만든다
-describe("tokenFilePaths", () => {
+describe("resolveTokenFilePaths", () => {
   it("Primitive 하나와 Color Scheme마다 Semantic 하나", () => {
     // given, when
-    const paths = tokenFilePaths("/repo/tokens");
+    const paths = resolveTokenFilePaths("/repo/tokens");
 
     // then
     expect(paths).toEqual({

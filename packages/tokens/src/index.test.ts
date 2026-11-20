@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { packageName } from "./index.ts";
+import { getPackageName } from "./index.ts";
 
-describe("packageName", () => {
+describe("getPackageName", () => {
   it("패키지 이름을 돌려준다", () => {
     // when
-    const name = packageName();
+    const name = getPackageName();
 
     // then
     expect(name).toBe("@gyeol-ui/tokens");

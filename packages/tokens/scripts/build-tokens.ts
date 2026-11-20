@@ -1,4 +1,3 @@
-import { access } from "node:fs/promises";
 import StyleDictionary from "style-dictionary";
 import type {
   Dictionary,
@@ -10,12 +9,13 @@ import type {
 import { formattedVariables } from "style-dictionary/utils";
 import {
   COLOR_SCHEMES,
-  colorMix,
-  colorSchemeBlock,
-  tokenFilePaths,
+  formatColorMix,
+  wrapInColorSchemeBlock,
+  resolveTokenFilePaths,
   type ColorScheme,
   type SelectorChain,
 } from "./build-tokens.helper.ts";
+import { validateTokens } from "./validate-tokens.ts";
 
 export interface BuildResult {
   /** `tokens.css`의 내용 */
@@ -55,13 +55,13 @@ interface AliasWithAlpha {
  * 토큰 원본의 `gyeol.alias`를 읽는다. 변환 전 원본(`original`)에서 읽는 이유:
  * Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에, 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
  */
-const getAliasWithAlpha = (
+const readAliasWithAlpha = (
   token: TransformedToken,
 ): AliasWithAlpha | undefined => token.original.$extensions?.gyeol?.alias;
 
 /** "alias + 투명도" 토큰인지 판단한다. 토큰 원본에 `gyeol.alias`가 있으면 그렇다 */
 const isAliasWithAlpha = (token: TransformedToken): boolean =>
-  getAliasWithAlpha(token) !== undefined;
+  readAliasWithAlpha(token) !== undefined;
 
 /**
  * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
@@ -73,7 +73,7 @@ function applyColorMix({
   token: TransformedToken;
   dictionary: Dictionary;
 }): TransformedToken {
-  const alias = getAliasWithAlpha(token);
+  const alias = readAliasWithAlpha(token);
   if (!alias) return token;
   // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
   const target = dictionary.unfilteredTokenMap?.get(alias.ref);
@@ -86,7 +86,7 @@ function applyColorMix({
   return {
     ...token,
     // 출력할 값. 원본 $value에 적힌 계산된 색(rgba) 대신 참조 대상 변수를 섞는다
-    $value: colorMix({ variable: target.name, alpha: alias.alpha }),
+    $value: formatColorMix({ variable: target.name, alpha: alias.alpha }),
     // 블록 안에서 변수 줄의 순서를 다른 참조 토큰과 같은 규칙으로 정하려고 원본 값을 ref로 바꾼다.
     //
     // formattedVariables는 outputReferences를 켜면, 참조되는 토큰을 참조하는 토큰보다 앞에 두도록 정렬한다(sortByReference).
@@ -107,7 +107,7 @@ function applyColorMix({
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
- * 변수 줄은 Style Dictionary가 만들고, 블록으로 감싸는 일은 colorSchemeBlock이 한다.
+ * 변수 줄은 Style Dictionary가 만들고, 블록으로 감싸는 일은 wrapInColorSchemeBlock이 한다.
  */
 const createColorSchemeFormat =
   ({
@@ -118,7 +118,7 @@ const createColorSchemeFormat =
     selectors: SelectorChain;
   }): FormatFn =>
   ({ dictionary }) =>
-    colorSchemeBlock({
+    wrapInColorSchemeBlock({
       colorScheme,
       selectors,
       variables: formattedVariables({
@@ -137,7 +137,7 @@ const createColorSchemeFormat =
     });
 
 /** Primitive와 Semantic 빌드가 함께 쓰는 CSS 플랫폼 설정. 만들 파일 목록만 다르다 */
-const cssPlatform = (files: File[]): PlatformConfig => ({
+const configureCssPlatform = (files: File[]): PlatformConfig => ({
   prefix: PREFIX,
   // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
   // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
@@ -165,7 +165,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise<string> {
     source: [primitivePath],
     log: { verbosity: "silent" },
     platforms: {
-      css: cssPlatform([{ format: "css/variables" }]),
+      css: configureCssPlatform([{ format: "css/variables" }]),
     },
   });
   return (await formatOutputs(sd)).join("");
@@ -203,7 +203,7 @@ async function buildSemanticCss({
       formats: Object.fromEntries(formats.map((f) => [f.name, f.format])),
     },
     platforms: {
-      css: cssPlatform(
+      css: configureCssPlatform(
         formats.map(({ name }) => ({
           format: name,
           filter: (token: TransformedToken) => token.isSource,
@@ -219,13 +219,12 @@ async function buildSemanticCss({
  * CSS 텍스트를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
-  const paths = tokenFilePaths(tokensDir);
+  // Style Dictionary에 넘기기 전에 토큰 파일을 직접 읽어 검증 규칙을 검사한다. 위반이 있으면 모두 모아 던진다.
+  // 파일이 없을 때도 여기서 ENOENT로 실패한다. Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고,
+  // 맞는 파일이 0개여도 오류가 아니라서, 그대로 넘기면 토큰 없이 빌드가 끝나 빈 블록이 나온다.
+  await validateTokens(tokensDir);
 
-  // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
-  // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
-  for (const path of [paths.primitive, ...Object.values(paths.semantic)]) {
-    await access(path);
-  }
+  const paths = resolveTokenFilePaths(tokensDir);
 
   const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
   for (const colorScheme of COLOR_SCHEMES) {
