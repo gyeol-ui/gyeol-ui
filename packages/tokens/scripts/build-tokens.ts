@@ -1,6 +1,7 @@
 import { access } from "node:fs/promises";
 import StyleDictionary from "style-dictionary";
 import type {
+  Dictionary,
   File,
   FormatFn,
   PlatformConfig,
@@ -9,6 +10,7 @@ import type {
 import { formattedVariables } from "style-dictionary/utils";
 import {
   COLOR_SCHEMES,
+  colorMix,
   colorSchemeBlock,
   tokenFilePaths,
   type ColorScheme,
@@ -41,6 +43,47 @@ const SCHEME_SELECTORS: Record<ColorScheme, readonly SelectorChain[]> = {
   ],
 };
 
+/** Figma의 "alias + 투명도". `$extensions.gyeol.alias`에 적는다 */
+interface AliasWithAlpha {
+  /** 참조 대상. 예: `{bg-surface}` */
+  ref: string;
+  /** 불투명도(0–1) */
+  alpha: number;
+}
+
+/**
+ * 토큰 원본의 `gyeol.alias`를 읽는다. 변환 전 원본(`original`)에서 읽는 이유:
+ * Style Dictionary는 `$value`뿐 아니라 토큰 전체의 참조를 풀기 때문에, 변환 후에는 `ref`가 참조 대상의 색 객체로 바뀌어 있다.
+ */
+const aliasWithAlpha = (token: TransformedToken): AliasWithAlpha | undefined =>
+  token.original.$extensions?.gyeol?.alias;
+
+/**
+ * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다.
+ *
+ * - `$value`: `$value`에 적힌 계산된 색 대신 참조 대상 변수를 섞는 `color-mix()`.
+ * - `original.$value`: `ref`. outputReferences의 정렬(sortByReference)은 `original.$value`만 보고 참조를 판단하므로,
+ *   그대로 두면 참조가 없는 토큰으로 여겨 블록 맨 앞으로 올라간다. `ref`를 넣으면 다른 참조 토큰처럼 순서가 정해진다.
+ */
+const withColorMix =
+  (dictionary: Dictionary) =>
+  (token: TransformedToken): TransformedToken => {
+    const alias = aliasWithAlpha(token);
+    if (!alias) return token;
+    // include로 넘긴 Primitive는 filter로 빠지므로 filter 전 토큰에서 찾는다
+    const target = dictionary.unfilteredTokenMap?.get(alias.ref);
+    if (!target) {
+      throw new Error(
+        `${token.path.join(".")}: gyeol.alias의 참조 대상 ${alias.ref}가 없다`,
+      );
+    }
+    return {
+      ...token,
+      $value: colorMix({ variable: target.name, alpha: alias.alpha }),
+      original: { ...token.original, $value: alias.ref },
+    };
+  };
+
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
  * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
@@ -60,8 +103,12 @@ const createColorSchemeFormat =
       selectors,
       variables: formattedVariables({
         format: "css",
-        dictionary,
-        outputReferences: true,
+        dictionary: {
+          ...dictionary,
+          allTokens: dictionary.allTokens.map(withColorMix(dictionary)),
+        },
+        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 withColorMix가 만든 color-mix()를 그대로 낸다
+        outputReferences: (token) => !aliasWithAlpha(token),
         usesDtcg: true,
         formatting: { indentation: "" },
       }),

@@ -4,7 +4,7 @@ gyeol-ui의 Design Token 패키지입니다.
 
 > 🚧 아직 npm에 배포하지 않았습니다.
 >
-> 지금 들어 있는 토큰은 Figma에서 내보낸 것이 아니라 **손으로 쓴 임시 씨앗 토큰**입니다. 값과 이름은 Figma 플러그인이 토큰을 내보내기 시작하면 바뀔 수 있습니다. 지금은 Primitive Token(색, 간격, 모서리)과 투명도 없는 Semantic Token만 있고, 투명도가 있는 Semantic Token과 TS 상수는 [토큰 파이프라인 스펙](https://github.com/gyeol-ui/gyeol-ui/issues/16)에서 이어서 추가합니다.
+> 지금 들어 있는 토큰은 Figma에서 내보낸 것이 아니라 **손으로 쓴 임시 씨앗 토큰**입니다. 값과 이름은 Figma 플러그인이 토큰을 내보내기 시작하면 바뀔 수 있습니다. 지금은 Primitive Token(색, 간격, 모서리)과 Semantic Token만 있고, TS 상수는 [토큰 파이프라인 스펙](https://github.com/gyeol-ui/gyeol-ui/issues/16)에서 이어서 추가합니다.
 
 ## 사용법
 
@@ -29,12 +29,20 @@ import "@gyeol-ui/tokens/tokens.css";
 
 | 범주 | 변수 | 공개 API |
 |---|---|---|
-| Semantic 색 | `--gyeol-bg-surface`, `--gyeol-bg-subtle`, `--gyeol-fg-default`, `--gyeol-fg-muted`, `--gyeol-border-default`, `--gyeol-bg-accent`, `--gyeol-fg-on-accent`, `--gyeol-ring-offset` | 예 |
+| Semantic 색 | `--gyeol-bg-surface`, `--gyeol-bg-subtle`, `--gyeol-fg-default`, `--gyeol-fg-muted`, `--gyeol-border-default`, `--gyeol-bg-accent`, `--gyeol-fg-on-accent`, `--gyeol-ring-offset`, `--gyeol-alpha-90` | 예 |
 | 간격 | `--gyeol-spacing-{1, 2, 3, 4, 6, 8}` (4px의 배수, `spacing-4` = 16px) | 예 |
 | 모서리 | `--gyeol-radius-{sm, md, full}` | 예 |
 | 색 | `--gyeol-color-*` | 아니요 |
 
 `--gyeol-color-*`는 Primitive 색이라 출력은 되지만 공개 API가 아닙니다. 색에는 Semantic 변수를 쓰세요. Semantic 변수의 값은 `var(--gyeol-color-gray-900)`처럼 Primitive나 다른 Semantic 변수를 가리킵니다.
+
+투명도가 있는 Semantic 변수는 가리키는 변수를 `color-mix()`로 투명하게 섞습니다. 가리키는 변수의 색이 Color Scheme에 따라 바뀌면 함께 바뀝니다.
+
+```css
+--gyeol-alpha-90: color-mix(in srgb, var(--gyeol-bg-surface) 90%, transparent);
+```
+
+`alpha` 그룹은 `bg-surface`의 투명도 단계이고, 숫자는 불투명도입니다(`alpha-90` = `bg-surface`의 90%). `color-mix()`는 iOS Safari 16.2, Android WebView 111부터 쓸 수 있습니다.
 
 ### Color Scheme 고르기
 
@@ -79,7 +87,17 @@ packageName(); // "@gyeol-ui/tokens"
 토큰 원본은 [`tokens/`](./tokens/) 폴더의 DTCG 2025.10 JSON입니다. Figma Variables collection의 mode 하나가 파일 하나입니다.
 
 - `tokens/primitive.json`: Primitive collection. `color`, `spacing`, `radius` 범주 그룹에 `$type`을 선언합니다.
-- `tokens/semantic/light.json`, `tokens/semantic/dark.json`: Semantic collection의 light, dark mode. 두 파일에 같은 이름의 토큰이 있고, 값은 모두 `{color.gray.900}`이나 `{bg-surface}` 같은 참조입니다. 범주 그룹이 없으므로 `$type`은 토큰마다 적습니다.
+- `tokens/semantic/light.json`, `tokens/semantic/dark.json`: Semantic collection의 light, dark mode. 두 파일에 같은 이름의 토큰이 있고, 값은 `{color.gray.900}`이나 `{bg-surface}` 같은 참조이거나, 아래의 "alias + 투명도"입니다. 범주 그룹이 없으므로 `$type`은 토큰마다 적습니다.
+- Figma의 "alias + 투명도"는 `$value`에 계산한 색(`alpha` 포함)을 적고, `$extensions`의 `gyeol.alias`에 참조 대상과 불투명도를 적습니다. CSS에는 `$value`가 아니라 `gyeol.alias`로 만든 `color-mix(in srgb, var(--gyeol-…) N%, transparent)`가 나옵니다. 참조 대상은 Primitive와 Semantic 모두 됩니다.
+
+  ```json
+  "90": {
+    "$type": "color",
+    "$value": { "colorSpace": "srgb", "components": [1, 1, 1], "alpha": 0.9 },
+    "$extensions": { "gyeol": { "alias": { "ref": "{bg-surface}", "alpha": 0.9 } } }
+  }
+  ```
+
 - 색은 `srgb` 색 객체(`{ "colorSpace": "srgb", "components": [r, g, b] }`, 각 값은 0–1)로 쓰고, CSS에는 hex로 나옵니다. `alpha`가 있으면 `rgba()`로 나옵니다.
 - dimension은 `{ "value": 16, "unit": "px" }`로 쓰고, CSS에는 px로 나옵니다.
 

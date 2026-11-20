@@ -7,8 +7,27 @@
     "$type": "color",
     "$value": "{color.gray.900}"
   },
+  "border-default": {
+    "$type": "color",
+    "$value": "{color.gray.900}"
+  },
   "ring-offset": {
     "$type": "color",
     "$value": "{bg-surface}"
+  },
+  "alpha": {
+    "90": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1, 1, 1],
+        "alpha": 0.9
+      },
+      "$extensions": {
+        "gyeol": {
+          "alias": { "ref": "{bg-surface}", "alpha": 0.9 }
+        }
+      }
+    }
   }
 }

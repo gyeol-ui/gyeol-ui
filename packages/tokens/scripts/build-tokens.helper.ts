@@ -24,6 +24,22 @@ export function tokenFilePaths(tokensDir: string): TokenFilePaths {
   };
 }
 
+/**
+ * "alias + 투명도"를 CSS 값으로 쓴다. 참조 대상 변수 `--{variable}`을 불투명도 `alpha`(0–1)만큼 남기고 투명하게 섞는다.
+ * 참조 대상 변수를 가리키므로 Color Scheme이 바뀌어 대상의 색이 바뀌면 함께 바뀐다.
+ */
+export function colorMix({
+  variable,
+  alpha,
+}: {
+  variable: string;
+  alpha: number;
+}): string {
+  // 0.07 * 100 = 7.000000000000001 같은 부동소수점 오차를 지운다
+  const percent = Number((alpha * 100).toFixed(4));
+  return `color-mix(in srgb, var(--${variable}) ${percent}%, transparent)`;
+}
+
 const indentAt = (depth: number): string => "  ".repeat(depth);
 
 /**
