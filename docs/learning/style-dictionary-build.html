@@ -462,22 +462,16 @@ await writeFile(join(generatedDir, "tokens.css"), css);</code></pre>
 
           <h3>color/css와 color/hex</h3>
           <p>
-            DTCG 토큰에서 색은 hex나 <code>rgba()</code> 문자열이 아니라
-            <code
-              >{ "colorSpace": "srgb", "components": [0, 0, 0], "alpha": 0.5
-              }</code
-            >
-            같은 객체다. 이 객체를 어떤 CSS 문자열로 낼지는 transform이 정한다.
-            두 transform은 alpha가 있는 색을 내는 방식이 다르다. fixture의
-            <code>color.overlay</code>(위 객체)로 실행한 결과다.
+            alpha가 있는 색을 내는 방식이 다르다. fixture의
+            <code>color.overlay</code>(검정, alpha 0.5)로 실행한 결과다.
           </p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>transform</th>
-                  <th><code>color.gray.900</code> (alpha 없음)</th>
-                  <th><code>color.overlay</code> (alpha 0.5)</th>
+                  <th><code>color.gray.900</code></th>
+                  <th><code>color.overlay</code></th>
                 </tr>
               </thead>
               <tbody>
