@@ -428,7 +428,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
           </div>
 
           <h3>4. Semantic: Primitive를 함께 넘기고 Semantic만 낸다</h3>
-          <pre><code class="language-ts" data-lines="12 18 19 22 28 29">async function buildSemanticCss({
+          <pre><code class="language-ts" data-lines="12 19 24 32">async function buildSemanticCss({
   primitivePath,
   semanticPath,
   colorScheme,
@@ -439,16 +439,19 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
 }): Promise&lt;string[]&gt; {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
+  // ① format: 블록마다 직접 만든 format을 이름 붙여 만든다
   const formats = SCHEME_SELECTORS[colorScheme].map((selectors, index) =&gt; ({
     name: `gyeol/css/${colorScheme}-${index}`,
     format: colorSchemeFormat({ colorScheme, selectors }),
   }));
 
   const sd = new StyleDictionary({
+    // ② 토큰: Primitive는 참조를 푸는 데만, Semantic은 출력할 토큰
     include: [primitivePath],
     source: [semanticPath],
     log: { verbosity: "silent" },
     hooks: {
+      // ① 만든 format을 이름으로 등록한다
       formats: Object.fromEntries(formats.map((f) =&gt; [f.name, f.format])),
     },
     platforms: {
@@ -456,6 +459,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
         formats.map(({ name }) =&gt; ({
           destination: `${name}.css`,
           format: name,
+          // ③ filter: source(Semantic)에서 읽은 토큰만 낸다
           filter: (token: TransformedToken) =&gt; token.isSource,
         })),
       ),
@@ -463,7 +467,10 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
   });
   return formatOutputs(sd);
 }</code></pre>
-          <p>Primitive 빌드와 다른 곳은 세 군데다.</p>
+          <p>
+            Primitive 빌드와 다른 곳은 세 군데다. 코드의 ①~③ 주석이 아래 표의
+            번호와 같다.
+          </p>
           <div class="table-wrap">
             <table>
               <thead>
@@ -475,7 +482,19 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
               </thead>
               <tbody>
                 <tr>
-                  <td>토큰</td>
+                  <td>① format</td>
+                  <td>
+                    <code>colorSchemeFormat(…)</code>을
+                    <code>hooks.formats</code>에 이름 붙여 등록
+                  </td>
+                  <td>
+                    블록마다 <code>color-scheme</code> 속성을 넣고 헤더를 빼야
+                    해서 직접 만든 format을 쓴다
+                    <small><a href="#custom-format">직접 만든 format</a></small>
+                  </td>
+                </tr>
+                <tr>
+                  <td>② 토큰</td>
                   <td>
                     <code>include: [primitivePath]</code>,
                     <code>source: [semanticPath]</code>
@@ -489,7 +508,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                   </td>
                 </tr>
                 <tr>
-                  <td>filter</td>
+                  <td>③ filter</td>
                   <td>
                     <code>(token) =&gt; token.isSource</code>
                   </td>
@@ -499,18 +518,6 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
                     <small
                       ><a href="#filter">Primitive는 참조 대상으로만</a></small
                     >
-                  </td>
-                </tr>
-                <tr>
-                  <td>format</td>
-                  <td>
-                    <code>colorSchemeFormat(…)</code>을
-                    <code>hooks.formats</code>에 이름 붙여 등록
-                  </td>
-                  <td>
-                    블록마다 <code>color-scheme</code> 속성을 넣고 헤더를 빼야
-                    해서 직접 만든 format을 쓴다
-                    <small><a href="#custom-format">직접 만든 format</a></small>
                   </td>
                 </tr>
               </tbody>
@@ -1053,7 +1060,7 @@ async function buildPrimitiveCss(primitivePath: string): Promise&lt;string&gt; {
             도우미 함수 <code>formattedVariables</code>에 맡기고, 나머지를 직접
             짠다.
           </p>
-          <pre><code class="language-ts" data-lines="14 19 34 37">// build-tokens.ts
+          <pre><code class="language-ts" data-lines="14 35 39 45">// build-tokens.ts
 const colorSchemeFormat =
   ({
     colorScheme,
@@ -1066,6 +1073,7 @@ const colorSchemeFormat =
     colorSchemeBlock({
       colorScheme,
       selectors,
+      // ① 변수 줄: Style Dictionary가 들여쓰기 없는 --이름: 값; 줄을 만든다
       variables: formattedVariables({
         format: "css",
         dictionary,
@@ -1086,16 +1094,20 @@ export function colorSchemeBlock({
   variables: string;
 }): string {
   const indent = indentAt(selectors.length);
+  // ② color-scheme 줄을 맨 앞에 넣고, 줄마다 중첩 깊이만큼 들여 쓴다
   const body = [`color-scheme: ${colorScheme};`, ...variables.split("\n")]
     .map((line) =&gt; `${indent}${line}`)
     .join("\n");
+  // ③ 안쪽 selector부터 감싼다
   const block = selectors.reduceRight(
     (content, selector, depth) =&gt;
       `${indentAt(depth)}${selector} {\n${content}\n${indentAt(depth)}}`,
     body,
   );
+  // ④ 헤더 없이 블록만 돌려준다
   return `${block}\n`;
 }</code></pre>
+          <p>코드의 ①~④ 주석이 아래 단계 번호와 같다.</p>
           <ol class="steps green">
             <li>
               <strong>변수 줄</strong>
