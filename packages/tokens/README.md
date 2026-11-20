@@ -57,9 +57,9 @@ packageName(); // "@gyeol-ui/tokens"
 
 | 명령 | 하는 일 |
 |---|---|
-| `pnpm build` | Style Dictionary로 `dist/tokens.css`를 만들고, tsdown으로 `dist/`에 ESM과 타입 선언을 만든다 |
+| `pnpm build` | Style Dictionary로 `generated/tokens.css`를 만들고, tsdown으로 `dist/`에 ESM과 타입 선언을 만들며 `tokens.css`를 복사한다 |
 | `pnpm lint` | oxlint로 코드를 검사한다 |
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |
 
-빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 파일을 쓰지 않고 CSS 텍스트를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 `dist/`에 씁니다.
+빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 파일을 쓰지 않고 CSS 텍스트를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다.

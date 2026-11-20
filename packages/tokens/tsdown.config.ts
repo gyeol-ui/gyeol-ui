@@ -5,8 +5,8 @@ const config: UserConfig = defineConfig({
   format: "esm",
   platform: "neutral",
   dts: true,
-  // dist/tokens.css를 먼저 쓰므로 지우지 않는다. 지난 결과는 scripts/build.ts가 지운다
-  clean: false,
+  // scripts/build.ts가 generated/에 만든 CSS를 dist/로 복사한다. dist/는 기본 clean으로 비운 뒤 채운다
+  copy: [{ from: "generated/tokens.css", to: "dist" }],
   publint: true,
 });
 

@@ -7,6 +7,8 @@ node_modules/
 
 # Build outputs
 dist/
+# 빌드 스크립트가 만드는 중간 결과물 (예: packages/tokens/generated/)
+generated/
 build/
 storybook-static/
 *.tsbuildinfo
