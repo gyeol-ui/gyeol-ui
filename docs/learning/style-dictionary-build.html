@@ -264,7 +264,8 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
           </ul>
 
           <h3>2. 파일을 확인하고, 세 번 빌드해 이어 붙인다</h3>
-          <pre><code class="language-ts" data-lines="2 7 10 11 13 20">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
+          <pre><code class="language-ts" data-lines="2 11 13 23">export async function buildTokens(tokensDir: string): Promise&lt;BuildResult&gt; {
+  // ① 파일이 있는지 확인한다: 토큰 파일 경로를 만들고 셋 다 있는지 본다
   const paths = tokenFilePaths(tokensDir);
 
   // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
@@ -273,7 +274,9 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
     await access(path);
   }
 
+  // ② Primitive 블록을 만든다: 맨 위 헤더 + :root { 실제 값 }
   const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
+  // ③ Color Scheme마다 Semantic 블록을 만든다: light 1개, dark 2개
   for (const colorScheme of COLOR_SCHEMES) {
     cssBlocks.push(
       ...(await buildSemanticCss({
@@ -283,9 +286,12 @@ const SCHEME_SELECTORS: Record&lt;ColorScheme, readonly SelectorChain[]&gt; = {
       })),
     );
   }
+  // ④ 이어 붙인다: 블록 4개를 빈 줄 하나씩 두고 CSS 텍스트 하나로
   return { css: cssBlocks.join("\n").trimEnd() + "\n" };
 }</code></pre>
-          <p>이 함수가 전체 흐름이다. 칠한 줄을 차례로 읽으면 이렇다.</p>
+          <p>
+            이 함수가 전체 흐름이다. 코드의 ①~④ 주석이 아래 단계 번호와 같다.
+          </p>
           <ol class="steps blue">
             <li>
               <strong>파일이 있는지 확인한다</strong>
