@@ -11,11 +11,8 @@ const fixture = (name: string): string =>
 describe("buildTokens", () => {
   describe("Primitive 블록", () => {
     it("Primitive를 :root에 --gyeol- 접두사 CSS 변수로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain(":root {");
@@ -26,11 +23,8 @@ describe("buildTokens", () => {
     });
 
     it("alpha가 있는 색은 rgba()로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain("--gyeol-color-overlay: rgba(0, 0, 0, 0.5);");
@@ -39,11 +33,8 @@ describe("buildTokens", () => {
 
   describe("Semantic 블록", () => {
     it("light Semantic을 :root 블록에 color-scheme: light와 var() 참조로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain(
@@ -59,11 +50,8 @@ describe("buildTokens", () => {
     });
 
     it("dark Semantic을 OS 설정 media query 블록에 color-scheme: dark로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain(
@@ -77,11 +65,8 @@ describe("buildTokens", () => {
     });
 
     it("dark Semantic을 <html>의 data-color-scheme 속성 블록에도 color-scheme: dark로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain(
@@ -94,33 +79,24 @@ describe("buildTokens", () => {
     });
 
     it("Semantic이 다른 Semantic을 가리키면 그 Semantic 변수를 var()로 낸다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toContain("--gyeol-ring-offset: var(--gyeol-bg-surface);");
     });
 
     it("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css.match(/--gyeol-color-white:/g)).toHaveLength(1);
     });
 
     it("data-color-scheme 속성은 <html>에서만 Color Scheme을 바꾼다", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then: 모든 블록의 selector가 :root로 시작하므로 하위 요소의 속성은 아무 블록에도 맞지 않는다
       const selectors = [...css.matchAll(/^\s*([^\s@/*].*) \{$/gm)].map(
@@ -152,11 +128,8 @@ describe("buildTokens", () => {
     });
 
     it("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {
-      // given
-      const tokensDir = fixture("does-not-exist");
-
-      // when
-      const result = buildTokens(tokensDir);
+      // given, when
+      const result = buildTokens(fixture("does-not-exist"));
 
       // then
       await expect(result).rejects.toThrow("primitive.json");
@@ -183,11 +156,8 @@ describe("buildTokens", () => {
 
   describe("전체 출력", () => {
     it("fixture의 CSS 출력 전체", async () => {
-      // given
-      const tokensDir = fixture("valid");
-
-      // when
-      const { css } = await buildTokens(tokensDir);
+      // given, when
+      const { css } = await buildTokens(fixture("valid"));
 
       // then
       expect(css).toMatchInlineSnapshot(`

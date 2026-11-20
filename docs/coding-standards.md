@@ -47,16 +47,17 @@ hasTokenAt({ tokens: semantic, path: token.path });
 
 ### 구조
 
-`describe`로 대상(함수나 모듈 이름)을 묶고, `it` 하나에 동작 하나를 쓴다. `it` 본문은 `// given`, `// when`, `// then` 주석으로 나눈다. 준비할 것이 없으면 `// given`을 생략한다.
+`describe`로 대상(함수나 모듈 이름)을 묶고, `it` 하나에 동작 하나를 쓴다. `it` 본문은 `// given`, `// when`, `// then` 주석으로 나눈다.
+
+- 입력을 호출 안에 바로 쓸 수 있으면 `// given, when` 한 줄로 합치고 입력을 변수로 빼지 않는다.
+- 임시 폴더를 만드는 것처럼 준비 과정이 있으면 `// given`을 따로 둔다.
+- 준비할 것이 전혀 없으면 `// given`을 생략한다.
 
 ```ts
 describe("tokenFilePaths", () => {
   it("Primitive 하나와 Color Scheme마다 Semantic 하나", () => {
-    // given
-    const tokensDir = "/repo/tokens";
-
-    // when
-    const paths = tokenFilePaths(tokensDir);
+    // given, when
+    const paths = tokenFilePaths("/repo/tokens");
 
     // then
     expect(paths).toEqual({ … });
