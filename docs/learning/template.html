@@ -28,6 +28,8 @@
           <li><a href="#breach">유출 표</a></li>
           <li><a href="#modgrid">나머지 격자</a></li>
           <li><a href="#erd">테이블 관계도</a></li>
+          <li><a href="#vartable">변수 표</a></li>
+          <li><a href="#frames">화면 미리보기</a></li>
           <li><a href="#table">표와 배지</a></li>
           <li><a href="#callout">강조 상자</a></li>
           <li><a href="#check">접는 질문</a></li>
@@ -425,6 +427,94 @@
             선과 표시를 읽는 법을 적는다. 까마귀 발(N) 쪽이 여러 개, 막대(1)
             쪽이 하나다.
           </p>
+        </section>
+
+        <section id="vartable">
+          <h2>변수 표</h2>
+          <table class="vartable">
+            <caption>
+              Collection 이름
+              <small>열 = 무엇인지</small>
+            </caption>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th class="vt-active"><small>mode</small>light</th>
+                <th><small>mode</small>dark</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>color/bg/surface</code></td>
+                <td class="vt-active">
+                  <span class="vt-alias"
+                    ><span class="vt-swatch" style="--c: #fafafa"></span
+                    >color/gray/50</span
+                  >
+                </td>
+                <td>
+                  <span class="vt-alias"
+                    ><span class="vt-swatch" style="--c: #18181b"></span
+                    >color/gray/900</span
+                  >
+                </td>
+              </tr>
+              <tr>
+                <td><code>spacing/4</code></td>
+                <td class="vt-active">16</td>
+                <td class="vt-warn">16</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="vartable-note">읽는 법을 적는다.</p>
+        </section>
+
+        <section id="frames">
+          <h2>화면 미리보기</h2>
+          <div class="frames">
+            <figure class="frame">
+              <figcaption>
+                경우 A <span class="frame-mode">Semantic: light</span>
+              </figcaption>
+              <div
+                class="frame-screen"
+                style="
+                  --f-bg: #fafafa;
+                  --f-fg: #18181b;
+                  --f-border: #e4e4e7;
+                  --f-brand: #2f62b5;
+                  --f-on-brand: #fafafa;
+                "
+              >
+                <div class="frame-card">
+                  <strong>제목</strong>
+                  <p>설명</p>
+                  <span class="frame-btn">버튼</span>
+                </div>
+              </div>
+            </figure>
+            <figure class="frame">
+              <figcaption>
+                경우 B <span class="frame-mode">Semantic: dark</span>
+              </figcaption>
+              <div
+                class="frame-screen"
+                style="
+                  --f-bg: #18181b;
+                  --f-fg: #fafafa;
+                  --f-border: #3f3f46;
+                  --f-brand: #8db1f0;
+                  --f-on-brand: #18181b;
+                "
+              >
+                <div class="frame-card">
+                  <strong>제목</strong>
+                  <p>설명</p>
+                  <span class="frame-btn">버튼</span>
+                </div>
+              </div>
+            </figure>
+          </div>
         </section>
 
         <section id="table">
