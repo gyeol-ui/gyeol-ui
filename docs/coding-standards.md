@@ -61,6 +61,18 @@ dictionary.allTokens.map(withColorMix(dictionary));
 dictionary.allTokens.map((token) => applyColorMix({ token, dictionary }));
 ```
 
+## 값을 꺼내는 함수
+
+무엇에서 값을 꺼내는 함수는 `aliasRefOf`처럼 `…Of`로 끝내지 않고 `getAliasRef`처럼 `get`으로 시작한다. 호출하는 코드에서 함수 이름과 값 이름이 헷갈리지 않게 하려는 것이다.
+
+```ts
+// 하지 않는다
+const aliasRefOf = (token: Token): string | undefined => …;
+
+// 한다
+const getAliasRef = (token: Token): string | undefined => …;
+```
+
 ## 테스트
 
 테스트는 Vitest로 쓰고, 소스 옆에 `*.test.ts`로 둔다.

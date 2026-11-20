@@ -1,4 +1,3 @@
-import { access } from "node:fs/promises";
 import StyleDictionary from "style-dictionary";
 import type {
   Dictionary,
@@ -16,6 +15,7 @@ import {
   type ColorScheme,
   type SelectorChain,
 } from "./build-tokens.helper.ts";
+import { validateTokens } from "./validate-tokens.ts";
 
 export interface BuildResult {
   /** `tokens.css`의 내용 */
@@ -219,13 +219,12 @@ async function buildSemanticCss({
  * CSS 텍스트를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
-  const paths = tokenFilePaths(tokensDir);
+  // Style Dictionary에 넘기기 전에 토큰 파일을 직접 읽어 검증 규칙을 검사한다. 위반이 있으면 모두 모아 던진다.
+  // 파일이 없을 때도 여기서 ENOENT로 실패한다. Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고,
+  // 맞는 파일이 0개여도 오류가 아니라서, 그대로 넘기면 토큰 없이 빌드가 끝나 빈 블록이 나온다.
+  await validateTokens(tokensDir);
 
-  // Style Dictionary의 source와 include는 경로 하나라도 glob 패턴으로 풀고, 맞는 파일이 0개여도 오류가 아니다.
-  // 그러면 토큰 없이 빌드가 끝나 빈 블록이 나온다. 넘기기 전에 파일이 있는지 확인해, 없으면 ENOENT로 실패한다.
-  for (const path of [paths.primitive, ...Object.values(paths.semantic)]) {
-    await access(path);
-  }
+  const paths = tokenFilePaths(tokensDir);
 
   const cssBlocks = [await buildPrimitiveCss(paths.primitive)];
   for (const colorScheme of COLOR_SCHEMES) {

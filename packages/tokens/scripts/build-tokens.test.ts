@@ -1,12 +1,76 @@
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { buildTokens } from "./build-tokens.ts";
+import { TokenValidationError } from "./validate-tokens.ts";
 
 const fixture = (name: string): string =>
   fileURLToPath(new URL(`./fixtures/${name}`, import.meta.url));
+
+const srgb = (...components: number[]) => ({
+  colorSpace: "srgb",
+  components,
+});
+
+/** 규칙을 지키는 가장 작은 토큰. 잘못된 fixture는 이 중 한 파일만 바꿔서 만든다 */
+const MINIMAL = {
+  primitive: {
+    color: {
+      $type: "color",
+      white: { $value: srgb(1, 1, 1) },
+      black: { $value: srgb(0, 0, 0) },
+    },
+    spacing: {
+      $type: "dimension",
+      "4": { $value: { value: 16, unit: "px" } },
+    },
+  },
+  light: {
+    "bg-surface": { $type: "color", $value: "{color.white}" },
+  },
+  dark: {
+    "bg-surface": { $type: "color", $value: "{color.black}" },
+  },
+};
+
+/**
+ * 임시 토큰 폴더를 만든다. 넘기지 않은 파일은 MINIMAL의 것을 쓴다.
+ * 폴더는 테스트가 끝나면 지운다.
+ */
+async function createTokensDir(
+  files: Partial<Record<keyof typeof MINIMAL, unknown>>,
+): Promise<string> {
+  const { primitive, light, dark } = { ...MINIMAL, ...files };
+  const tokensDir = await mkdtemp(join(tmpdir(), "gyeol-tokens-"));
+  onTestFinished(() => rm(tokensDir, { recursive: true, force: true }));
+  await mkdir(join(tokensDir, "semantic"));
+  await writeFile(join(tokensDir, "primitive.json"), JSON.stringify(primitive));
+  await writeFile(
+    join(tokensDir, "semantic", "light.json"),
+    JSON.stringify(light),
+  );
+  await writeFile(
+    join(tokensDir, "semantic", "dark.json"),
+    JSON.stringify(dark),
+  );
+  return tokensDir;
+}
+
+/** 빌드가 TokenValidationError로 실패하면 위반의 파일, 경로, 규칙을 돌려준다 */
+async function getViolations(
+  tokensDir: string,
+): Promise<{ file: string; path: string; rule: string }[]> {
+  const error = await buildTokens(tokensDir).then(
+    () => undefined,
+    (e: unknown) => e,
+  );
+  if (!(error instanceof TokenValidationError)) {
+    throw new Error(`TokenValidationError가 아니다: ${String(error)}`);
+  }
+  return error.violations.map(({ file, path, rule }) => ({ file, path, rule }));
+}
 
 describe("buildTokens", () => {
   describe("Primitive 블록", () => {
@@ -165,9 +229,7 @@ describe("buildTokens", () => {
       await expect(result).rejects.toThrow("primitive.json");
     });
 
-    it("토큰 폴더에 Semantic 파일이 없으면 실패한다", async ({
-      onTestFinished,
-    }) => {
+    it("토큰 폴더에 Semantic 파일이 없으면 실패한다", async () => {
       // given: primitive.json만 있는 토큰 폴더
       const tokensDir = await mkdtemp(join(tmpdir(), "gyeol-tokens-"));
       onTestFinished(() => rm(tokensDir, { recursive: true, force: true }));
@@ -181,6 +243,576 @@ describe("buildTokens", () => {
 
       // then
       await expect(result).rejects.toThrow("light.json");
+    });
+  });
+
+  describe("검증 오류", () => {
+    it("여러 파일의 여러 위반을 한 번에 알리고, 메시지에 파일, 토큰 경로, 규칙을 적는다", async () => {
+      // given: Primitive에 alias, light에 실제 값
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            ink: { $value: "{color.black}" },
+          },
+        },
+        light: { "bg-surface": { $type: "color", $value: srgb(1, 1, 1) } },
+      });
+
+      // when
+      const result = buildTokens(tokensDir);
+
+      // then
+      await expect(result).rejects.toThrow(
+        [
+          "토큰 JSON이 규칙을 2곳에서 어겼다.",
+          "  primitive.json color.ink [primitive-real-value] Primitive는 실제 값만 둔다. alias {color.black}를 쓸 수 없다",
+          '  semantic/light.json bg-surface [semantic-alias] Semantic은 Primitive나 다른 Semantic을 가리키는 alias(예: "{color.gray.900}")여야 한다',
+        ].join("\n"),
+      );
+    });
+  });
+
+  describe("검증 규칙", () => {
+    it("규칙을 지키는 가장 작은 토큰 폴더는 빌드가 성공한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({});
+
+      // when
+      const result = buildTokens(tokensDir);
+
+      // then
+      await expect(result).resolves.toHaveProperty("css");
+    });
+
+    it("Primitive에 alias가 있으면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            ink: { $value: "{color.black}" },
+          },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "primitive.json",
+          path: "color.ink",
+          rule: "primitive-real-value",
+        },
+      ]);
+    });
+
+    it("Primitive에 alias + 투명도 확장이 있으면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            shade: {
+              $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+              $extensions: {
+                gyeol: { alias: { ref: "{color.black}", alpha: 0.5 } },
+              },
+            },
+          },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "primitive.json",
+          path: "color.shade",
+          rule: "primitive-real-value",
+        },
+      ]);
+    });
+
+    it("Primitive 색 값 자체의 alpha는 실제 값이므로 허용한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            overlay: { $value: { ...srgb(0, 0, 0), alpha: 0.5 } },
+          },
+        },
+      });
+
+      // when
+      const result = buildTokens(tokensDir);
+
+      // then
+      await expect(result).resolves.toHaveProperty("css");
+    });
+
+    it("Semantic 칸이 alias가 아니라 실제 값이면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        light: {
+          ...MINIMAL.light,
+          "fg-default": { $type: "color", $value: srgb(0, 0, 0) },
+        },
+        dark: { ...MINIMAL.dark, "fg-default": MINIMAL.light["bg-surface"] },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "fg-default",
+          rule: "semantic-alias",
+        },
+      ]);
+    });
+
+    it("Semantic의 alias + 투명도 확장에 참조가 없으면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        light: {
+          ...MINIMAL.light,
+          scrim: {
+            $type: "color",
+            $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+            $extensions: { gyeol: { alias: { alpha: 0.5 } } },
+          },
+        },
+        dark: {
+          ...MINIMAL.dark,
+          scrim: { $type: "color", $value: "{color.black}" },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "semantic/light.json", path: "scrim", rule: "semantic-alias" },
+      ]);
+    });
+
+    it("Semantic 타입이 색이 아니면 실패한다", async () => {
+      // given
+      const gap = { $type: "dimension", $value: "{spacing.4}" };
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, gap },
+        dark: { ...MINIMAL.dark, gap },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "semantic/light.json", path: "gap", rule: "semantic-color" },
+        { file: "semantic/dark.json", path: "gap", rule: "semantic-color" },
+      ]);
+    });
+
+    it("light와 dark의 Semantic 이름이 다르면 빠진 쪽 파일로 실패한다", async () => {
+      // given: fg-default는 light에만, fg-muted는 dark에만 있다
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, "fg-default": MINIMAL.dark["bg-surface"] },
+        dark: { ...MINIMAL.dark, "fg-muted": MINIMAL.light["bg-surface"] },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "fg-muted",
+          rule: "semantic-names-match",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "fg-default",
+          rule: "semantic-names-match",
+        },
+      ]);
+    });
+
+    it("Primitive 경로가 3단계보다 깊으면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            gray: { cool: { "900": { $value: srgb(0.1, 0.1, 0.1) } } },
+          },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "primitive.json",
+          path: "color.gray.cool.900",
+          rule: "path-structure",
+        },
+      ]);
+    });
+
+    it("Primitive 토큰이 범주 그룹 밖에 있으면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          white: { $type: "color", $value: srgb(1, 1, 1) },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "primitive.json", path: "white", rule: "path-structure" },
+      ]);
+    });
+
+    it("Semantic 그룹이 두 단계면 실패한다", async () => {
+      // given
+      const alpha = {
+        surface: { "90": { $type: "color", $value: "{color.white}" } },
+      };
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, alpha },
+        dark: { ...MINIMAL.dark, alpha },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "alpha.surface.90",
+          rule: "path-structure",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "alpha.surface.90",
+          rule: "path-structure",
+        },
+      ]);
+    });
+
+    it("경로의 이름 칸이 kebab-case가 아니면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            dark_gray: { $value: srgb(0.2, 0.2, 0.2) },
+          },
+        },
+        light: {
+          ...MINIMAL.light,
+          fgDefault: { $type: "color", $value: "{color.black}" },
+        },
+        dark: {
+          ...MINIMAL.dark,
+          fgDefault: { $type: "color", $value: "{color.white}" },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "primitive.json", path: "color.dark_gray", rule: "kebab-case" },
+        { file: "semantic/light.json", path: "fgDefault", rule: "kebab-case" },
+        { file: "semantic/dark.json", path: "fgDefault", rule: "kebab-case" },
+      ]);
+    });
+
+    it("Semantic끼리 CSS 변수 이름이 겹치면 실패한다", async () => {
+      // given: alpha.90과 alpha-90은 모두 --gyeol-alpha-90이 된다
+      const tokens = {
+        alpha: { "90": { $type: "color", $value: "{color.white}" } },
+        "alpha-90": { $type: "color", $value: "{color.black}" },
+      };
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, ...tokens },
+        dark: { ...MINIMAL.dark, ...tokens },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "alpha-90",
+          rule: "css-name-unique",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "alpha-90",
+          rule: "css-name-unique",
+        },
+      ]);
+    });
+
+    it("Semantic과 Primitive의 CSS 변수 이름이 겹치면 실패한다", async () => {
+      // given: color-white는 Primitive color.white와 같은 --gyeol-color-white가 된다
+      const tokens = {
+        "color-white": { $type: "color", $value: "{color.white}" },
+      };
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, ...tokens },
+        dark: { ...MINIMAL.dark, ...tokens },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "color-white",
+          rule: "css-name-unique",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "color-white",
+          rule: "css-name-unique",
+        },
+      ]);
+    });
+
+    it("Primitive끼리 CSS 변수 이름이 겹치면 한 번만 알린다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            gray: { "900": { $value: srgb(0.1, 0.1, 0.1) } },
+            "gray-900": { $value: srgb(0.1, 0.1, 0.1) },
+          },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "primitive.json",
+          path: "color.gray-900",
+          rule: "css-name-unique",
+        },
+      ]);
+    });
+
+    it("색이 srgb 색 객체가 아니면 실패한다", async () => {
+      // given: Primitive의 display-p3와 hex 문자열, Semantic의 alias + 투명도에 적은 계산된 색
+      const scrim = {
+        $type: "color",
+        $value: { ...srgb(0, 0, 0), alpha: 0.5 },
+        $extensions: {
+          gyeol: { alias: { ref: "{color.black}", alpha: 0.5 } },
+        },
+      };
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          color: {
+            ...MINIMAL.primitive.color,
+            red: {
+              $value: { colorSpace: "display-p3", components: [1, 0, 0] },
+            },
+            green: { $value: "#00ff00" },
+          },
+        },
+        light: {
+          ...MINIMAL.light,
+          scrim: { ...scrim, $value: { ...scrim.$value, colorSpace: "hsl" } },
+        },
+        dark: { ...MINIMAL.dark, scrim },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "primitive.json", path: "color.red", rule: "color-srgb" },
+        { file: "primitive.json", path: "color.green", rule: "color-srgb" },
+        { file: "semantic/light.json", path: "scrim", rule: "color-srgb" },
+      ]);
+    });
+
+    it("dimension unit이 px가 아니면 실패한다", async () => {
+      // given
+      const tokensDir = await createTokensDir({
+        primitive: {
+          ...MINIMAL.primitive,
+          radius: {
+            $type: "dimension",
+            md: { $value: { value: 0.375, unit: "rem" } },
+            sm: { $value: "4px" },
+          },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        { file: "primitive.json", path: "radius.md", rule: "dimension-px" },
+        { file: "primitive.json", path: "radius.sm", rule: "dimension-px" },
+      ]);
+    });
+
+    it("참조 대상이 없으면 실패한다", async () => {
+      // given: 없는 토큰, 토큰이 아닌 그룹, alias + 투명도의 없는 참조 대상
+      const tokensDir = await createTokensDir({
+        light: {
+          ...MINIMAL.light,
+          "fg-default": { $type: "color", $value: "{color.gray.500}" },
+          "fg-muted": { $type: "color", $value: "{color}" },
+          scrim: {
+            $type: "color",
+            $value: { ...srgb(1, 1, 1), alpha: 0.5 },
+            $extensions: {
+              gyeol: { alias: { ref: "{bg-missing}", alpha: 0.5 } },
+            },
+          },
+        },
+        dark: {
+          ...MINIMAL.dark,
+          "fg-default": { $type: "color", $value: "{color.white}" },
+          "fg-muted": { $type: "color", $value: "{color.white}" },
+          scrim: { $type: "color", $value: "{color.white}" },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "fg-default",
+          rule: "reference-exists",
+        },
+        {
+          file: "semantic/light.json",
+          path: "fg-muted",
+          rule: "reference-exists",
+        },
+        {
+          file: "semantic/light.json",
+          path: "scrim",
+          rule: "reference-exists",
+        },
+      ]);
+    });
+
+    it("Semantic은 다른 Color Scheme 파일의 Semantic을 가리킬 수 없다", async () => {
+      // given: bg-accent는 dark에만 있는 토큰이 아니라, light 파일 안에서 찾는다
+      const tokensDir = await createTokensDir({
+        light: {
+          ...MINIMAL.light,
+          "ring-offset": { $type: "color", $value: "{bg-accent}" },
+        },
+        dark: {
+          ...MINIMAL.dark,
+          "bg-accent": { $type: "color", $value: "{color.white}" },
+          "ring-offset": { $type: "color", $value: "{bg-accent}" },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "ring-offset",
+          rule: "reference-exists",
+        },
+        {
+          file: "semantic/light.json",
+          path: "bg-accent",
+          rule: "semantic-names-match",
+        },
+      ]);
+    });
+
+    it("참조가 순환하면 실패한다", async () => {
+      // given: light에서 fg-default → fg-muted → fg-default, 그리고 alias + 투명도의 자기 참조
+      const tokensDir = await createTokensDir({
+        light: {
+          ...MINIMAL.light,
+          "fg-default": { $type: "color", $value: "{fg-muted}" },
+          "fg-muted": { $type: "color", $value: "{fg-default}" },
+          scrim: {
+            $type: "color",
+            $value: { ...srgb(1, 1, 1), alpha: 0.5 },
+            $extensions: { gyeol: { alias: { ref: "{scrim}", alpha: 0.5 } } },
+          },
+        },
+        dark: {
+          ...MINIMAL.dark,
+          "fg-default": { $type: "color", $value: "{color.white}" },
+          "fg-muted": { $type: "color", $value: "{fg-default}" },
+          scrim: { $type: "color", $value: "{bg-surface}" },
+        },
+      });
+
+      // when
+      const violations = await getViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "fg-default",
+          rule: "reference-no-cycle",
+        },
+        {
+          file: "semantic/light.json",
+          path: "scrim",
+          rule: "reference-no-cycle",
+        },
+      ]);
     });
   });
 
