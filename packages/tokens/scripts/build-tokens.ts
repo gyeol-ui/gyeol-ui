@@ -59,11 +59,7 @@ const aliasWithAlpha = (token: TransformedToken): AliasWithAlpha | undefined =>
   token.original.$extensions?.gyeol?.alias;
 
 /**
- * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다.
- *
- * - `$value`: `$value`에 적힌 계산된 색 대신 참조 대상 변수를 섞는 `color-mix()`.
- * - `original.$value`: `ref`. outputReferences의 정렬(sortByReference)은 `original.$value`만 보고 참조를 판단하므로,
- *   그대로 두면 참조가 없는 토큰으로 여겨 블록 맨 앞으로 올라간다. `ref`를 넣으면 다른 참조 토큰처럼 순서가 정해진다.
+ * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
  */
 function applyColorMix({
   token,
@@ -84,7 +80,21 @@ function applyColorMix({
   }
   return {
     ...token,
+    // 출력할 값. 원본 $value에 적힌 계산된 색(rgba) 대신 참조 대상 변수를 섞는다
     $value: colorMix({ variable: target.name, alpha: alias.alpha }),
+    // 블록 안에서 변수 줄의 순서를 다른 참조 토큰과 같은 규칙으로 정하려고 원본 값을 ref로 바꾼다.
+    //
+    // formattedVariables는 outputReferences를 켜면, 변수를 쓰는 줄보다 그 변수를 정의하는 줄이 먼저 나오도록
+    // 토큰을 정렬한다(sortByReference). 이때 토큰이 참조하는지는 original.$value가 "{bg-surface}" 같은
+    // 참조 문자열인지로만 판단한다.
+    //
+    // "alias + 투명도"의 original.$value는 계산된 색 객체다. 그대로 두면 참조가 없는 토큰으로 여겨,
+    // 참조하는 토큰 모두보다 앞, 즉 블록 맨 앞으로 옮겨진다.
+    //   예: light 블록에서 --gyeol-alpha-90이 자기가 가리키는 --gyeol-bg-surface보다 먼저 나온다.
+    // ref를 넣으면 bg-surface를 참조하는 토큰으로 여겨 다른 참조 토큰처럼 원본 순서를 지키고, bg-surface 뒤에 나온다.
+    //
+    // 출력 값은 바뀌지 않는다. outputReferences 함수가 이 토큰을 빼므로 ref가 var()로 바뀌지 않고 위의 $value가 나온다.
+    // CSS 변수는 선언 순서와 관계없이 풀리므로 순서는 읽기 위한 것이다.
     original: { ...token.original, $value: alias.ref },
   };
 }
