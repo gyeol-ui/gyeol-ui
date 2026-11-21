@@ -43,13 +43,13 @@ export function formatColorMix({
 
 const formatIndent = (depth: number): string => "  ".repeat(depth);
 
-/** TS 객체로 낼 토큰 하나. `path`는 토큰 경로이고 `value`는 낼 문자열이다 */
+/** TS 객체로 쓸 토큰 하나. `path`는 토큰 경로이고 `value`는 쓸 문자열이다 */
 export interface TsEntry {
   path: readonly string[];
   value: string;
 }
 
-/** 키를 camelCase로 바꾼 토큰 경로를 따라 중첩한 객체. 잎은 낼 문자열이다 */
+/** 키를 camelCase로 바꾼 토큰 경로를 따라 중첩한 객체. 잎은 쓸 문자열이다 */
 type TsTree = Map<string, string | TsTree>;
 
 /** 토큰 목록을 경로대로 중첩한다 */

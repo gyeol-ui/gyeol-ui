@@ -89,7 +89,7 @@ async function collectViolations(
 
 describe("buildTokens", () => {
   describe("Primitive 블록", () => {
-    it("Primitive를 :root에 --gyeol- 접두사 CSS 변수로 낸다", async () => {
+    it("Primitive를 :root에 --gyeol- 접두사 CSS 변수로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -101,7 +101,7 @@ describe("buildTokens", () => {
       expect(css).toContain("--gyeol-radius-md: 6px;");
     });
 
-    it("alpha가 있는 색은 rgba()로 낸다", async () => {
+    it("alpha가 있는 색은 rgba()로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -111,7 +111,7 @@ describe("buildTokens", () => {
   });
 
   describe("Semantic 블록", () => {
-    it("light Semantic을 :root 블록에 color-scheme: light와 var() 참조로 낸다", async () => {
+    it("light Semantic을 :root 블록에 color-scheme: light와 var() 참조로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -128,7 +128,7 @@ describe("buildTokens", () => {
       );
     });
 
-    it("dark Semantic을 OS 설정 media query 블록에 color-scheme: dark로 낸다", async () => {
+    it("dark Semantic을 OS 설정 media query 블록에 color-scheme: dark로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -143,7 +143,7 @@ describe("buildTokens", () => {
       );
     });
 
-    it("dark Semantic을 <html>의 data-color-scheme 속성 블록에도 color-scheme: dark로 낸다", async () => {
+    it("dark Semantic을 <html>의 data-color-scheme 속성 블록에도 color-scheme: dark로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -157,7 +157,7 @@ describe("buildTokens", () => {
       );
     });
 
-    it("Semantic이 다른 Semantic을 가리키면 그 Semantic 변수를 var()로 낸다", async () => {
+    it("Semantic이 다른 Semantic을 가리키면 그 Semantic 변수를 var()로 출력한다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -189,7 +189,7 @@ describe("buildTokens", () => {
       ).toHaveLength(2);
     });
 
-    it("Semantic 블록에는 Primitive 변수를 다시 내지 않는다", async () => {
+    it("Semantic 블록에는 Primitive 변수를 다시 출력하지 않는다", async () => {
       // given, when
       const { css } = await buildTokens(resolveFixturePath("valid"));
 
@@ -215,7 +215,7 @@ describe("buildTokens", () => {
   });
 
   describe("TS tokens", () => {
-    it("Semantic, spacing, radius를 camelCase 키의 CSS 변수 참조로 낸다", async () => {
+    it("Semantic, spacing, radius를 camelCase 키의 CSS 변수 참조로 담는다", async () => {
       // when
       const { ts } = await buildTokens(resolveFixturePath("valid"));
       const { tokens } = await importTsModule(ts);
@@ -228,7 +228,7 @@ describe("buildTokens", () => {
       expect(tokens.radius.md).toBe("var(--gyeol-radius-md)");
     });
 
-    it("Primitive 색은 내지 않는다", async () => {
+    it("Primitive 색은 담지 않는다", async () => {
       // when
       const { ts } = await buildTokens(resolveFixturePath("valid"));
       const { tokens } = await importTsModule(ts);
@@ -240,7 +240,7 @@ describe("buildTokens", () => {
   });
 
   describe("TS values", () => {
-    it("Color Scheme마다 Semantic의 실제 색을 낸다", async () => {
+    it("Color Scheme마다 Semantic의 실제 색을 담는다", async () => {
       // when
       const { ts } = await buildTokens(resolveFixturePath("valid"));
       const { values } = await importTsModule(ts);
@@ -252,7 +252,7 @@ describe("buildTokens", () => {
       expect(values.dark.ringOffset).toBe("#18181b");
     });
 
-    it("투명도가 있으면 원본에 적힌 계산된 색을 rgba()로 낸다", async () => {
+    it("투명도가 있으면 원본에 적힌 계산된 색을 rgba()로 담는다", async () => {
       // when
       const { ts } = await buildTokens(resolveFixturePath("valid"));
       const { values } = await importTsModule(ts);

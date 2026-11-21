@@ -44,8 +44,8 @@ export interface PublicToken {
 const PREFIX = "gyeol";
 
 /**
- * Color Scheme마다 Semantic을 내는 CSS 블록의 selector다.
- * dark는 OS 설정(media query)과 data-color-scheme 속성, 두 블록에 같은 내용을 낸다.
+ * Color Scheme마다 Semantic을 출력하는 CSS 블록의 selector다.
+ * dark는 OS 설정(media query)과 data-color-scheme 속성, 두 블록에 같은 내용을 출력한다.
  *
  * data-color-scheme 속성은 `<html>`에서만 지원하므로 모든 selector를 `:root`로 묶는다.
  * 하위 요소에 붙인 속성은 어느 블록에도 맞지 않아 부모의 값을 물려받는다.
@@ -83,7 +83,7 @@ const isAliasWithAlpha = (token: TransformedToken): boolean =>
   readAliasWithAlpha(token) !== undefined;
 
 /**
- * "alias + 투명도" 토큰을 `color-mix()`로 내도록 바꾼다. 다른 토큰은 그대로 돌려준다.
+ * "alias + 투명도" 토큰을 `color-mix()`로 출력하도록 바꾼다. 다른 토큰은 그대로 돌려준다.
  */
 function applyColorMix({
   token,
@@ -125,7 +125,7 @@ function applyColorMix({
 
 /**
  * css/variables와 같은 변수 줄을 `selectors` 블록 안에 내되, 맨 앞에 CSS color-scheme 속성을 넣고
- * 헤더를 내지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
+ * 헤더를 출력하지 않는다. 헤더는 Primitive 블록(파일 맨 위)에만 남긴다.
  * 변수 줄은 Style Dictionary가 만들고, 블록으로 감싸는 일은 wrapInColorSchemeBlock이 한다.
  */
 const createColorSchemeFormat =
@@ -148,7 +148,7 @@ const createColorSchemeFormat =
             applyColorMix({ token, dictionary }),
           ),
         },
-        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 applyColorMix가 만든 color-mix()를 그대로 낸다
+        // "alias + 투명도"는 원본 값을 var()로 바꾸지 않고 applyColorMix가 만든 color-mix()를 그대로 출력한다
         outputReferences: (token) => !isAliasWithAlpha(token),
         usesDtcg: true,
         formatting: { indentation: "" },
@@ -156,8 +156,8 @@ const createColorSchemeFormat =
     });
 
 /**
- * TS `tokens`에 넣을 토큰 목록을 낸다. 값은 CSS 변수 참조다.
- * Style Dictionary의 JS/TS 기본 format은 참조를 내지 못하므로 직접 만든다.
+ * TS `tokens`에 넣을 토큰 목록을 만든다. 값은 CSS 변수 참조다.
+ * Style Dictionary의 JS/TS 기본 format은 참조를 출력하지 못하므로 직접 만든다.
  * 문자열이 아니라 목록을 돌려주고, Primitive와 Semantic의 목록을 합쳐 TS로 쓰는 일은 formatTsModule이 한다.
  */
 const listTsReferences: FormatFn = ({ dictionary }): TsEntry[] =>
@@ -178,7 +178,7 @@ function getSemanticValue(token: TransformedToken): string {
   return value;
 }
 
-/** TS `values`의 Color Scheme 하나에 넣을 토큰 목록을 낸다. 값은 실제 색이다 */
+/** TS `values`의 Color Scheme 하나에 넣을 토큰 목록을 만든다. 값은 실제 색이다 */
 const listTsValues: FormatFn = ({ dictionary }): TsEntry[] =>
   dictionary.allTokens.map((token) => ({
     path: token.path,
@@ -202,7 +202,7 @@ const listPublicTokens: FormatFn = ({ dictionary }): PublicToken[] =>
     return { path, type: token.$type, cssVariable: `--${token.name}` };
   });
 
-/** TS 토큰 목록을 내는 format의 등록 이름 */
+/** TS 토큰 목록을 만드는 format의 등록 이름 */
 const TS_FORMAT = {
   references: "gyeol/ts/references",
   values: "gyeol/ts/values",
@@ -224,7 +224,7 @@ const configurePlatform = (files: File[]): PlatformConfig => ({
   // 실제로 일하는 transform은 name/kebab(이름), color/css(hex, rgba()), size/rem(dimension)이다.
   // size/rem은 이름과 달리 px를 rem으로 바꾸지 않는다. unit이 적혀 있으면 그대로 붙이고
   // ({16, "px"} → "16px"), unit 없는 숫자에만 "rem"을 붙인다. 토큰은 모두 px로 쓰므로 px로 나온다.
-  // size/px를 직접 고르지 않는 이유: size/px는 unit을 무시해 {1.5, "rem"}도 "1.5px"로 낸다.
+  // size/px를 직접 고르지 않는 이유: size/px는 unit을 무시해 {1.5, "rem"}도 "1.5px"로 출력한다.
   transformGroup: "css",
   files,
 });
@@ -258,7 +258,7 @@ const isPublicPrimitive = (token: TransformedToken): boolean =>
   token.$type !== "color";
 
 /**
- * Primitive를 `:root`에 실제 값으로 낸다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
+ * Primitive를 `:root`에 실제 값으로 출력한다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
  * TS `tokens`와 공개 토큰 목록에는 공개 API인 Primitive만 넣는다.
  */
 async function buildPrimitive(primitivePath: string): Promise<{
@@ -300,7 +300,7 @@ const isSourceToken = (token: TransformedToken): boolean => token.isSource;
  * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 쓰고, 공개 토큰 목록의 항목을 만든다.
  *
  * Primitive는 include로 참조를 풀 대상으로만 넘긴다. include로 읽은 토큰도 기본으로는 출력되므로,
- * filter로 source(Semantic)에서 읽은 토큰(isSource)만 낸다.
+ * filter로 source(Semantic)에서 읽은 토큰(isSource)만 출력한다.
  * 출력에서 빠진 Primitive를 가리킨다는 "filtered out token references" 경고가 나지만 의도한 동작이고,
  * 로그를 silent로 꺼서 보이지 않는다.
  */
