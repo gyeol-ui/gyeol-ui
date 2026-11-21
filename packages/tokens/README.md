@@ -111,6 +111,30 @@ values.dark.alpha[90]; // "rgba(9, 9, 11, 0.9)"
 
 투명도가 있는 값은 토큰 원본의 `$value`에 적힌 계산된 색("alias + 투명도", 아래 "토큰 원본" 참고)입니다. `values`는 빌드할 때 정해진 문자열이라 Color Scheme이 바뀌어도 스스로 바뀌지 않습니다. 지금 Color Scheme에 맞는 쪽을 직접 고르세요.
 
+### 공개 토큰 목록
+
+`@gyeol-ui/tokens/tokens.json`은 어떤 토큰이 있는지 담은 목록입니다. 다른 패키지(예: Tailwind 테마)가 토큰 이름을 하드코딩하지 않고 이 목록으로 토큰을 알게 하려는 것입니다.
+
+```ts
+import publicTokens from "@gyeol-ui/tokens/tokens.json" with { type: "json" };
+```
+
+```json
+[
+  { "path": "bg-surface", "type": "color", "cssVariable": "--gyeol-bg-surface" },
+  { "path": "alpha.90", "type": "color", "cssVariable": "--gyeol-alpha-90" },
+  { "path": "spacing.4", "type": "dimension", "cssVariable": "--gyeol-spacing-4" }
+]
+```
+
+| 필드 | 값 |
+|---|---|
+| `path` | DTCG 경로. 그룹은 `.`으로 잇습니다(`alpha.90`) |
+| `type` | `color` 또는 `dimension` |
+| `cssVariable` | `tokens.css`가 정의하는 CSS 변수 이름 |
+
+범위는 공개 API와 같습니다: Semantic 색 전부(`alpha` 그룹 포함), `spacing`, `radius`. Primitive 색은 들어 있지 않습니다.
+
 ## 토큰 원본
 
 토큰 원본은 [`tokens/`](./tokens/) 폴더의 DTCG 2025.10 JSON입니다. Figma Variables collection의 mode 하나가 파일 하나입니다.
@@ -163,9 +187,9 @@ TokenValidationError: 토큰 JSON이 규칙을 2곳에서 어겼다.
 
 | 명령 | 하는 일 |
 |---|---|
-| `pnpm build` | Style Dictionary로 `generated/tokens.css`와 `generated/index.ts`를 만들고, tsdown으로 `generated/index.ts`에서 `dist/`에 ESM과 타입 선언을 만들며 `tokens.css`를 복사한다 |
+| `pnpm build` | Style Dictionary로 `generated/tokens.css`, `generated/index.ts`, `generated/tokens.json`을 만들고, tsdown으로 `generated/index.ts`에서 `dist/`에 ESM과 타입 선언을 만들며 `tokens.css`와 `tokens.json`을 복사한다 |
 | `pnpm lint` | oxlint로 코드를 검사한다 |
 | `pnpm test` | Vitest로 테스트를 실행한다 |
 | `pnpm typecheck` | `tsc`로 타입을 검사한다 |
 
-빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트와 TS 소스를 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 `generated/index.ts`를 패키지 진입점으로 빌드한 뒤 `generated/tokens.css`를 `dist/`로 복사합니다. TS 소스를 쓰는 순수 함수 `formatTsModule`은 [`scripts/build-tokens.helper.ts`](./scripts/build-tokens.helper.ts)에 있습니다.
+빌드 함수는 [`scripts/build-tokens.ts`](./scripts/build-tokens.ts)의 `buildTokens(토큰 폴더)`입니다. 먼저 [`scripts/validate-tokens.ts`](./scripts/validate-tokens.ts)로 위의 규칙을 검사하고, 위반이 있으면 모든 위반을 담은 `TokenValidationError`를 던집니다. 규칙 하나하나를 검사하는 순수 함수는 [`scripts/validate-tokens.helper.ts`](./scripts/validate-tokens.helper.ts)에 있고, 함수마다 무엇을 받아 어떤 위반을 돌려주는지는 [`scripts/validate-tokens.helper.test.ts`](./scripts/validate-tokens.helper.test.ts)에서 볼 수 있습니다. 파일을 쓰지 않고 CSS 텍스트, TS 소스, 공개 토큰 목록 JSON을 돌려주므로, 테스트는 [`scripts/fixtures/`](./scripts/fixtures/)의 fixture 토큰 폴더로 이 함수를 부릅니다. `pnpm build`는 [`scripts/build.ts`](./scripts/build.ts)에서 이 함수를 실제 `tokens/` 폴더로 실행해 결과를 git에 넣지 않는 `generated/`에 씁니다. 이어서 tsdown이 `dist/`를 비우고 `generated/index.ts`를 패키지 진입점으로 빌드한 뒤 `generated/tokens.css`와 `generated/tokens.json`을 `dist/`로 복사합니다. TS 소스를 쓰는 순수 함수 `formatTsModule`은 [`scripts/build-tokens.helper.ts`](./scripts/build-tokens.helper.ts)에 있습니다.

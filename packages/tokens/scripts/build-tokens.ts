@@ -25,6 +25,20 @@ export interface BuildResult {
   css: string;
   /** 패키지 TS 진입점(`tokens`, `values`)의 소스 */
   ts: string;
+  /** 공개 토큰 목록 `tokens.json`의 내용. 항목은 {@link PublicToken}이다 */
+  json: string;
+}
+
+/**
+ * 공개 토큰 목록(`tokens.json`)의 항목 하나. 범위는 공개 API와 같다: Semantic 전부, `spacing`, `radius`.
+ * 다른 패키지(예: `@gyeol-ui/tailwind`)는 이 목록으로만 토큰을 안다.
+ */
+export interface PublicToken {
+  /** DTCG 경로. 예: `bg-surface`, `alpha.90`, `spacing.4` */
+  path: string;
+  type: "color" | "dimension";
+  /** 예: `--gyeol-bg-surface` */
+  cssVariable: string;
 }
 
 const PREFIX = "gyeol";
@@ -171,15 +185,37 @@ const listTsValues: FormatFn = ({ dictionary }): TsEntry[] =>
     value: getSemanticValue(token),
   }));
 
+/** 공개 토큰 목록의 `type`으로 쓸 수 있는 값인지 판단한다 */
+const isPublicTokenType = (type: unknown): type is PublicToken["type"] =>
+  type === "color" || type === "dimension";
+
+/** 토큰마다 공개 토큰 목록의 항목을 만든다 */
+const listPublicTokens: FormatFn = ({ dictionary }): PublicToken[] =>
+  dictionary.allTokens.map((token) => {
+    const path = token.path.join(".");
+    // 검증 규칙(semantic-color)과 범주 그룹의 $type으로 color나 dimension만 들어온다. 타입을 좁히는 가드다
+    if (!isPublicTokenType(token.$type)) {
+      throw new Error(
+        `${path}: 공개 토큰 목록에 넣을 수 없는 $type ${String(token.$type)}`,
+      );
+    }
+    return { path, type: token.$type, cssVariable: `--${token.name}` };
+  });
+
 /** TS 토큰 목록을 내는 format의 등록 이름 */
 const TS_FORMAT = {
   references: "gyeol/ts/references",
   values: "gyeol/ts/values",
 } as const;
 
-const TS_FORMATS = {
+/** 공개 토큰 목록을 만드는 format의 등록 이름 */
+const JSON_FORMAT = "gyeol/json/public-tokens";
+
+/** TS와 JSON의 목록을 만드는 format. 문자열이 아니라 목록을 돌려준다 */
+const LIST_FORMATS = {
   [TS_FORMAT.references]: listTsReferences,
   [TS_FORMAT.values]: listTsValues,
+  [JSON_FORMAT]: listPublicTokens,
 };
 
 /** Primitive와 Semantic 빌드가 함께 쓰는 플랫폼 설정. CSS와 TS 모두 이름과 값을 같은 transform으로 만든다. 만들 파일 목록만 다르다 */
@@ -203,51 +239,65 @@ const formatOutputs = async (sd: StyleDictionary): Promise<string[]> => {
   });
 };
 
-/** `ts` 플랫폼의 파일마다 TS format이 낸 토큰 목록을 모은다 */
-const collectTsEntries = async (sd: StyleDictionary): Promise<TsEntry[][]> => {
-  const files = await sd.formatPlatform("ts");
+/** 목록을 만드는 format(`LIST_FORMATS`)만 쓰는 플랫폼에서, 파일마다 format이 돌려준 목록을 모은다 */
+async function collectLists<T>(
+  sd: StyleDictionary,
+  platform: "ts" | "json",
+): Promise<T[][]> {
+  const files = await sd.formatPlatform(platform);
   return files.map(({ output }) => {
     if (!Array.isArray(output)) {
-      throw new Error("Style Dictionary가 TS 토큰 목록을 만들지 못했다");
+      throw new Error(`Style Dictionary가 ${platform} 목록을 만들지 못했다`);
     }
     return output;
   });
-};
+}
+
+/** 공개 API인 Primitive만 고른다. Primitive 색은 공개 API가 아니므로 색이 아닌 것(spacing, radius)이다 */
+const isPublicPrimitive = (token: TransformedToken): boolean =>
+  token.$type !== "color";
 
 /**
  * Primitive를 `:root`에 실제 값으로 낸다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
- * TS `tokens`에는 색이 아닌 Primitive(spacing, radius)만 참조로 낸다. Primitive 색은 공개 API가 아니다.
+ * TS `tokens`와 공개 토큰 목록에는 공개 API인 Primitive만 넣는다.
  */
-async function buildPrimitive(
-  primitivePath: string,
-): Promise<{ css: string; tsReferences: TsEntry[] }> {
+async function buildPrimitive(primitivePath: string): Promise<{
+  css: string;
+  tsReferences: TsEntry[];
+  publicTokens: PublicToken[];
+}> {
   const sd = new StyleDictionary({
     source: [primitivePath],
     log: { verbosity: "silent" },
-    hooks: { formats: TS_FORMATS },
+    hooks: { formats: LIST_FORMATS },
     platforms: {
       css: configurePlatform([{ format: "css/variables" }]),
       ts: configurePlatform([
-        {
-          format: TS_FORMAT.references,
-          filter: (token: TransformedToken) => token.$type !== "color",
-        },
+        { format: TS_FORMAT.references, filter: isPublicPrimitive },
+      ]),
+      json: configurePlatform([
+        { format: JSON_FORMAT, filter: isPublicPrimitive },
       ]),
     },
   });
   const [css] = await formatOutputs(sd);
-  const [tsReferences] = await collectTsEntries(sd);
-  if (css === undefined || tsReferences === undefined) {
+  const [tsReferences] = await collectLists<TsEntry>(sd, "ts");
+  const [publicTokens] = await collectLists<PublicToken>(sd, "json");
+  if (
+    css === undefined ||
+    tsReferences === undefined ||
+    publicTokens === undefined
+  ) {
     throw new Error("Style Dictionary가 Primitive 결과를 만들지 못했다");
   }
-  return { css, tsReferences };
+  return { css, tsReferences, publicTokens };
 }
 
 /** source(Semantic)에서 읽은 토큰만 고른다. include로 넘긴 Primitive는 빠진다 */
 const isSourceToken = (token: TransformedToken): boolean => token.isSource;
 
 /**
- * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 낸다.
+ * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 쓰고, 공개 토큰 목록의 항목을 만든다.
  *
  * Primitive는 include로 참조를 풀 대상으로만 넘긴다. include로 읽은 토큰도 기본으로는 출력되므로,
  * filter로 source(Semantic)에서 읽은 토큰(isSource)만 낸다.
@@ -264,6 +314,7 @@ async function buildSemantic({
   cssBlocks: string[];
   tsReferences: TsEntry[];
   tsValues: TsEntry[];
+  publicTokens: PublicToken[];
 }> {
   // 블록마다 selector가 달라 format을 블록마다 만든다.
   // 파일 설정의 format은 타입상 함수도 받지만 5.8은 등록된 이름만 찾으므로 이름을 붙여 등록한다.
@@ -279,7 +330,7 @@ async function buildSemantic({
     hooks: {
       formats: {
         ...Object.fromEntries(formats.map((f) => [f.name, f.format])),
-        ...TS_FORMATS,
+        ...LIST_FORMATS,
       },
     },
     platforms: {
@@ -295,18 +346,29 @@ async function buildSemantic({
           filter: isSourceToken,
         })),
       ),
+      json: configurePlatform([{ format: JSON_FORMAT, filter: isSourceToken }]),
     },
   });
-  const [tsReferences, tsValues] = await collectTsEntries(sd);
-  if (tsReferences === undefined || tsValues === undefined) {
+  const [tsReferences, tsValues] = await collectLists<TsEntry>(sd, "ts");
+  const [publicTokens] = await collectLists<PublicToken>(sd, "json");
+  if (
+    tsReferences === undefined ||
+    tsValues === undefined ||
+    publicTokens === undefined
+  ) {
     throw new Error("Style Dictionary가 Semantic 결과를 만들지 못했다");
   }
-  return { cssBlocks: await formatOutputs(sd), tsReferences, tsValues };
+  return {
+    cssBlocks: await formatOutputs(sd),
+    tsReferences,
+    tsValues,
+    publicTokens,
+  };
 }
 
 /**
  * 토큰 폴더(`primitive.json`, `semantic/light.json`, `semantic/dark.json`이 들어 있는 폴더)를 읽어
- * CSS 텍스트와 TS 소스를 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
+ * CSS 텍스트, TS 소스, 공개 토큰 목록 JSON을 돌려준다. 파일을 쓰지 않는다. 쓰는 일은 `build.ts`가 한다.
  */
 export async function buildTokens(tokensDir: string): Promise<BuildResult> {
   // Style Dictionary에 넘기기 전에 토큰 파일을 직접 읽어 검증 규칙을 검사한다. 위반이 있으면 모두 모아 던진다.
@@ -336,5 +398,12 @@ export async function buildTokens(tokensDir: string): Promise<BuildResult> {
         dark: semantic.dark.tsValues,
       },
     }),
+    // TS tokens와 같은 순서와 범위다. Semantic 이름은 light와 dark가 같으므로 light에서 가져온다
+    json:
+      JSON.stringify(
+        [...semantic.light.publicTokens, ...primitive.publicTokens],
+        null,
+        2,
+      ) + "\n",
   };
 }

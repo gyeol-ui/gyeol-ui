@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, onTestFinished } from "vitest";
-import { buildTokens } from "./build-tokens.ts";
+import { buildTokens, type PublicToken } from "./build-tokens.ts";
 import { TokenValidationError } from "./validate-tokens.ts";
 
 const resolveFixturePath = (name: string): string =>
@@ -274,14 +274,61 @@ describe("buildTokens", () => {
     });
   });
 
+  describe("공개 토큰 목록", () => {
+    it("Semantic 전부와 spacing, radius를 담고 Primitive 색은 담지 않는다", async () => {
+      // given, when
+      const { json } = await buildTokens(resolveFixturePath("valid"));
+
+      // then
+      expect(JSON.parse(json)).toEqual([
+        {
+          path: "bg-surface",
+          type: "color",
+          cssVariable: "--gyeol-bg-surface",
+        },
+        {
+          path: "fg-default",
+          type: "color",
+          cssVariable: "--gyeol-fg-default",
+        },
+        {
+          path: "border-default",
+          type: "color",
+          cssVariable: "--gyeol-border-default",
+        },
+        {
+          path: "ring-offset",
+          type: "color",
+          cssVariable: "--gyeol-ring-offset",
+        },
+        {
+          path: "alpha.90",
+          type: "color",
+          cssVariable: "--gyeol-alpha-90",
+        },
+        {
+          path: "spacing.4",
+          type: "dimension",
+          cssVariable: "--gyeol-spacing-4",
+        },
+        {
+          path: "radius.md",
+          type: "dimension",
+          cssVariable: "--gyeol-radius-md",
+        },
+      ]);
+    });
+  });
+
   describe("토큰 폴더", () => {
     it("실제 씨앗 토큰 폴더로 빌드가 성공한다", async () => {
       // given
       const tokensDir = fileURLToPath(new URL("../tokens", import.meta.url));
 
       // when
-      const { css, ts } = await buildTokens(tokensDir);
+      const { css, ts, json } = await buildTokens(tokensDir);
       const { tokens, values } = await importTsModule(ts);
+      const publicTokens: PublicToken[] = JSON.parse(json);
 
       // then: 값은 Figma에서 바뀔 수 있으므로 이름과 모양만 확인한다
       expect(css).toMatch(/--gyeol-color-gray-900: \S+;/);
@@ -300,6 +347,19 @@ describe("buildTokens", () => {
       expect(tokens.radius.full).toBe("var(--gyeol-radius-full)");
       expect(values.light.bgSurface).toMatch(/^#[0-9a-f]{6}$/);
       expect(values.dark.alpha[90]).toMatch(/^rgba\(\d+, \d+, \d+, 0\.9\)$/);
+      expect(publicTokens).toContainEqual({
+        path: "fg-on-accent",
+        type: "color",
+        cssVariable: "--gyeol-fg-on-accent",
+      });
+      expect(publicTokens).toContainEqual({
+        path: "radius.full",
+        type: "dimension",
+        cssVariable: "--gyeol-radius-full",
+      });
+      expect(publicTokens.map(({ path }) => path)).not.toContainEqual(
+        expect.stringMatching(/^color\./),
+      );
     });
 
     it("토큰 폴더에 primitive.json이 없으면 실패한다", async () => {

@@ -27,6 +27,10 @@ _Avoid_: 접두어, Prefix
 **Component Token**:
 특정 컴포넌트의 특정 부위에 한정된 Token (예: 기본 버튼의 배경). Semantic Token을 가리킨다.
 
+**공개 토큰 목록**:
+공개 API인 Design Token(Semantic Token 전부와 간격, 모서리 같은 색 아닌 Primitive Token)을 나열한 목록. 토큰 패키지 밖에서는 이 목록으로만 어떤 Token이 있는지 안다.
+_Avoid_: Token manifest, 토큰 인덱스
+
 **Tailwind 테마**:
 Design Token을 Tailwind 유틸리티 클래스로 쓸 수 있게 하는 설정 묶음. 이름은 Tailwind의 `@theme`에서 왔고, 브랜드별 토큰 세트(gyeol-ui가 지원하지 않는 Theme)와 무관하다.
 _Avoid_: Theme
