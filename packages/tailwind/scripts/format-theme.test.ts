@@ -79,6 +79,44 @@ const FIXTURE: PublicToken[] = [
   },
 ];
 
+/**
+ * 실제 공개 토큰이 나와야 할 클래스. docs/architecture.md의 Role 표와 ADR-0005를 손으로 옮겼다.
+ * 토큰 경로 패턴 → (유틸리티 접두어, CSS 속성) 목록. dropCategory면 클래스 이름에서 범주를 뗀다(`spacing.4` → `p-4`)
+ */
+const EXPECTED_UTILITIES: {
+  pattern: RegExp;
+  utilities: [prefix: string, property: string][];
+  dropCategory?: boolean;
+}[] = [
+  { pattern: /^bg-/, utilities: [["bg", "background-color"]] },
+  { pattern: /^fg-/, utilities: [["text", "color"]] },
+  {
+    pattern: /^border-/,
+    utilities: [
+      ["border", "border-color"],
+      ["divide", "border-color"],
+    ],
+  },
+  {
+    pattern: /^ring-offset$/,
+    utilities: [["ring-offset", "--tw-ring-offset-color"]],
+  },
+  { pattern: /^alpha\./, utilities: [["bg", "background-color"]] },
+  {
+    pattern: /^spacing\./,
+    utilities: [
+      ["p", "padding"],
+      ["gap", "gap"],
+    ],
+    dropCategory: true,
+  },
+  {
+    pattern: /^radius\./,
+    utilities: [["rounded", "border-radius"]],
+    dropCategory: true,
+  },
+];
+
 describe("formatTheme", () => {
   it("bg Role 토큰은 bg- 클래스의 배경색이 된다", async () => {
     // given, when
@@ -245,33 +283,23 @@ describe("formatTheme", () => {
   it("실제 공개 토큰 목록의 모든 토큰이 기대한 클래스로 나온다", async () => {
     // given
     const tokens = await readPublicTokens();
-    // ADR-0005와 docs/architecture.md의 Role 표: 토큰 경로의 첫 조각 → 클래스 접두어와 CSS 속성
-    const expectations = tokens.map((token) => {
-      const name = token.path.replaceAll(".", "-");
-      const [first, ...rest] = token.path.split(".");
-      const [prefix, property] =
-        first === "spacing"
-          ? ["p", "padding"]
-          : first === "radius"
-            ? ["rounded", "border-radius"]
-            : first === "alpha"
-              ? ["bg", "background-color"]
-              : name.startsWith("bg-")
-                ? ["bg", "background-color"]
-                : name.startsWith("fg-")
-                  ? ["text", "color"]
-                  : name.startsWith("border-")
-                    ? ["border", "border-color"]
-                    : name === "ring-offset" || name.startsWith("ring-offset-")
-                      ? ["ring-offset", "--tw-ring-offset-color"]
-                      : [];
-      const suffix =
-        first === "spacing" || first === "radius" ? rest.join("-") : name;
-      return {
+    const expectations = tokens.flatMap((token) => {
+      const entry = EXPECTED_UTILITIES.find(({ pattern }) =>
+        pattern.test(token.path),
+      );
+      if (entry === undefined) {
+        throw new Error(`${token.path}: 기대할 클래스를 표에 적지 않은 토큰`);
+      }
+      const name = (
+        entry.dropCategory ? token.path.split(".").slice(1) : [token.path]
+      )
+        .join("-")
+        .replaceAll(".", "-");
+      return entry.utilities.map(([prefix, property]) => ({
         path: token.path,
-        className: `${prefix}-${suffix}`,
-        declarations: property && { [property]: `var(${token.cssVariable})` },
-      };
+        className: `${prefix}-${name}`,
+        declarations: { [property]: `var(${token.cssVariable})` },
+      }));
     });
 
     // when

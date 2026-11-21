@@ -82,6 +82,7 @@ Role에 맞지 않는 조합(`text-bg-surface`, `bg-fg-default`)은 클래스가
 
 `dist/theme.css`는 손으로 쓰지 않고 생성합니다. 토큰이 바뀌면 다시 빌드하는 것만으로 클래스가 따라옵니다.
 
-- 테마 텍스트를 쓰는 함수는 [`scripts/format-theme.ts`](./scripts/format-theme.ts)의 `formatTheme(공개 토큰 목록)`입니다. Role과 Tailwind namespace의 대응은 이 파일에만 있습니다. 대응을 정할 수 없는 토큰(표에 없는 Role이나 범주)이 있으면 그 토큰 경로를 모두 담아 실패합니다.
+- 테마 텍스트를 쓰는 함수는 [`scripts/format-theme.ts`](./scripts/format-theme.ts)의 `formatTheme(공개 토큰 목록)`입니다. 대응을 정할 수 없는 토큰(표에 없는 Role이나 범주)이 있으면 그 토큰 경로를 모두 담아 실패합니다.
+- Role·범주와 Tailwind namespace의 대응은 [`scripts/format-theme.helper.ts`](./scripts/format-theme.helper.ts)에만 있습니다. 토큰 하나가 어떤 `@theme` 변수가 되는지는 [`scripts/format-theme.helper.test.ts`](./scripts/format-theme.helper.test.ts)에서 볼 수 있습니다.
 - [`scripts/build.ts`](./scripts/build.ts)가 이 함수를 실제 공개 토큰 목록으로 실행해 `dist/theme.css`에 씁니다.
 - 테스트([`scripts/format-theme.test.ts`](./scripts/format-theme.test.ts))는 생성된 텍스트를 비교하지 않고, [`entry.css`](./entry.css)(배포하지 않는 진입 CSS, 위의 import 두 줄)와 함께 `@tailwindcss/node`로 컴파일해 어떤 클래스가 어떤 CSS로 나오는지 확인합니다. 실제 공개 토큰 목록의 모든 토큰도 확인하므로, Tailwind를 올렸을 때 Role별 namespace 동작이 깨지면 테스트가 실패합니다.
