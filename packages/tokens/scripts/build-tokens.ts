@@ -185,18 +185,18 @@ const listTsValues: FormatFn = ({ dictionary }): TsEntry[] =>
     value: getSemanticValue(token),
   }));
 
-/** 공개 토큰 목록의 `type`으로 낼 수 있는지 판단한다 */
+/** 공개 토큰 목록의 `type`으로 쓸 수 있는 값인지 판단한다 */
 const isPublicTokenType = (type: unknown): type is PublicToken["type"] =>
   type === "color" || type === "dimension";
 
-/** 공개 토큰 목록에 넣을 항목을 낸다 */
+/** 토큰마다 공개 토큰 목록의 항목을 만든다 */
 const listPublicTokens: FormatFn = ({ dictionary }): PublicToken[] =>
   dictionary.allTokens.map((token) => {
     const path = token.path.join(".");
     // 검증 규칙(semantic-color)과 범주 그룹의 $type으로 color나 dimension만 들어온다. 타입을 좁히는 가드다
     if (!isPublicTokenType(token.$type)) {
       throw new Error(
-        `${path}: 공개 토큰 목록에 낼 수 없는 $type ${String(token.$type)}`,
+        `${path}: 공개 토큰 목록에 넣을 수 없는 $type ${String(token.$type)}`,
       );
     }
     return { path, type: token.$type, cssVariable: `--${token.name}` };
@@ -208,10 +208,10 @@ const TS_FORMAT = {
   values: "gyeol/ts/values",
 } as const;
 
-/** 공개 토큰 목록을 내는 format의 등록 이름 */
+/** 공개 토큰 목록을 만드는 format의 등록 이름 */
 const JSON_FORMAT = "gyeol/json/public-tokens";
 
-/** TS와 JSON 목록을 내는 format. 문자열이 아니라 목록을 돌려준다 */
+/** TS와 JSON의 목록을 만드는 format. 문자열이 아니라 목록을 돌려준다 */
 const LIST_FORMATS = {
   [TS_FORMAT.references]: listTsReferences,
   [TS_FORMAT.values]: listTsValues,
@@ -239,7 +239,7 @@ const formatOutputs = async (sd: StyleDictionary): Promise<string[]> => {
   });
 };
 
-/** 목록을 내는 format(`LIST_FORMATS`)만 쓰는 플랫폼에서, 파일마다 format이 낸 목록을 모은다 */
+/** 목록을 만드는 format(`LIST_FORMATS`)만 쓰는 플랫폼에서, 파일마다 format이 돌려준 목록을 모은다 */
 async function collectLists<T>(
   sd: StyleDictionary,
   platform: "ts" | "json",
@@ -259,7 +259,7 @@ const isPublicPrimitive = (token: TransformedToken): boolean =>
 
 /**
  * Primitive를 `:root`에 실제 값으로 낸다. 파일 맨 위의 자동 생성 헤더도 여기서 나온다.
- * TS `tokens`와 공개 토큰 목록에는 공개 API인 Primitive만 낸다.
+ * TS `tokens`와 공개 토큰 목록에는 공개 API인 Primitive만 넣는다.
  */
 async function buildPrimitive(primitivePath: string): Promise<{
   css: string;
@@ -297,7 +297,7 @@ async function buildPrimitive(primitivePath: string): Promise<{
 const isSourceToken = (token: TransformedToken): boolean => token.isSource;
 
 /**
- * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 내고, 공개 토큰 목록을 낸다.
+ * Color Scheme 하나의 Semantic을 CSS에는 `var()` 참조로, TS에는 참조와 실제 색으로 쓰고, 공개 토큰 목록의 항목을 만든다.
  *
  * Primitive는 include로 참조를 풀 대상으로만 넘긴다. include로 읽은 토큰도 기본으로는 출력되므로,
  * filter로 source(Semantic)에서 읽은 토큰(isSource)만 낸다.
