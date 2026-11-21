@@ -68,6 +68,15 @@ tools/
     - Semantic: (그룹) / 이름 (예: `bg-surface`, `alpha.90`). 색만 담으므로 범주를 쓰지 않는다
     - 이름은 kebab-case다. 그룹은 한 단계까지만 둔다.
     - 모든 토큰의 CSS 변수 이름은 서로 달라야 한다.
+  - Semantic 이름의 첫 조각은 Role이고, 아래 표에 있는 값이어야 한다. `alpha` 그룹은 예외로 표에 따로 둔다. 토큰 빌드가 검사한다. Tailwind namespace는 Tailwind 테마에서만 쓴다.
+
+    | Role | 칠하는 자리 | Tailwind namespace |
+    |---|---|---|
+    | `bg` | 배경 | `--background-color-*` |
+    | `fg` | 글자 | `--text-color-*` |
+    | `border` | 테두리 | `--border-color-*` |
+    | `ring-offset` | 포커스 링과 요소 사이 | `--ring-offset-color-*` |
+    | `alpha` 그룹 | 배경(`bg-surface`의 투명도 단계) | `--background-color-*` |
   - 색은 `srgb`로 쓰고 Figma 파일의 color profile도 sRGB로 둔다. dimension은 `px`로 쓴다.
   - 간격의 단계 이름은 4px의 배수로 한다 (예: `spacing.4` = 16px). 모서리는 크기 단계로 이름 짓는다 (예: `radius.sm`, `radius.md`, `radius.full`).
   - Semantic의 `alpha` 그룹은 `bg-surface`의 투명도 단계이고, 숫자는 불투명도다 (예: `alpha.90` = `bg-surface` 90%). 다른 색에 투명도를 건 토큰은 용도 이름을 붙인다.
@@ -75,6 +84,7 @@ tools/
 - CSS 변수는 `--gyeol-` 접두사를 붙인다 (예: `--gyeol-bg-surface`). Primitive는 `:root`에, Semantic은 Primitive를 `var()`로 가리키는 Color Scheme 블록에 낸다.
   - 공개 API는 Semantic 변수와, 색이 아닌 Primitive 변수(`--gyeol-spacing-*`, `--gyeol-radius-*`)다. Primitive 색 변수는 출력되지만 공개 API가 아니다. 컴포넌트는 색에 Semantic만 쓴다.
 - Color Scheme은 기본으로 `prefers-color-scheme`을 따르고, `<html>`에 `data-color-scheme` 속성이 있으면 그 값을 따른다. 속성은 `<html>`에서만 지원하고, 페이지 일부의 Color Scheme을 따로 바꾸는 것은 지원하지 않는다. 웹뷰에서는 네이티브 앱의 light/dark 설정이 `prefers-color-scheme`에 반영된다. Color Scheme 블록마다 CSS `color-scheme` 속성도 낸다.
+- 토큰 패키지는 공개 토큰 목록(`tokens.json`, 토큰마다 경로·타입·CSS 변수 이름)을 함께 내보낸다. 다른 패키지는 이 목록으로 토큰을 안다.
 
 확인한 사실(2026-11):
 
@@ -101,6 +111,26 @@ tools/
   - targetSdk 32 이하에서는 `<meta name="color-scheme" content="light dark">`가 없으면 dark media query가 무시될 수 있다.
 - shadcn/ui Figma kit(2026-10)은 collection 세 개로 나눈다. `Tailwind`(mode 1개, 팔레트), `Style`(mode = 스타일, `color/light/*`와 `color/dark/*`를 모두 가짐, radius·shadow·font 포함), `Mode`(Light/Dark, 같은 이름의 `color/light/*` 또는 `color/dark/*`를 가리킴)다. "alias + 투명도"를 여러 곳에 쓰고, `Style` 안의 토큰끼리도 가리킨다(예: `color/dark/alpha/5` → `color/dark/background` 95%).
 - DTCG 2025.10에는 "참조하면서 투명도만 바꾸기"를 적는 표준 방법이 없다. Style Dictionary(5.8)는 JSON Pointer `$ref`와 `color-mix()` 출력을 지원하지 않는다. `color-mix()`는 iOS Safari 16.2, Android WebView 111부터 쓸 수 있다.
+
+## Tailwind 테마
+
+- 이 절의 Tailwind 테마는 Tailwind의 `@theme` 설정이며 Theme과 무관하다(GLOSSARY).
+- Tailwind 테마(`packages/tailwind`)는 공개 토큰 목록에서 생성하고 손으로 쓰지 않는다.
+  - `@gyeol-ui/tokens/tokens.css`를 맨 앞에서 `@import`하고, `@theme inline`을 쓴다. 공개 CSS 변수는 `--gyeol-*` 한 벌이다.
+  - 공개 토큰만 넣는다. Semantic은 Role별 namespace에 토큰 이름 그대로 넣고(예: `bg-bg-surface`, `text-fg-default`), `--color-*`에는 아무것도 넣지 않는다 ([ADR-0005](./adr/0005-tailwind-utilities-keep-token-names.md)).
+  - 토큰이 있는 범주(`--color-*`, `--spacing`, `--radius-*`)의 Tailwind 기본값은 비운다. 간격은 토큰 이름으로만 쓰고(`p-4` = `var(--gyeol-spacing-4)`), `--spacing-0: 0px`만 직접 둔다. 토큰이 없는 범주(글자 크기, 그림자, breakpoint, 폰트)는 해당 토큰이 생길 때 비운다.
+  - `dark:` variant는 "스타일과 토큰"의 Color Scheme 규칙과 같게 다시 정의한다.
+  - CSS export에는 `style`이나 `default` 조건을 둔다. `tailwindcss`는 peer(`^4`)다.
+
+확인한 사실(2026-11, Tailwind 4.3.5에서 직접 컴파일):
+
+- `--background-color-*`, `--text-color-*`, `--border-color-*`, `--ring-offset-color-*` 같은 유틸리티별 namespace는 동작하지만 공식 문서에는 `--color-*`만 있다. 모두 마지막에 `--color-*`로 폴백한다. `divide-*`는 `--border-color-*`를 쓴다.
+- `@theme inline`은 변수를 내보내지 않고 유틸리티에 값을 바로 넣는다. 기본 `@theme`은 `:root`에 Tailwind 변수를 한 벌 더 만들고, 하위 요소에서 `--gyeol-*`를 다시 정의해도 반영되지 않는다.
+- `--spacing-*: initial`은 `--spacing` 배수도 지워 `p-0`까지 사라진다. `--*: initial`은 breakpoint와 글자 크기도 지운다. `rounded-full`, `p-px`, `w-full`, 임의값, `bg-transparent`/`bg-current`는 남는다.
+- 투명도 수식어(`/50`)는 `color-mix(in oklab, …)`로 나오고, 지원하지 않는 브라우저에서는 불투명한 원래 색으로 폴백한다.
+- `@tailwindcss/node`, `@tailwindcss/postcss`, `@tailwindcss/vite` 모두 패키지 CSS 안의 다른 패키지 CSS `@import`를 푼다. resolver는 `style` 조건을 보고, `import` 조건만 있으면 실패한다.
+- compile API의 `build()`는 앞서 넣은 후보를 계속 쌓는다.
+- `prettier-plugin-tailwindcss`(0.8)는 v4에서 `tailwindStylesheet`가 필수다. 패키지 이름이 아니라 파일 경로만 받고, 그 CSS에 `@import "tailwindcss"`가 있어야 한다.
 
 ## 컴포넌트
 
