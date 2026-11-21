@@ -1,0 +1,49 @@
+{
+  "name": "@gyeol-ui/tailwind",
+  "version": "0.0.0",
+  "description": "gyeol-ui Design Token을 Tailwind CSS v4 클래스로 쓰는 테마",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gyeol-ui/gyeol-ui.git",
+    "directory": "packages/tailwind"
+  },
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "style": "./dist/theme.css",
+      "default": "./dist/theme.css"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts && publint",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gyeol-ui/tokens": "workspace:*"
+  },
+  "peerDependencies": {
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@tailwindcss/node": "4.3.5",
+    "@types/node": "26.6.6",
+    "postcss": "8.5.33",
+    "publint": "0.3.25",
+    "tailwindcss": "4.3.5",
+    "typescript": "7.0.2",
+    "vitest": "5.1.0"
+  }
+}
