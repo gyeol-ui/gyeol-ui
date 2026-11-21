@@ -133,7 +133,7 @@ import publicTokens from "@gyeol-ui/tokens/tokens.json" with { type: "json" };
 | `type` | `color` 또는 `dimension` |
 | `cssVariable` | `tokens.css`가 정의하는 CSS 변수 이름 |
 
-범위는 공개 API와 같습니다: Semantic 색 전부(`alpha` 그룹 포함), `spacing`, `radius`. Primitive 색은 들어 있지 않습니다. 순서는 TS `tokens`와 같습니다.
+범위는 공개 API와 같습니다: Semantic 색 전부(`alpha` 그룹 포함), `spacing`, `radius`. Primitive 색은 들어 있지 않습니다.
 
 ## 토큰 원본
 

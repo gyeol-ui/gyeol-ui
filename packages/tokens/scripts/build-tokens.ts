@@ -239,27 +239,19 @@ const formatOutputs = async (sd: StyleDictionary): Promise<string[]> => {
   });
 };
 
-/** `ts` 플랫폼의 파일마다 TS format이 낸 토큰 목록을 모은다 */
-const collectTsEntries = async (sd: StyleDictionary): Promise<TsEntry[][]> => {
-  const files = await sd.formatPlatform("ts");
+/** 목록을 내는 format(`LIST_FORMATS`)만 쓰는 플랫폼에서, 파일마다 format이 낸 목록을 모은다 */
+async function collectLists<T>(
+  sd: StyleDictionary,
+  platform: "ts" | "json",
+): Promise<T[][]> {
+  const files = await sd.formatPlatform(platform);
   return files.map(({ output }) => {
     if (!Array.isArray(output)) {
-      throw new Error("Style Dictionary가 TS 토큰 목록을 만들지 못했다");
+      throw new Error(`Style Dictionary가 ${platform} 목록을 만들지 못했다`);
     }
     return output;
   });
-};
-
-/** `json` 플랫폼(파일 하나)이 낸 공개 토큰 목록을 꺼낸다 */
-const collectPublicTokens = async (
-  sd: StyleDictionary,
-): Promise<PublicToken[]> => {
-  const [file] = await sd.formatPlatform("json");
-  if (!Array.isArray(file?.output)) {
-    throw new Error("Style Dictionary가 공개 토큰 목록을 만들지 못했다");
-  }
-  return file.output;
-};
+}
 
 /** 공개 API인 Primitive만 고른다. Primitive 색은 공개 API가 아니므로 색이 아닌 것(spacing, radius)이다 */
 const isPublicPrimitive = (token: TransformedToken): boolean =>
@@ -289,11 +281,16 @@ async function buildPrimitive(primitivePath: string): Promise<{
     },
   });
   const [css] = await formatOutputs(sd);
-  const [tsReferences] = await collectTsEntries(sd);
-  if (css === undefined || tsReferences === undefined) {
+  const [tsReferences] = await collectLists<TsEntry>(sd, "ts");
+  const [publicTokens] = await collectLists<PublicToken>(sd, "json");
+  if (
+    css === undefined ||
+    tsReferences === undefined ||
+    publicTokens === undefined
+  ) {
     throw new Error("Style Dictionary가 Primitive 결과를 만들지 못했다");
   }
-  return { css, tsReferences, publicTokens: await collectPublicTokens(sd) };
+  return { css, tsReferences, publicTokens };
 }
 
 /** source(Semantic)에서 읽은 토큰만 고른다. include로 넘긴 Primitive는 빠진다 */
@@ -352,15 +349,20 @@ async function buildSemantic({
       json: configurePlatform([{ format: JSON_FORMAT, filter: isSourceToken }]),
     },
   });
-  const [tsReferences, tsValues] = await collectTsEntries(sd);
-  if (tsReferences === undefined || tsValues === undefined) {
+  const [tsReferences, tsValues] = await collectLists<TsEntry>(sd, "ts");
+  const [publicTokens] = await collectLists<PublicToken>(sd, "json");
+  if (
+    tsReferences === undefined ||
+    tsValues === undefined ||
+    publicTokens === undefined
+  ) {
     throw new Error("Style Dictionary가 Semantic 결과를 만들지 못했다");
   }
   return {
     cssBlocks: await formatOutputs(sd),
     tsReferences,
     tsValues,
-    publicTokens: await collectPublicTokens(sd),
+    publicTokens,
   };
 }
 

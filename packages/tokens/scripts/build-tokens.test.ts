@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, onTestFinished } from "vitest";
-import { buildTokens } from "./build-tokens.ts";
+import { buildTokens, type PublicToken } from "./build-tokens.ts";
 import { TokenValidationError } from "./validate-tokens.ts";
 
 const resolveFixturePath = (name: string): string =>
@@ -328,7 +328,7 @@ describe("buildTokens", () => {
       // when
       const { css, ts, json } = await buildTokens(tokensDir);
       const { tokens, values } = await importTsModule(ts);
-      const publicTokens: { path: string }[] = JSON.parse(json);
+      const publicTokens: PublicToken[] = JSON.parse(json);
 
       // then: 값은 Figma에서 바뀔 수 있으므로 이름과 모양만 확인한다
       expect(css).toMatch(/--gyeol-color-gray-900: \S+;/);
