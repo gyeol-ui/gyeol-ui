@@ -20,8 +20,16 @@ _Avoid_: Global token, Base token, Palette token
 컴포넌트가 참조하는, 용도에 이름을 붙인 색 Token (예: `bg-surface`). Color Scheme마다 다른 Primitive Token이나 다른 Semantic Token을 가리킨다.
 _Avoid_: Alias token, Decision token
 
+**Role**:
+Semantic Token 이름의 첫 조각으로, 색이 칠해지는 자리(배경, 글자, 테두리 등)를 나타낸다 (예: `bg-surface`의 `bg`).
+_Avoid_: 접두어, Prefix
+
 **Component Token**:
 특정 컴포넌트의 특정 부위에 한정된 Token (예: 기본 버튼의 배경). Semantic Token을 가리킨다.
+
+**Tailwind 테마**:
+Design Token을 Tailwind 유틸리티 클래스로 쓸 수 있게 하는 설정 묶음. 이름은 Tailwind의 `@theme`에서 왔고, 브랜드별 토큰 세트(gyeol-ui가 지원하지 않는 Theme)와 무관하다.
+_Avoid_: Theme
 
 ## 동기화
 
