@@ -146,9 +146,10 @@ TokenValidationError: 토큰 JSON이 규칙을 2곳에서 어겼다.
 | `semantic-alias` | Semantic은 모든 토큰이 Primitive나 같은 파일의 다른 Semantic을 가리키는 참조이거나, `ref`가 참조인 "alias + 투명도"입니다. |
 | `semantic-color` | Semantic의 `$type`은 `color`만 됩니다. |
 | `semantic-names-match` | `semantic/light.json`과 `semantic/dark.json`에 같은 이름의 토큰이 모두 있어야 합니다. 빠진 쪽 파일의 위반으로 나옵니다. |
+| `semantic-role` | Semantic 이름(경로를 `-`로 이은 것)의 첫 조각은 Role(`bg`, `fg`, `border`, `ring-offset`) 중 하나입니다. 이름이 Role과 같거나(`ring-offset`) `Role-`로 시작해야 합니다(`bg-surface`, `fg-on-accent`). `background-muted`처럼 Role로 시작하는 다른 단어는 안 됩니다. `alpha` 그룹(`alpha.90`)만 예외입니다. Role은 색이 칠해지는 자리이고, Tailwind 테마는 Role에 따라 클래스를 정합니다. |
 | `path-structure` | 경로는 최대 3단계입니다. Primitive는 `범주/(그룹)/이름`(2–3단계, 예: `spacing.4`, `color.gray.900`), Semantic은 `(그룹)/이름`(1–2단계, 예: `bg-surface`, `alpha.90`)입니다. |
 | `kebab-case` | 경로의 모든 이름 칸은 kebab-case(소문자, 숫자, `-`)입니다. |
-| `css-name-unique` | 모든 토큰의 CSS 변수 이름이 서로 달라야 합니다. `alpha.90`과 `alpha-90`은 모두 `--gyeol-alpha-90`이 되어 겹칩니다. Semantic은 Primitive와도 겹치면 안 됩니다. |
+| `css-name-unique` | 모든 토큰의 CSS 변수 이름이 서로 달라야 합니다. `bg.surface`와 `bg-surface`는 모두 `--gyeol-bg-surface`가 되어 겹칩니다. Semantic은 Primitive와도 겹치면 안 됩니다. |
 | `color-srgb` | 색은 `srgb` 색 객체입니다. hex 문자열이나 다른 색 공간은 안 됩니다. "alias + 투명도"의 `$value`도 검사합니다. |
 | `dimension-px` | dimension은 `unit`이 `px`인 객체입니다. |
 | `reference-exists` | 참조 대상 토큰이 있어야 합니다. 그룹은 토큰이 아니므로 가리킬 수 없고, Semantic은 다른 Color Scheme 파일의 Semantic을 가리킬 수 없습니다. |

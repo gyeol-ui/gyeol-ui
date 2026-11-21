@@ -11,6 +11,7 @@ import {
   checkSemanticAlias,
   checkSemanticColor,
   checkSemanticNamesMatch,
+  checkSemanticRole,
   checkValueFormat,
   collectTokens,
   indexCssNames,
@@ -187,6 +188,57 @@ describe("checkSemanticColor", () => {
         path: "ring",
         rule: "semantic-color",
         detail: "Semantic의 $type은 color여야 한다. 지금은 없음이다",
+      },
+    ]);
+  });
+});
+
+// semantic-role
+describe("checkSemanticRole", () => {
+  it("이름이 Role이거나 Role-로 시작하지 않는 토큰을 알리고, alpha 그룹은 통과시킨다", () => {
+    // given, when
+    const violations = checkSemanticRole({
+      file: "semantic/light.json",
+      tokens: [
+        toToken({ path: "bg-surface", value: "{color.white}" }),
+        toToken({ path: "fg-on-accent", value: "{color.white}" }),
+        toToken({ path: "border-default", value: "{color.white}" }),
+        toToken({ path: "ring-offset", value: "{bg-surface}" }),
+        toToken({ path: "alpha.90", value: "{bg-surface}" }),
+        toToken({ path: "brand-primary", value: "{color.white}" }),
+        toToken({ path: "background", value: "{color.white}" }),
+        toToken({ path: "ring", value: "{color.white}" }),
+        toToken({ path: "alpha-90", value: "{bg-surface}" }),
+      ],
+    });
+
+    // then
+    const detail =
+      "Semantic 이름의 첫 조각은 Role(bg, fg, border, ring-offset)이어야 한다. alpha 그룹만 예외다";
+    expect(violations).toEqual([
+      {
+        file: "semantic/light.json",
+        path: "brand-primary",
+        rule: "semantic-role",
+        detail,
+      },
+      {
+        file: "semantic/light.json",
+        path: "background",
+        rule: "semantic-role",
+        detail,
+      },
+      {
+        file: "semantic/light.json",
+        path: "ring",
+        rule: "semantic-role",
+        detail,
+      },
+      {
+        file: "semantic/light.json",
+        path: "alpha-90",
+        rule: "semantic-role",
+        detail,
       },
     ]);
   });

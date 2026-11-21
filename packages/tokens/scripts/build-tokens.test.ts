@@ -471,7 +471,7 @@ describe("buildTokens", () => {
       const tokensDir = await createTokensDir({
         light: {
           ...MINIMAL.light,
-          scrim: {
+          "bg-scrim": {
             $type: "color",
             $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 },
             $extensions: { gyeol: { alias: { alpha: 0.5 } } },
@@ -479,7 +479,7 @@ describe("buildTokens", () => {
         },
         dark: {
           ...MINIMAL.dark,
-          scrim: { $type: "color", $value: "{color.black}" },
+          "bg-scrim": { $type: "color", $value: "{color.black}" },
         },
       });
 
@@ -488,16 +488,20 @@ describe("buildTokens", () => {
 
       // then
       expect(violations).toEqual([
-        { file: "semantic/light.json", path: "scrim", rule: "semantic-alias" },
+        {
+          file: "semantic/light.json",
+          path: "bg-scrim",
+          rule: "semantic-alias",
+        },
       ]);
     });
 
     it("Semantic 타입이 색이 아니면 실패한다", async () => {
       // given
-      const gap = { $type: "dimension", $value: "{spacing.4}" };
+      const fgGap = { $type: "dimension", $value: "{spacing.4}" };
       const tokensDir = await createTokensDir({
-        light: { ...MINIMAL.light, gap },
-        dark: { ...MINIMAL.dark, gap },
+        light: { ...MINIMAL.light, "fg-gap": fgGap },
+        dark: { ...MINIMAL.dark, "fg-gap": fgGap },
       });
 
       // when
@@ -505,8 +509,8 @@ describe("buildTokens", () => {
 
       // then
       expect(violations).toEqual([
-        { file: "semantic/light.json", path: "gap", rule: "semantic-color" },
-        { file: "semantic/dark.json", path: "gap", rule: "semantic-color" },
+        { file: "semantic/light.json", path: "fg-gap", rule: "semantic-color" },
+        { file: "semantic/dark.json", path: "fg-gap", rule: "semantic-color" },
       ]);
     });
 
@@ -606,6 +610,66 @@ describe("buildTokens", () => {
       ]);
     });
 
+    it("Semantic 이름의 첫 조각이 Role 표에 없으면 실패한다", async () => {
+      // given: brand-primary는 Role이 없고, background-muted는 bg로 시작하지만 Role이 아니다
+      const extra = {
+        "brand-primary": { $type: "color", $value: "{color.black}" },
+        "background-muted": { $type: "color", $value: "{color.white}" },
+      };
+      const tokensDir = await createTokensDir({
+        light: { ...MINIMAL.light, ...extra },
+        dark: { ...MINIMAL.dark, ...extra },
+      });
+
+      // when
+      const violations = await collectViolations(tokensDir);
+
+      // then
+      expect(violations).toEqual([
+        {
+          file: "semantic/light.json",
+          path: "brand-primary",
+          rule: "semantic-role",
+        },
+        {
+          file: "semantic/light.json",
+          path: "background-muted",
+          rule: "semantic-role",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "brand-primary",
+          rule: "semantic-role",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "background-muted",
+          rule: "semantic-role",
+        },
+      ]);
+    });
+
+    it("Role 표의 모든 Role과 alpha 그룹은 통과한다", async () => {
+      // given
+      const semantic = {
+        "bg-surface": { $type: "color", $value: "{color.white}" },
+        "fg-on-accent": { $type: "color", $value: "{color.black}" },
+        "border-default": { $type: "color", $value: "{color.black}" },
+        "ring-offset": { $type: "color", $value: "{bg-surface}" },
+        alpha: { "90": { $type: "color", $value: "{bg-surface}" } },
+      };
+      const tokensDir = await createTokensDir({
+        light: semantic,
+        dark: semantic,
+      });
+
+      // when
+      const result = buildTokens(tokensDir);
+
+      // then
+      await expect(result).resolves.toHaveProperty("css");
+    });
+
     it("경로의 이름 칸이 kebab-case가 아니면 실패한다", async () => {
       // given
       const tokensDir = await createTokensDir({
@@ -618,11 +682,11 @@ describe("buildTokens", () => {
         },
         light: {
           ...MINIMAL.light,
-          fgDefault: { $type: "color", $value: "{color.black}" },
+          "fg-Default": { $type: "color", $value: "{color.black}" },
         },
         dark: {
           ...MINIMAL.dark,
-          fgDefault: { $type: "color", $value: "{color.white}" },
+          "fg-Default": { $type: "color", $value: "{color.white}" },
         },
       });
 
@@ -632,16 +696,15 @@ describe("buildTokens", () => {
       // then
       expect(violations).toEqual([
         { file: "primitive.json", path: "color.dark_gray", rule: "kebab-case" },
-        { file: "semantic/light.json", path: "fgDefault", rule: "kebab-case" },
-        { file: "semantic/dark.json", path: "fgDefault", rule: "kebab-case" },
+        { file: "semantic/light.json", path: "fg-Default", rule: "kebab-case" },
+        { file: "semantic/dark.json", path: "fg-Default", rule: "kebab-case" },
       ]);
     });
 
     it("Semantic끼리 CSS 변수 이름이 겹치면 실패한다", async () => {
-      // given: alpha.90과 alpha-90은 모두 --gyeol-alpha-90이 된다
+      // given: MINIMAL의 bg-surface와 bg.surface는 모두 --gyeol-bg-surface가 된다
       const tokens = {
-        alpha: { "90": { $type: "color", $value: "{color.white}" } },
-        "alpha-90": { $type: "color", $value: "{color.black}" },
+        bg: { surface: { $type: "color", $value: "{color.black}" } },
       };
       const tokensDir = await createTokensDir({
         light: { ...MINIMAL.light, ...tokens },
@@ -655,19 +718,20 @@ describe("buildTokens", () => {
       expect(violations).toEqual([
         {
           file: "semantic/light.json",
-          path: "alpha-90",
+          path: "bg.surface",
           rule: "css-name-unique",
         },
         {
           file: "semantic/dark.json",
-          path: "alpha-90",
+          path: "bg.surface",
           rule: "css-name-unique",
         },
       ]);
     });
 
     it("Semantic과 Primitive의 CSS 변수 이름이 겹치면 실패한다", async () => {
-      // given: color-white는 Primitive color.white와 같은 --gyeol-color-white가 된다
+      // given: color-white는 Primitive color.white와 같은 --gyeol-color-white가 된다.
+      // Primitive 범주는 Role이 아니므로 Primitive와 겹치는 Semantic 이름은 semantic-role도 어긴다
       const tokens = {
         "color-white": { $type: "color", $value: "{color.white}" },
       };
@@ -684,7 +748,17 @@ describe("buildTokens", () => {
         {
           file: "semantic/light.json",
           path: "color-white",
+          rule: "semantic-role",
+        },
+        {
+          file: "semantic/light.json",
+          path: "color-white",
           rule: "css-name-unique",
+        },
+        {
+          file: "semantic/dark.json",
+          path: "color-white",
+          rule: "semantic-role",
         },
         {
           file: "semantic/dark.json",
@@ -722,7 +796,7 @@ describe("buildTokens", () => {
 
     it("색이 srgb 색 객체가 아니면 실패한다", async () => {
       // given: Primitive의 display-p3와 hex 문자열, Semantic의 alias + 투명도에 적은 계산된 색
-      const scrim = {
+      const bgScrim = {
         $type: "color",
         $value: { ...toSrgbColor(0, 0, 0), alpha: 0.5 },
         $extensions: {
@@ -742,9 +816,12 @@ describe("buildTokens", () => {
         },
         light: {
           ...MINIMAL.light,
-          scrim: { ...scrim, $value: { ...scrim.$value, colorSpace: "hsl" } },
+          "bg-scrim": {
+            ...bgScrim,
+            $value: { ...bgScrim.$value, colorSpace: "hsl" },
+          },
         },
-        dark: { ...MINIMAL.dark, scrim },
+        dark: { ...MINIMAL.dark, "bg-scrim": bgScrim },
       });
 
       // when
@@ -754,7 +831,7 @@ describe("buildTokens", () => {
       expect(violations).toEqual([
         { file: "primitive.json", path: "color.red", rule: "color-srgb" },
         { file: "primitive.json", path: "color.green", rule: "color-srgb" },
-        { file: "semantic/light.json", path: "scrim", rule: "color-srgb" },
+        { file: "semantic/light.json", path: "bg-scrim", rule: "color-srgb" },
       ]);
     });
 
@@ -788,7 +865,7 @@ describe("buildTokens", () => {
           ...MINIMAL.light,
           "fg-default": { $type: "color", $value: "{color.gray.500}" },
           "fg-muted": { $type: "color", $value: "{color}" },
-          scrim: {
+          "bg-scrim": {
             $type: "color",
             $value: { ...toSrgbColor(1, 1, 1), alpha: 0.5 },
             $extensions: {
@@ -800,7 +877,7 @@ describe("buildTokens", () => {
           ...MINIMAL.dark,
           "fg-default": { $type: "color", $value: "{color.white}" },
           "fg-muted": { $type: "color", $value: "{color.white}" },
-          scrim: { $type: "color", $value: "{color.white}" },
+          "bg-scrim": { $type: "color", $value: "{color.white}" },
         },
       });
 
@@ -821,7 +898,7 @@ describe("buildTokens", () => {
         },
         {
           file: "semantic/light.json",
-          path: "scrim",
+          path: "bg-scrim",
           rule: "reference-exists",
         },
       ]);
@@ -866,17 +943,19 @@ describe("buildTokens", () => {
           ...MINIMAL.light,
           "fg-default": { $type: "color", $value: "{fg-muted}" },
           "fg-muted": { $type: "color", $value: "{fg-default}" },
-          scrim: {
+          "bg-scrim": {
             $type: "color",
             $value: { ...toSrgbColor(1, 1, 1), alpha: 0.5 },
-            $extensions: { gyeol: { alias: { ref: "{scrim}", alpha: 0.5 } } },
+            $extensions: {
+              gyeol: { alias: { ref: "{bg-scrim}", alpha: 0.5 } },
+            },
           },
         },
         dark: {
           ...MINIMAL.dark,
           "fg-default": { $type: "color", $value: "{color.white}" },
           "fg-muted": { $type: "color", $value: "{fg-default}" },
-          scrim: { $type: "color", $value: "{bg-surface}" },
+          "bg-scrim": { $type: "color", $value: "{bg-surface}" },
         },
       });
 
@@ -892,7 +971,7 @@ describe("buildTokens", () => {
         },
         {
           file: "semantic/light.json",
-          path: "scrim",
+          path: "bg-scrim",
           rule: "reference-no-cycle",
         },
       ]);
