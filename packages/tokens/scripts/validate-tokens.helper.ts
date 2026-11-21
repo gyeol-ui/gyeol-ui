@@ -8,6 +8,7 @@ export type RuleName =
   | "semantic-alias"
   | "semantic-color"
   | "semantic-names-match"
+  | "semantic-role"
   | "path-structure"
   | "kebab-case"
   | "css-name-unique"
@@ -190,6 +191,31 @@ export function checkSemanticColor({ file, tokens }: TokenFile): Violation[] {
           detail: `Semantic의 $type은 color여야 한다. 지금은 ${JSON.stringify(token.type) ?? "없음"}이다`,
         }),
   );
+}
+
+/** Semantic 이름의 첫 조각에 올 수 있는 Role. 색이 칠해지는 자리다. docs/architecture.md의 Role 표와 같다 */
+const ROLES = ["bg", "fg", "border", "ring-offset"] as const;
+
+/** Role 표의 예외로 허용하는 Semantic 그룹 */
+const ROLE_EXEMPT_GROUP = "alpha";
+
+/**
+ * Semantic 이름의 첫 조각은 Role이다. 이름(경로를 `-`로 이은 것)이 Role과 같거나 `Role-`로 시작해야 한다.
+ * `alpha` 그룹의 토큰(`alpha.90`)은 예외로 통과한다. `ring-offset`처럼 Role만으로 된 이름도 된다.
+ */
+export function checkSemanticRole({ file, tokens }: TokenFile): Violation[] {
+  return tokens.flatMap((token) => {
+    if (token.path.length > 1 && token.path[0] === ROLE_EXEMPT_GROUP) return [];
+    const name = token.path.join("-");
+    return ROLES.some((role) => name === role || name.startsWith(`${role}-`))
+      ? []
+      : toViolation({
+          file,
+          token,
+          rule: "semantic-role",
+          detail: `Semantic 이름의 첫 조각은 Role(${ROLES.join(", ")})이어야 한다. ${ROLE_EXEMPT_GROUP} 그룹만 예외다`,
+        });
+  });
 }
 
 /**

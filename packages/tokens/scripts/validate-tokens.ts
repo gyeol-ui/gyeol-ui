@@ -16,6 +16,7 @@ import {
   checkSemanticAlias,
   checkSemanticColor,
   checkSemanticNamesMatch,
+  checkSemanticRole,
   checkValueFormat,
   collectTokens,
   indexCssNames,
@@ -97,6 +98,7 @@ export async function validateTokens(tokensDir: string): Promise<void> {
     ...COLOR_SCHEMES.flatMap((colorScheme) => [
       ...checkSemanticAlias(semantic[colorScheme]),
       ...checkSemanticColor(semantic[colorScheme]),
+      ...checkSemanticRole(semantic[colorScheme]),
       ...checkPathStructure({
         tokenFile: semantic[colorScheme],
         minDepth: 1,
