@@ -497,7 +497,7 @@ describe("buildTokens", () => {
     });
 
     it("Semantic 타입이 색이 아니면 실패한다", async () => {
-      // given
+      // given: 이름에 fg를 붙인 것은 semantic-role 위반이 섞이지 않게 하려는 것이다
       const fgGap = { $type: "dimension", $value: "{spacing.4}" };
       const tokensDir = await createTokensDir({
         light: { ...MINIMAL.light, "fg-gap": fgGap },

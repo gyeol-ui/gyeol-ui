@@ -194,7 +194,7 @@ export function checkSemanticColor({ file, tokens }: TokenFile): Violation[] {
 }
 
 /** Semantic 이름의 첫 조각에 올 수 있는 Role. 색이 칠해지는 자리다. docs/architecture.md의 Role 표와 같다 */
-export const ROLES = ["bg", "fg", "border", "ring-offset"] as const;
+const ROLES = ["bg", "fg", "border", "ring-offset"] as const;
 
 /** Role 표의 예외로 허용하는 Semantic 그룹 */
 const ROLE_EXEMPT_GROUP = "alpha";
