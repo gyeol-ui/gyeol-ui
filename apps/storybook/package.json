@@ -1,0 +1,26 @@
+{
+  "name": "@gyeol-ui/storybook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev -p 6006",
+    "build": "storybook build",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gyeol-ui/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "10.6.9",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "storybook": "10.6.9",
+    "typescript": "7.0.2",
+    "vite": "8.4.0",
+    "vitest": "5.1.0"
+  }
+}
