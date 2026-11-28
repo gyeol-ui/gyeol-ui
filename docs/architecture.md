@@ -155,9 +155,24 @@ tools/
 - Figma PAT는 최대 90일 후 만료된다.
 - Figma 플러그인은 manifest의 `networkAccess.allowedDomains`에 적은 도메인으로만 `fetch`할 수 있다. `api.github.com`은 CORS를 허용하므로 사용자 토큰으로 PR을 열 수 있다.
 
+## Storybook
+
+- `apps/storybook`(private `@gyeol-ui/storybook`)에서 `@storybook/react-vite`로 구성한다. 스토리는 CSF 3으로 쓴다.
+- autodocs의 docgen은 기본값 `react-docgen`을 둔다. `react-docgen-typescript`는 TypeScript 7.0에서 쓸 수 없다.
+- 토큰 스토리는 컴포넌트가 아니므로 `apps/storybook/src/tokens/`에 둔다. 공개 토큰 목록에서 생성하고, 공개 API가 아닌 Primitive 색은 보여주지 않는다.
+- 툴바에서 Color Scheme을 `system` / `light` / `dark`로 바꾼다. `system`은 `<html>`의 `data-color-scheme`을 지우고, 나머지는 그 값을 설정한다.
+- `main`에 push될 때마다 GitHub Pages로 배포한다.
+
+확인한 사실(2026-11):
+
+- Storybook 안정판은 10.6.9이고, 11.0.0-rc.1이 2026-11-26에 나왔다. CSF Next(CSF factories)는 아직 preview 단계다.
+- TypeScript 7.0에는 클래식 JS API(`ts.createProgram`)가 없다. `react-docgen-typescript`를 쓰는 Vite 플러그인은 peer에서 7.0.x를 제외하고 7.1부터 다시 받는다. 기본 `react-docgen`은 Babel 파서라 TypeScript 컴파일러가 필요 없다.
+- `@storybook/addon-themes`(10.6)의 `withThemeByDataAttribute` API 문서에는 테마 이름과 속성 값의 대응만 있고, 속성을 지우는 선택지는 없다(직접 실행해 보지는 않았다).
+- `@storybook/addon-vitest`(10.6)는 Vitest 4와 5를 지원하고, 브라우저 모드(Playwright chromium)로 스토리를 테스트한다.
+
 ## 품질
 
-- Storybook과 Vitest addon으로 상호작용을 테스트한다.
+- Storybook과 Vitest addon으로 상호작용을 테스트한다. Vitest addon과 CI의 axe 검사는 Phase 1 첫 컴포넌트 스펙에서 추가한다.
 - 시각 회귀 테스트는 외부 SaaS 없이 Playwright 스크린샷을 GitHub Actions에서 직접 돌린다.
 - 접근성은 세 겹으로 검증한다:
   - 개발 중에는 Storybook a11y addon으로 확인한다.
