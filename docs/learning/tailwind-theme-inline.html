@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tailwind @theme inline이 하는 일</title>
+    <link rel="stylesheet" href="learn.css" />
+    <script src="vendor/highlightjs/highlight.min.js" defer></script>
+    <script src="learn.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <nav aria-label="목차">
+        <strong>목차</strong>
+        <ol>
+          <li><a href="#overview">한눈에 보기</a></li>
+          <li><a href="#theme-variable">theme variable</a></li>
+          <li><a href="#build">Tailwind가 @theme으로 하는 일</a></li>
+          <li><a href="#inline">inline이 바꾸는 한 가지</a></li>
+          <li><a href="#browser">브라우저에서 생기는 차이</a></li>
+          <li><a href="#cases">경우마다 측정한 결과</a></li>
+          <li><a href="#why">이 저장소가 inline을 쓰는 이유</a></li>
+          <li><a href="#check">점검 문제</a></li>
+          <li><a href="#code">쓰인 곳</a></li>
+          <li><a href="#sources">출처</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <h1>Tailwind @theme inline이 하는 일</h1>
+        <p class="lead">
+          <code>@gyeol-ui/tailwind</code>의 <code>theme.css</code>는
+          <code>@theme</code>이 아니라 <code>@theme inline</code>으로 시작한다.
+          <code>inline</code>은 Tailwind가 빌드할 때 클래스 규칙에 테마 변수의
+          <strong>이름</strong>을 적을지 <strong>값</strong>을 적을지를 바꾼다.
+          이 차이가 브라우저에서 CSS 변수가 상속되는 방식과 만나면 결과 색이
+          달라진다. 빌드 단계, 생성된 CSS, 요소마다의 변수 값을 실제로
+          컴파일하고 측정한 결과로 따라간다.
+        </p>
+
+        <section id="overview">
+          <h2>한눈에 보기</h2>
+          <p>
+            같은 테마 줄 하나가 <code>inline</code> 유무에 따라 이렇게 다른
+            CSS가 된다(<code>bg-bg-surface</code>를 쓴 경우).
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th><code>@theme inline</code> (지금)</th>
+                  <th><code>@theme</code></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>클래스 규칙</td>
+                  <td>
+                    <code>background-color: var(--gyeol-bg-surface)</code>
+                  </td>
+                  <td>
+                    <code
+                      >background-color:
+                      var(--background-color-bg-surface)</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>:root</code>에 생기는 변수</td>
+                  <td><span class="badge muted">없음</span></td>
+                  <td>
+                    <code
+                      >--background-color-bg-surface:
+                      var(--gyeol-bg-surface)</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>:root</code> 아래에서
+                    <code>--gyeol-bg-surface</code>를 바꾸면
+                  </td>
+                  <td>클래스가 바뀐 값을 따른다</td>
+                  <td>클래스는 <code>:root</code>의 값에 머문다</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            세 줄의 이유를 차례로 본다. 테마 변수가 무엇인지, Tailwind가 빌드할
+            때 그것으로 무엇을 하는지, <code>inline</code>이 그중 어디를
+            바꾸는지, 그 결과가 브라우저에서 왜 다르게 보이는지다.
+          </p>
+        </section>
+
+        <section id="theme-variable">
+          <h2>theme variable</h2>
+          <p>
+            Tailwind v4의 theme variable은 <code>@theme</code> 블록 안에 적는
+            <code>--이름: 값</code> 한 줄이다. CSS 변수처럼 생겼지만, 어떤
+            유틸리티 클래스가 생길지를 정하는 <strong>설정</strong>이다.
+            <code>:root</code>에 적은 일반 CSS 변수로는 클래스가 생기지 않는다.
+          </p>
+          <pre><code class="language-css">:root {
+  --brand: #3b82f6;         /* 일반 CSS 변수: bg-brand는 생기지 않는다 */
+}
+
+@theme {
+  --color-brand: #3b82f6;   /* theme variable: bg-brand, text-brand … 가 생긴다 */
+}</code></pre>
+          <p>
+            이름의 앞부분(namespace)이 어떤 유틸리티가 이 변수를 쓸지 정하고,
+            나머지가 클래스 이름이 된다.
+          </p>
+          <div class="anatomy">
+            <span class="part blue" data-label="namespace"
+              >--background-color</span
+            ><span class="part dim" data-label="">-</span
+            ><span class="part green" data-label="클래스 이름">bg-surface</span
+            ><span class="part dim" data-label="">: </span
+            ><span class="part" data-label="클래스가 칠할 내용"
+              >var(--gyeol-bg-surface)</span
+            >
+            <span class="anatomy-caption"
+              ><code>bg-</code> 유틸리티가 찾는 namespace라서
+              <code>bg-bg-surface</code>가 생긴다</span
+            >
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>theme variable</th>
+                  <th>생기는 클래스</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>--color-brand</code></td>
+                  <td>
+                    <code>bg-brand</code>, <code>text-brand</code>,
+                    <code>border-brand</code> …<small>색 유틸리티 전부</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>--background-color-bg-surface</code></td>
+                  <td>
+                    <code>bg-bg-surface</code><small>배경색 유틸리티만</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>--spacing-4</code></td>
+                  <td>
+                    <code>p-4</code>, <code>m-4</code>, <code>gap-4</code> …
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>--radius-md</code></td>
+                  <td><code>rounded-md</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            이 저장소의 테마 변수는 값이 모두 토큰 CSS
+            변수(<code>var(--gyeol-…)</code>)를 가리킨다. 실제 색과 길이는
+            <code>@gyeol-ui/tokens</code>의 <code>tokens.css</code>에 있다.
+          </p>
+        </section>
+
+        <section id="build">
+          <h2>Tailwind가 @theme으로 하는 일</h2>
+          <p>
+            <code>@theme</code> 블록은 브라우저가 읽는 CSS가 아니다. Tailwind가
+            빌드할 때 읽고 출력에서 지운다. 빌드는 이렇게 진행된다.
+          </p>
+          <ol class="steps blue">
+            <li>
+              <strong>import 펼치기</strong>
+              <code>@import "tailwindcss"</code>와
+              <code>@import "@gyeol-ui/tailwind"</code>(→ theme.css →
+              tokens.css)를 하나의 CSS로 합친다.
+            </li>
+            <li>
+              <strong>테마 표 만들기</strong>
+              모든 <code>@theme</code> 블록을 모아 메모리에 키와 값의 표를
+              만든다. Tailwind 기본 테마가 먼저 들어가고, 뒤의 블록이 덮어쓰거나
+              <code>initial</code>로 지운다. <code>@theme inline</code> 블록에서
+              온 항목에는 <strong>inline 표시</strong>가 붙는다.
+            </li>
+            <li>
+              <strong>쓰인 클래스 찾기</strong>
+              소스에서 <code>bg-bg-surface</code>, <code>p-4</code> 같은 후보를
+              모은다. 쓰지 않은 클래스는 만들지 않는다.
+            </li>
+            <li>
+              <strong>클래스 규칙 쓰기</strong>
+              클래스마다 테마 표에서 항목을 찾아 규칙을 쓴다. 이때 항목의 inline
+              표시를 본다. 다음 절에서 자세히 본다.
+            </li>
+            <li>
+              <strong>쓰인 테마 변수 출력</strong>
+              4에서 규칙이 이름으로 가리킨 항목만 <code>@layer theme</code>의
+              <code>:root</code>에 CSS 변수로 출력한다. 기본으로는 쓰인 변수만
+              나온다.
+            </li>
+            <li>
+              <strong>이어 붙이기</strong>
+              preflight, 만든 유틸리티, tokens.css 내용을 이어 붙인다.
+              <code>@theme</code> 블록 자체는 출력에 없다.
+            </li>
+          </ol>
+          <p>2에서 만들어지는 테마 표는 이런 모양이다(일부).</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>키</th>
+                  <th>값</th>
+                  <th>inline 표시</th>
+                  <th>어디서 왔나</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>--background-color-bg-surface</code></td>
+                  <td><code>var(--gyeol-bg-surface)</code></td>
+                  <td><span class="badge blue">있음</span></td>
+                  <td>theme.css</td>
+                </tr>
+                <tr>
+                  <td><code>--spacing-4</code></td>
+                  <td><code>var(--gyeol-spacing-4)</code></td>
+                  <td><span class="badge blue">있음</span></td>
+                  <td>theme.css</td>
+                </tr>
+                <tr>
+                  <td><code>--font-sans</code></td>
+                  <td><code>-apple-system, BlinkMacSystemFont, …</code></td>
+                  <td><span class="badge muted">없음</span></td>
+                  <td>Tailwind 기본 테마</td>
+                </tr>
+                <tr>
+                  <td><code>--color-red-500</code></td>
+                  <td colspan="2">
+                    <span class="badge muted">지워짐</span
+                    ><small>theme.css의 <code>--color-*: initial</code></small>
+                  </td>
+                  <td>Tailwind 기본 테마</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="inline">
+          <h2>inline이 바꾸는 한 가지</h2>
+          <p>
+            <code>inline</code>은 빌드의 4단계만 바꾼다. 클래스 규칙에 테마
+            항목의 <strong>키 이름</strong>을 적느냐, <strong>값</strong>을
+            복사해 붙이느냐다. 5단계의 <code>:root</code> 출력은 그 선택을
+            따라온다. 테마 줄 하나를 두 방식으로 끝까지 따라가면 다음과 같다.
+          </p>
+          <ol class="trace">
+            <li class="trace-phase">빌드 (Tailwind)</li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where">theme.css<small>테마 줄</small></span>
+                <pre class="trace-val">
+--background-color-bg-surface: var(--gyeol-bg-surface);</pre>
+              </div>
+            </li>
+            <li class="trace-step">
+              <strong>2. 테마 표</strong>블록 앞의 <code>inline</code> 유무가
+              항목의 표시로 남는다.
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where">@theme inline</span>
+                <pre class="trace-val">키   --background-color-bg-surface
+값   var(--gyeol-bg-surface)
+표시 <b>inline</b></pre>
+              </div>
+              <div class="trace-at">
+                <span class="trace-where">@theme</span>
+                <pre class="trace-val">키   --background-color-bg-surface
+값   var(--gyeol-bg-surface)
+표시 <b>없음</b></pre>
+              </div>
+            </li>
+            <li class="trace-step">
+              <strong>4. 규칙 쓰기</strong><code>bg-bg-surface</code>가 이
+              항목을 찾았다. inline이면 값을, 아니면 키 이름을 적는다.
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where"
+                  >@theme inline<small>값을 붙였다</small></span
+                >
+                <pre class="trace-val">
+.bg-bg-surface {
+  background-color: var(<b>--gyeol-bg-surface</b>);
+}</pre>
+              </div>
+              <div class="trace-at">
+                <span class="trace-where"
+                  >@theme<small>키 이름을 적었다</small></span
+                >
+                <pre class="trace-val">
+.bg-bg-surface {
+  background-color: var(<b>--background-color-bg-surface</b>);
+}</pre>
+              </div>
+            </li>
+            <li class="trace-step">
+              <strong>5. 변수 출력</strong>규칙이 키 이름을 가리키면 그 이름의
+              변수가 화면에 있어야 하므로 <code>:root</code>에 출력한다.
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where"
+                  >@theme inline<small>@layer theme</small></span
+                >
+                <pre class="trace-val">
+:root, :host {
+  /* 토큰 관련 변수 없음 */
+}</pre>
+              </div>
+              <div class="trace-at">
+                <span class="trace-where"
+                  >@theme<small>@layer theme</small></span
+                >
+                <pre class="trace-val">:root, :host {
+  <b>--background-color-bg-surface: var(--gyeol-bg-surface);</b>
+}</pre>
+              </div>
+            </li>
+          </ol>
+          <p>
+            실제 <code>dist/theme.css</code>로 <code>bg-bg-surface</code>와
+            <code>p-4</code>를 컴파일한 결과에서 해당 부분만 옮겼다.
+          </p>
+          <div class="compare">
+            <div class="compare-card blue">
+              <div class="compare-title">
+                지금 테마<small>@theme inline</small>
+              </div>
+              <dl class="compare-facts">
+                <dt><code>.bg-bg-surface</code></dt>
+                <dd><code>background-color: var(--gyeol-bg-surface)</code></dd>
+                <dt><code>.p-4</code></dt>
+                <dd><code>padding: var(--gyeol-spacing-4)</code></dd>
+                <dt><code>@layer theme</code>의 <code>:root</code></dt>
+                <dd>
+                  <code>--font-sans</code> 등 preflight가 쓰는 기본 변수만.
+                  <strong>토큰 관련 변수 없음</strong>
+                </dd>
+              </dl>
+              <p class="compare-result">
+                클래스가 토큰 변수를 <strong>직접</strong> 읽는다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">
+                inline을 빼면<small>@theme</small>
+              </div>
+              <dl class="compare-facts">
+                <dt><code>.bg-bg-surface</code></dt>
+                <dd>
+                  <code
+                    >background-color: var(--background-color-bg-surface)</code
+                  >
+                </dd>
+                <dt><code>.p-4</code></dt>
+                <dd><code>padding: var(--spacing-4)</code></dd>
+                <dt><code>@layer theme</code>의 <code>:root</code></dt>
+                <dd>
+                  기본 변수에 더해
+                  <strong
+                    ><code>--background-color-bg-surface</code>,
+                    <code>--spacing-4</code></strong
+                  >. 쓰지 않은 <code>--background-color-bg-subtle</code> 등은
+                  나오지 않는다
+                </dd>
+              </dl>
+              <p class="compare-result">
+                클래스가 Tailwind 변수를 <strong>거쳐</strong> 토큰 변수를
+                읽는다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="browser">
+          <h2>브라우저에서 생기는 차이</h2>
+          <p>
+            한 단계 더 거칠 뿐이라 결과가 같아 보인다. 차이는 브라우저가 CSS
+            변수를 계산하는 방식에서 나온다.
+          </p>
+          <div class="callout">
+            <p>
+              CSS 변수(<code>--*</code>)는 상속된다. 그리고 변수의 계산된 값은
+              <strong>그 변수를 선언한 요소에서</strong> 안의
+              <code>var()</code>를 바꿔 넣은 값이다. 그래서 자식 요소는
+              <code>var()</code> 식이 아니라
+              <strong>이미 바꿔 넣은 값</strong>을 물려받는다.
+            </p>
+          </div>
+          <p>
+            <code>@theme</code>에서는
+            <code>--background-color-bg-surface</code>가 <code>:root</code>에
+            선언된다. 그래서 그 안의 <code>var(--gyeol-bg-surface)</code>는
+            <code>:root</code>의 값으로 한 번 바뀌고, 모든 요소가 그 결과를
+            물려받는다. 아래는 프로모션 영역에서만
+            <code>--gyeol-bg-surface</code>를 노란색으로 바꾼 HTML이다.
+          </p>
+          <pre><code class="language-html">&lt;section style="--gyeol-bg-surface: #fde68a"&gt;
+  &lt;div class="bg-bg-surface p-4"&gt;프로모션 카드&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+          <p>두 테마로 만든 CSS에서 요소마다 변수 값을 Chrome으로 읽었다.</p>
+          <div class="inherit-pair">
+            <figure class="inherit">
+              <figcaption>
+                @theme inline<small
+                  >클래스가 <code>--gyeol-bg-surface</code>를 읽는다</small
+                >
+              </figcaption>
+              <div class="inh-el">
+                <span class="inh-tag">:root</span>
+                <ul class="inh-vars">
+                  <li class="set">
+                    <span class="inh-name">--gyeol-bg-surface</span
+                    ><span class="inh-val" style="--c: #ffffff">#ffffff</span
+                    ><small
+                      >var(--gyeol-color-white)를 여기서 바꿔 넣었다</small
+                    >
+                  </li>
+                </ul>
+                <div class="inh-el">
+                  <span class="inh-tag">section</span>
+                  <ul class="inh-vars">
+                    <li class="set">
+                      <span class="inh-name">--gyeol-bg-surface</span
+                      ><span class="inh-val" style="--c: #fde68a">#fde68a</span>
+                    </li>
+                  </ul>
+                  <div class="inh-el">
+                    <span class="inh-tag">div.bg-bg-surface</span>
+                    <ul class="inh-vars">
+                      <li>
+                        <span class="inh-name">--gyeol-bg-surface</span
+                        ><span class="inh-val" style="--c: #fde68a"
+                          >#fde68a</span
+                        >
+                      </li>
+                    </ul>
+                    <p class="inh-paint" style="--c: #fde68a">
+                      <span
+                        ><code>var(--gyeol-bg-surface)</code> →
+                        <strong>#fde68a</strong></span
+                      >
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </figure>
+            <figure class="inherit green">
+              <figcaption>
+                @theme<small
+                  >클래스가 <code>--background-color-bg-surface</code>를
+                  읽는다</small
+                >
+              </figcaption>
+              <div class="inh-el">
+                <span class="inh-tag">:root</span>
+                <ul class="inh-vars">
+                  <li class="set">
+                    <span class="inh-name">--gyeol-bg-surface</span
+                    ><span class="inh-val" style="--c: #ffffff">#ffffff</span>
+                  </li>
+                  <li class="set">
+                    <span class="inh-name">--background-color-bg-surface</span
+                    ><span class="inh-val" style="--c: #ffffff">#ffffff</span
+                    ><small>var(--gyeol-bg-surface)를 여기서 바꿔 넣었다</small>
+                  </li>
+                </ul>
+                <div class="inh-el">
+                  <span class="inh-tag">section</span>
+                  <ul class="inh-vars">
+                    <li class="set">
+                      <span class="inh-name">--gyeol-bg-surface</span
+                      ><span class="inh-val" style="--c: #fde68a">#fde68a</span>
+                    </li>
+                    <li>
+                      <span class="inh-name">--background-color-bg-surface</span
+                      ><span class="inh-val" style="--c: #ffffff">#ffffff</span>
+                    </li>
+                  </ul>
+                  <div class="inh-el">
+                    <span class="inh-tag">div.bg-bg-surface</span>
+                    <ul class="inh-vars">
+                      <li>
+                        <span class="inh-name">--gyeol-bg-surface</span
+                        ><span class="inh-val" style="--c: #fde68a"
+                          >#fde68a</span
+                        >
+                      </li>
+                      <li>
+                        <span class="inh-name"
+                          >--background-color-bg-surface</span
+                        ><span class="inh-val" style="--c: #ffffff"
+                          >#ffffff</span
+                        >
+                      </li>
+                    </ul>
+                    <p class="inh-paint bad" style="--c: #ffffff">
+                      <span
+                        ><code>var(--background-color-bg-surface)</code> →
+                        <strong>#ffffff</strong></span
+                      >
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </figure>
+          </div>
+          <p class="inherit-note">
+            오른쪽 div의 <code>--gyeol-bg-surface</code>는 노란색인데도 배경은
+            흰색이다. 클래스가 읽는 <code>--background-color-bg-surface</code>는
+            <code>:root</code>에서 이미 <code>#ffffff</code>로 정해져 내려왔다.
+          </p>
+          <p>
+            Tailwind 문서도 같은 이유로, 다른 변수를 가리키는 테마 변수에는
+            <code>inline</code>을 쓰라고 안내한다. 문서의 예는 글꼴이다.
+            <code>--font-sans: var(--font-inter)</code>를 부모에, 실제
+            <code>--font-inter</code>를 자식에 두면
+            <code>var(--font-sans)</code>가 부모에서 풀려 Inter가 아닌 대체
+            글꼴이 나온다.
+          </p>
+        </section>
+
+        <section id="cases">
+          <h2>경우마다 측정한 결과</h2>
+          <p>
+            같은 페이지에 카드 셋을 두고 배경색을
+            <code>getComputedStyle</code>로 읽었다. light는
+            <code>&lt;html&gt;</code>에 속성이 없을 때, dark는
+            <code>&lt;html data-color-scheme="dark"&gt;</code>일 때다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th rowspan="2">카드</th>
+                  <th colspan="2"><code>@theme inline</code></th>
+                  <th colspan="2"><code>@theme</code></th>
+                </tr>
+                <tr>
+                  <th>light</th>
+                  <th>dark</th>
+                  <th>light</th>
+                  <th>dark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>페이지 카드<small>토큰을 바꾸지 않음</small></td>
+                  <td><code>#ffffff</code></td>
+                  <td><code>#09090b</code></td>
+                  <td><code>#ffffff</code></td>
+                  <td><code>#09090b</code></td>
+                </tr>
+                <tr>
+                  <td>
+                    프로모션 카드<small
+                      >부모 section에서 <code>#fde68a</code>로</small
+                    >
+                  </td>
+                  <td><code>#fde68a</code></td>
+                  <td><code>#fde68a</code></td>
+                  <td>
+                    <code>#ffffff</code
+                    ><small><span class="badge warn">무시됨</span></small>
+                  </td>
+                  <td>
+                    <code>#09090b</code
+                    ><small><span class="badge warn">무시됨</span></small>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    자기 자신에서 바꾼 카드<small
+                      >카드의 style에서 <code>#bbf7d0</code>으로</small
+                    >
+                  </td>
+                  <td><code>#bbf7d0</code></td>
+                  <td><code>#bbf7d0</code></td>
+                  <td>
+                    <code>#ffffff</code
+                    ><small><span class="badge warn">무시됨</span></small>
+                  </td>
+                  <td>
+                    <code>#09090b</code
+                    ><small><span class="badge warn">무시됨</span></small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            light/dark 전환은 두 테마 모두 된다. dark 블록이 Tailwind 변수와
+            같은 요소(<code>:root</code>)에서 <code>--gyeol-bg-surface</code>를
+            바꾸므로, <code>--background-color-bg-surface</code>가 계산될 때
+            이미 dark 값이다. 차이는 <code>:root</code>보다 아래에서 토큰을 바꿀
+            때만 생긴다. 카드 자신의 style에서 바꿔도 무시되는 것은, 카드가 읽는
+            변수가 <code>--gyeol-bg-surface</code>가 아니라 물려받은
+            <code>--background-color-bg-surface</code>이기 때문이다.
+          </p>
+        </section>
+
+        <section id="why">
+          <h2>이 저장소가 inline을 쓰는 이유</h2>
+          <p>
+            gyeol-ui는 Theme(브랜드별 토큰 세트)을 지원하지 않고, Color Scheme도
+            <code>&lt;html&gt;</code>에서만 바꾼다. 그래서 공식으로 지원하는
+            기능만 쓰면 위 표의 "무시됨" 경우는 생기지 않는다. 그런데도
+            <code>inline</code>을 쓰는 이유는 셋이다.
+          </p>
+          <ol class="steps green">
+            <li>
+              <strong
+                >공개 CSS 변수를 <code>--gyeol-*</code> 한 벌로 둔다</strong
+              >
+              <code>docs/architecture.md</code>의 Tailwind 테마 규칙이다.
+              <code>inline</code>이 없으면
+              <code>--background-color-bg-surface</code>,
+              <code>--spacing-4</code> 같은 변수가 사용자 화면의
+              <code>:root</code>에 생긴다. 같은 값을 가리키는 이름이 두 벌이
+              되고, 사용자가 어느 쪽을 써야 하는지, 바꾸려면 어느 쪽을 바꿔야
+              하는지 헷갈린다.
+            </li>
+            <li>
+              <strong
+                >클래스가 <code>var(--gyeol-…)</code>를 직접 쓴 것과 똑같이
+                동작한다</strong
+              >
+              <code>bg-bg-surface</code>는 손으로 쓴
+              <code>background-color: var(--gyeol-bg-surface)</code>와 글자까지
+              같은 규칙이 된다. 사용자가 자기 CSS에서 토큰 변수를 다시 정의하면
+              Tailwind 클래스와 직접 쓴 CSS가 함께 따라간다. inline이 없으면 둘
+              중 클래스만 조용히 따라가지 않는다. 오류 없이 색만 틀어지는 종류라
+              미리 막는다.
+            </li>
+            <li>
+              <strong>Tailwind가 권하는 쓰임이다</strong>
+              이 테마의 값은 모두 다른 변수(<code>var(--gyeol-…)</code>)를
+              가리킨다. Tailwind 문서는 이런 테마 변수에 <code>inline</code>을
+              쓰라고 안내한다.
+            </li>
+          </ol>
+          <p>
+            포기한 것은 사용자가 자기 CSS에서
+            <code>var(--background-color-bg-surface)</code>처럼 Tailwind 변수를
+            쓰는 방법이다. 같은 값은 <code>var(--gyeol-bg-surface)</code>로 쓸
+            수 있으므로 잃는 것이 거의 없고, 쓸 이름이 하나로 정해진다.
+          </p>
+        </section>
+
+        <section id="check">
+          <h2>점검 문제</h2>
+          <div class="quiz">
+            <p class="quiz-q">
+              1. 테마를 <code>@theme</code>(inline 없음)으로 두고 아래 HTML을
+              그리면 div의 <code>padding</code>은 몇 px인가?
+              <code>--gyeol-spacing-4</code>의 원래 값은 16px이다.
+            </p>
+            <p class="quiz-context">
+              "inline이 바꾸는 한 가지"의 <code>.p-4</code> 규칙과 "브라우저에서
+              생기는 차이"의 상속 규칙을 쓴다.
+            </p>
+            <pre><code class="language-html">&lt;section style="--gyeol-spacing-4: 20px"&gt;
+  &lt;div class="p-4"&gt;…&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  16px이다. <code>.p-4</code>는
+                  <code>padding: var(--spacing-4)</code>이고,
+                  <code>--spacing-4: var(--gyeol-spacing-4)</code>는
+                  <code>:root</code>에서 16px로 계산되어 내려온다. div의
+                  <code>--gyeol-spacing-4</code>는 20px이지만 규칙이 읽지
+                  않는다. Chrome에서 같은 HTML로 확인한 값도 16px이다. 지금의
+                  <code>@theme inline</code>이면 20px이다.
+                </p>
+              </div>
+            </details>
+          </div>
+          <div class="quiz">
+            <p class="quiz-q">
+              2. 테마 변수의 값이 토큰 변수가 아니라 실제 색이라면 어떻게 될까?
+              아래처럼 바꾸고, section에서 Tailwind 변수 쪽을 다시 정의했다.
+            </p>
+            <p class="quiz-context">
+              "inline이 바꾸는 한 가지"의 4단계를 값이 리터럴인 경우에 대입한다.
+            </p>
+            <pre><code class="language-diff">-  --background-color-bg-surface: var(--gyeol-bg-surface);
++  --background-color-bg-surface: #ffffff;</code></pre>
+            <pre><code class="language-html">&lt;section style="--background-color-bg-surface: #fde68a"&gt;
+  &lt;div class="bg-bg-surface"&gt;…&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  이번에는 inline이 아닌 쪽이 따라간다.
+                  <code>@theme</code>이면 규칙이
+                  <code>var(--background-color-bg-surface)</code>라서
+                  section에서 다시 정의한 <code>#fde68a</code>를 물려받는다.
+                  <code>@theme inline</code>이면 규칙에 값
+                  <code>#ffffff</code>가 그대로 박혀서 무엇을 다시 정의해도
+                  흰색이다. Chrome에서도 각각 <code>rgb(253, 230, 138)</code>과
+                  <code>rgb(255, 255, 255)</code>였다.
+                </p>
+                <p>
+                  inline은 "덮어쓰기에 강하다"가 아니라 "규칙이 무엇을 읽느냐"를
+                  바꾼다. 이 저장소에서는 사용자가 바꿀 곳을
+                  <code>--gyeol-*</code>로 정했으므로, 규칙이
+                  <code>--gyeol-*</code>를 직접 읽게 하는 inline이 맞다.
+                </p>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="code">
+          <h2>쓰인 곳</h2>
+          <ul>
+            <li>
+              <code>packages/tailwind/scripts/format-theme.ts</code>의
+              <code>formatTheme</code>: 테마 텍스트를
+              <code>"@theme inline {"</code>으로 시작한다
+            </li>
+            <li>
+              <code>packages/tailwind/dist/theme.css</code>: 빌드한 테마.
+              <code>@theme inline</code> 블록 안의 테마 변수가 모두
+              <code>var(--gyeol-…)</code>를 가리킨다
+            </li>
+            <li>
+              <code>packages/tailwind/scripts/format-theme.test.ts</code>:
+              컴파일한 클래스의 선언이 <code>var(--gyeol-…)</code>인지 확인한다.
+              테마가 inline이 아니면 <code>var(--background-color-…)</code>가
+              나와 실패한다
+            </li>
+            <li>
+              <code>docs/architecture.md</code> "Tailwind 테마":
+              <code>@theme inline</code>을 쓰고 공개 CSS 변수를
+              <code>--gyeol-*</code> 한 벌로 둔다는 규칙과, 직접 확인한 사실
+            </li>
+          </ul>
+        </section>
+
+        <section id="sources">
+          <h2>출처</h2>
+          <p>
+            컴파일 결과는 이 저장소의 <code>dist/theme.css</code>를
+            <code>@tailwindcss/node</code> 4.3.5로 컴파일해 얻었다. inline이
+            없는 경우는 첫 줄만 <code>@theme {</code>로 바꿨다. 요소마다의 변수
+            값과 배경색, 점검 문제의 답은 두 결과 CSS를 Chrome 155에 넣고
+            <code>getComputedStyle</code>로 읽었다.
+          </p>
+          <ul>
+            <li>
+              Tailwind CSS,
+              <a
+                href="https://tailwindcss.com/docs/theme#what-are-theme-variables"
+                >What are theme variables?</a
+              >: theme variable이 어떤 유틸리티 클래스가 있을지를 정하는
+              <code>@theme</code> 안의 특별한 CSS 변수라는 것,
+              <a
+                href="https://tailwindcss.com/docs/theme#theme-variable-namespaces"
+                >Theme variable namespaces</a
+              >: namespace와 유틸리티의 대응
+            </li>
+            <li>
+              Tailwind CSS,
+              <a
+                href="https://tailwindcss.com/docs/theme#referencing-other-variables"
+                >Referencing other variables</a
+              >: 다른 변수를 가리키는 테마 변수에 <code>inline</code>을 쓰라는
+              안내, 유틸리티가 테마 변수 대신 그 값을 쓴다는 것, 글꼴 예
+            </li>
+            <li>
+              Tailwind CSS,
+              <a
+                href="https://tailwindcss.com/docs/theme#generating-all-css-variables"
+                >Generating all CSS variables</a
+              >: 기본으로는 쓰인 CSS 변수만 출력된다는 것
+            </li>
+            <li>
+              W3C,
+              <a
+                href="https://www.w3.org/TR/css-variables-1/#defining-variables"
+                >CSS Custom Properties for Cascading Variables Level 1, Defining
+                Custom Properties</a
+              >: 사용자 정의 속성은 상속되고(Inherited: yes), 계산된 값은 변수를
+              바꿔 넣은 값이다(Computed value: specified value with variables
+              substituted)
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

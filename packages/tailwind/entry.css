@@ -1,0 +1,6 @@
+/*
+ * 배포하지 않는 진입 CSS다. 사용자가 쓰는 import 두 줄과 같다.
+ * 테스트는 이 파일을 Tailwind로 컴파일해 클래스를 확인한다. 이때 `@gyeol-ui/tailwind`는 테스트가 만든 테마로 바꿔 읽는다.
+ */
+@import "tailwindcss";
+@import "@gyeol-ui/tailwind";

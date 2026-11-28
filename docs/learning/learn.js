@@ -38,6 +38,11 @@ const learnFolders = [
         title: "dark 블록이 두 개인 이유",
         tags: ["design-token"],
       },
+      {
+        file: "tailwind-theme-inline.html",
+        title: "Tailwind @theme inline이 하는 일",
+        tags: ["tailwind", "design-token"],
+      },
     ],
   },
 ];

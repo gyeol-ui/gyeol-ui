@@ -38,6 +38,7 @@ pnpm learning
 | `lint` | lint와 형식 검사 도구의 설정과 동작 |
 | `figma` | Figma Variables, 플러그인, Figma와 코드의 동기화 |
 | `design-token` | Design Token의 형식, 계층, 빌드 |
+| `tailwind` | Tailwind CSS의 테마, 유틸리티, 컴파일 동작 |
 
 ## 모듈
 
@@ -61,6 +62,8 @@ pnpm learning
 | 시간 막대 | `timeline`, `tl-row`, `tl-label`, `tl-track`, `tl-bar`, `tl-event` | 만료와 연장처럼 시간축 위에서 일어나는 일. 아래 "시간 막대" 참고 |
 | 요청 장면 | `scenes`, `scene`, `scene-url`, `scene-req`, `scene-server`, `scene-chips` | 사용자가 보고 있는 페이지에서 어떤 요청이 어디로 가고, 브라우저가 어떻게 판정하는지. SameSite, CORS처럼 "어디서 보낸 요청인가"가 갈림길인 규칙. 아래 "요청 장면" 참고 |
 | 변환 줄 | `pipe`, `pipe-row`, `pipe-val`, `pipe-fn`, `pipe-label`, `pipe-note` | 값이 함수(해시, 암호화, 서명)를 지나 어떻게 바뀌는지. 아래 "변환 줄" 참고 |
+| 추적 | `trace`, `trace-phase`, `trace-stop`, `trace-at`, `trace-where`, `trace-val`, `trace-step`, `ok`, `bad`, `dim` | 값 하나가 여러 파일과 빌드 단계를 지나며 모양이 바뀌는 것을 세로로 따라가기. 여러 줄인 값, 갈라지는 길을 나란히 견줄 때 쓴다. 아래 "추적" 참고 |
+| 상속 상자 | `inherit-pair`, `inherit`, `inh-el`, `inh-tag`, `inh-vars`, `set`, `inh-name`, `inh-val`, `inh-paint`, `inherit-note` | DOM 요소를 겹친 상자로 그리고, 요소마다 CSS 변수가 선언됐는지 물려받았는지와 계산된 값을 적기. 아래 "상속 상자" 참고 |
 | 해부도 | `anatomy`, `part`, `anatomy-caption` | URL, 쿠키 값, 토큰처럼 한 값을 부분으로 나눠 이름 달기. 아래 "해부도" 참고 |
 | 비교 카드 | `compare`, `compare-card`, `compare-title`, `compare-facts`, `compare-result` | 같은 항목을 가진 선택지 두세 개(정책, 설정값)를 나란히 놓고 견주기. 아래 "비교 카드" 참고 |
 | 유출 표 | `table.breach`, `has`, `lacks`, `pass`, `fail`, `bad`, `safe`, `group-start` | 상황마다 공격자가 가진 것, 그것으로 통과할 수 있는 확인, 결과를 한 줄로 비교하기(서명과 해시가 각각 무엇을 막는지). 아래 "유출 표" 참고 |
@@ -127,6 +130,22 @@ pnpm learning
 - 줄 이름은 줄 맨 앞의 `span.pipe-label`, 줄 끝의 보충 설명은 `span.pipe-note`, 값 아래 설명은 값 안의 `small`이다.
 - 값 색은 비밀인 값 `secret`(주황), 통과 `ok`(초록), 거절 `bad`(빨강)이다.
 - 함수 색은 기본 파랑, `green`이 있고, 할 수 없는 변환(해시를 거꾸로 돌리기)은 `blocked`(빨간 취소선과 ✕)다.
+
+추적(`trace`)은 `ol.trace` 안에 위에서 아래로 `li`를 적는다. 레일, 점, 화살표는 CSS가 그린다.
+
+- 단계나 실행 주체가 바뀌는 곳에 `li.trace-phase`(이름, 보충 설명은 `small`)를 둔다. 색은 기본 파랑, `green`이 있다. 단계가 하나뿐이면 생략해도 된다.
+- 값이 놓인 자리는 `li.trace-stop`이다. 안에 자리마다 `div.trace-at`을 두고, `span.trace-where`(파일이나 장소, 역할은 `small`)와 `pre.trace-val`(그 자리의 실제 내용)을 넣는다. 앞 단계에서 바뀐 부분은 `b`로 칠한다. 여러 줄이면 줄바꿈과 들여쓰기를 그대로 적는다. `code`로 쓰면 Prettier가 줄을 합치므로 `pre`를 쓴다.
+- 길이 갈라지거나 두 경우를 견주면 한 `trace-stop`에 `trace-at`을 여러 개 둔다. 나란히 놓이고 좁으면 아래로 쌓인다. 최종 결과는 `ok`(초록), 의도와 다른 결과는 `bad`(빨강), 따라가지 않는 갈래는 `dim`(흐리게)을 붙인다.
+- 자리 사이의 `li.trace-step`에 무엇이 바꾸는지(`strong`)와 어떻게 바뀌는지를 적는다. 색은 그 단계의 `trace-phase`와 맞춘다.
+
+상속 상자(`inherit`)는 `figure.inherit` 하나가 DOM 한 벌이다. 견줄 경우가 둘 이상이면 `div.inherit-pair`로 감싸 나란히 둔다. 그리는 일은 CSS만 한다.
+
+- `figcaption`에 경우 이름을, 그 안 `small`에 한 줄 설명을 적는다. 상자 색은 기본 파랑, `green`이 있다.
+- 요소마다 `div.inh-el`을 두고 자식 요소는 그 안에 다시 `div.inh-el`로 넣는다. 맨 위에 `span.inh-tag`(요소 이름, 예: `:root`, `div.bg-bg-surface`)를 둔다.
+- `ul.inh-vars`에 그 요소에서 보이는 CSS 변수를 `li`로 적는다. 안에는 `span.inh-name`(변수 이름), `span.inh-val`(계산된 값)을 두고, 색이면 `style="--c: #fde68a"`로 견본을 그린다. 그 요소에서 선언한 변수는 `li.set`(＝ 선언, 파랑), 물려받은 변수는 클래스 없이(↓ 상속, 회색) 둔다. 선언한 식이나 보충 설명은 `small`에 적는다.
+- 칠해진 결과는 가장 안쪽 요소 끝의 `p.inh-paint`에 `style="--c: …"`와 함께 적는다. 의도와 다르면 `bad`(빨강)를 붙인다.
+- 값은 직접 측정한 것만 적는다. `getComputedStyle(요소).getPropertyValue("--이름")`이 그 요소의 계산된 값이다.
+- 상자 바로 아래 `p.inherit-note`에 무엇을 견주어 볼지 한 문장을 적는다.
 
 해부도(`anatomy`)는 값을 `span.part`로 나눠 이어 적고, 부분마다 `data-label`에 이름을 단다. 이름은 부분 아래에 그려진다. 색은 `blue`, `green`, `warn`, 덜 중요한 부분은 `dim`이다. 맨 끝의 `span.anatomy-caption`에 읽는 법을 적는다.
 
