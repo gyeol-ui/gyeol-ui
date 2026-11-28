@@ -108,3 +108,4 @@ Semantic 색 토큰은 Color Scheme에 따라 값이 바뀌므로, 토큰 클래
 - Role·범주와 Tailwind namespace의 대응은 [`scripts/format-theme.helper.ts`](./scripts/format-theme.helper.ts)에만 있습니다. 토큰 하나가 어떤 `@theme` 변수가 되는지는 [`scripts/format-theme.helper.test.ts`](./scripts/format-theme.helper.test.ts)에서 볼 수 있습니다.
 - [`scripts/build.ts`](./scripts/build.ts)가 이 함수를 실제 공개 토큰 목록으로 실행해 `dist/theme.css`에 씁니다.
 - 테스트([`scripts/format-theme.test.ts`](./scripts/format-theme.test.ts))는 생성된 텍스트를 비교하지 않고, [`entry.css`](./entry.css)(배포하지 않는 진입 CSS, 위의 import 두 줄)와 함께 `@tailwindcss/node`로 컴파일해 어떤 클래스가 어떤 CSS로 나오는지 확인합니다. 실제 공개 토큰 목록의 모든 토큰도 확인하므로, Tailwind를 올렸을 때 Role별 namespace 동작이 깨지면 테스트가 실패합니다.
+- 컴파일하는 함수(`compileClasses`)와 결과 CSS에서 클래스의 규칙을 찾는 함수(`collectRules`, `findDeclarations`)는 [`scripts/__test__/`](./scripts/__test__/)에 있고, 각각 무엇을 받아 무엇을 돌려주는지 옆의 테스트에서 볼 수 있습니다.

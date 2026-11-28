@@ -1,83 +1,8 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { compile } from "@tailwindcss/node";
-import postcss, { AtRule } from "postcss";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it } from "vitest";
+import { compileClasses } from "./__test__/compile-classes.ts";
+import { collectRules, findDeclarations } from "./__test__/css-rules.ts";
 import { formatTheme, type PublicToken } from "./format-theme.ts";
 import { readPublicTokens } from "./read-public-tokens.ts";
-
-const packageDir = fileURLToPath(new URL("..", import.meta.url));
-const entryPath = join(packageDir, "entry.css");
-
-/**
- * 테마 텍스트와 진입 CSS를 Tailwind로 컴파일해 클래스들의 CSS를 돌려준다.
- * 진입 CSS의 `@gyeol-ui/tailwind`는 임시 파일에 쓴 테마로 바꿔 읽는다.
- * 임시 폴더는 패키지의 node_modules 아래에 두어, 테마 안의 `@gyeol-ui/tokens/tokens.css`가 실제 패키지로 풀리게 한다.
- * build()는 앞서 넣은 클래스를 계속 쌓으므로 부를 때마다 컴파일러를 새로 만든다.
- */
-async function compileClasses({
-  theme,
-  classes,
-}: {
-  theme: string;
-  classes: string[];
-}): Promise<string> {
-  const tmpRoot = join(packageDir, "node_modules", ".tmp");
-  await mkdir(tmpRoot, { recursive: true });
-  const dir = await mkdtemp(join(tmpRoot, "theme-"));
-  onTestFinished(() => rm(dir, { recursive: true, force: true }));
-  const themePath = join(dir, "theme.css");
-  await writeFile(themePath, theme);
-
-  const compiler = await compile(await readFile(entryPath, "utf8"), {
-    base: packageDir,
-    from: entryPath,
-    onDependency: () => {},
-    customCssResolver: async (id) =>
-      id === "@gyeol-ui/tailwind" ? themePath : undefined,
-  });
-  return compiler.build(classes);
-}
-
-/** CSS에서 클래스를 선택하는 규칙마다 감싼 @media 조건, 선택자, 선언을 모은다 */
-function collectRules({ css, className }: { css: string; className: string }): {
-  media: string | undefined;
-  selector: string;
-  declarations: Record<string, string>;
-}[] {
-  const escaped = className
-    .replaceAll(":", "\\:")
-    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const selector = new RegExp(`\\.${escaped}(?![\\w-])`);
-  const rules: ReturnType<typeof collectRules> = [];
-  postcss.parse(css).walkRules((rule) => {
-    if (!selector.test(rule.selector)) return;
-    const declarations: Record<string, string> = {};
-    rule.walkDecls((decl) => {
-      declarations[decl.prop] = decl.value;
-    });
-    const media =
-      rule.parent instanceof AtRule && rule.parent.name === "media"
-        ? rule.parent.params
-        : undefined;
-    rules.push({ media, selector: rule.selector, declarations });
-  });
-  return rules;
-}
-
-/** CSS에서 클래스를 선택하는 규칙들의 선언을 하나로 모은다. 규칙이 없으면 undefined */
-function findDeclarations({
-  css,
-  className,
-}: {
-  css: string;
-  className: string;
-}): Record<string, string> | undefined {
-  const rules = collectRules({ css, className });
-  if (rules.length === 0) return undefined;
-  return Object.assign({}, ...rules.map(({ declarations }) => declarations));
-}
 
 const FIXTURE: PublicToken[] = [
   { path: "bg-surface", type: "color", cssVariable: "--gyeol-bg-surface" },
