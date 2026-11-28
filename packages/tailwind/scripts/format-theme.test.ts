@@ -1,64 +1,8 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { compile } from "@tailwindcss/node";
-import postcss from "postcss";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, expect, it } from "vitest";
+import { compileClasses } from "./__test__/compile-classes.ts";
+import { collectRules, findDeclarations } from "./__test__/css-rules.ts";
 import { formatTheme, type PublicToken } from "./format-theme.ts";
 import { readPublicTokens } from "./read-public-tokens.ts";
-
-const packageDir = fileURLToPath(new URL("..", import.meta.url));
-const entryPath = join(packageDir, "entry.css");
-
-/**
- * 테마 텍스트와 진입 CSS를 Tailwind로 컴파일해 클래스들의 CSS를 돌려준다.
- * 진입 CSS의 `@gyeol-ui/tailwind`는 임시 파일에 쓴 테마로 바꿔 읽는다.
- * 임시 폴더는 패키지의 node_modules 아래에 두어, 테마 안의 `@gyeol-ui/tokens/tokens.css`가 실제 패키지로 풀리게 한다.
- * build()는 앞서 넣은 클래스를 계속 쌓으므로 부를 때마다 컴파일러를 새로 만든다.
- */
-async function compileClasses({
-  theme,
-  classes,
-}: {
-  theme: string;
-  classes: string[];
-}): Promise<string> {
-  const tmpRoot = join(packageDir, "node_modules", ".tmp");
-  await mkdir(tmpRoot, { recursive: true });
-  const dir = await mkdtemp(join(tmpRoot, "theme-"));
-  onTestFinished(() => rm(dir, { recursive: true, force: true }));
-  const themePath = join(dir, "theme.css");
-  await writeFile(themePath, theme);
-
-  const compiler = await compile(await readFile(entryPath, "utf8"), {
-    base: packageDir,
-    from: entryPath,
-    onDependency: () => {},
-    customCssResolver: async (id) =>
-      id === "@gyeol-ui/tailwind" ? themePath : undefined,
-  });
-  return compiler.build(classes);
-}
-
-/** CSS에서 클래스를 선택하는 규칙들의 선언을 모은다. 규칙이 없으면 undefined */
-function findDeclarations({
-  css,
-  className,
-}: {
-  css: string;
-  className: string;
-}): Record<string, string> | undefined {
-  const selector = new RegExp(`\\.${className}(?![\\w-])`);
-  let declarations: Record<string, string> | undefined;
-  postcss.parse(css).walkRules((rule) => {
-    if (!selector.test(rule.selector)) return;
-    declarations ??= {};
-    rule.walkDecls((decl) => {
-      declarations![decl.prop] = decl.value;
-    });
-  });
-  return declarations;
-}
 
 const FIXTURE: PublicToken[] = [
   { path: "bg-surface", type: "color", cssVariable: "--gyeol-bg-surface" },
@@ -263,6 +207,50 @@ describe("formatTheme", () => {
       "border-radius": "var(--gyeol-radius-full)",
     });
     expect(findDeclarations({ css, className: "rounded-lg" })).toBeUndefined();
+  });
+
+  it('dark:는 OS가 dark이고 <html>에 data-color-scheme="light"가 없을 때 켜진다', async () => {
+    // given, when
+    const css = await compileClasses({
+      theme: formatTheme(FIXTURE),
+      classes: ["dark:opacity-80"],
+    });
+
+    // then
+    const mediaRules = collectRules({
+      css,
+      className: "dark:opacity-80",
+    }).filter(({ media }) => media === "(prefers-color-scheme: dark)");
+    expect(mediaRules).toEqual([
+      {
+        media: "(prefers-color-scheme: dark)",
+        selector:
+          '.dark\\:opacity-80:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *)',
+        declarations: { opacity: "80%" },
+      },
+    ]);
+  });
+
+  it('dark:는 <html data-color-scheme="dark">이면 OS 설정과 상관없이 켜진다', async () => {
+    // given, when
+    const css = await compileClasses({
+      theme: formatTheme(FIXTURE),
+      classes: ["dark:opacity-80"],
+    });
+
+    // then
+    const attributeRules = collectRules({
+      css,
+      className: "dark:opacity-80",
+    }).filter(({ media }) => media === undefined);
+    expect(attributeRules).toEqual([
+      {
+        media: undefined,
+        selector:
+          '.dark\\:opacity-80:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *)',
+        declarations: { opacity: "80%" },
+      },
+    ]);
   });
 
   it("표에 없는 Role이나 범주의 토큰이 있으면 모든 토큰 경로를 담아 실패한다", () => {

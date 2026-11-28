@@ -52,6 +52,28 @@ Role에 맞지 않는 조합(`text-bg-surface`, `bg-fg-default`)은 클래스가
 
 `p-0`처럼 `0`은 토큰이 아니지만 `0px`로 들어 있습니다.
 
+## `dark:`
+
+Semantic 색 토큰은 Color Scheme에 따라 값이 바뀌므로, 토큰 클래스만 쓰면 `dark:` 없이도 dark에서 맞는 색이 나옵니다. 토큰 밖의 스타일을 Color Scheme에 따라 바꿀 때 `dark:`를 씁니다.
+
+`dark:`는 토큰의 Color Scheme 규칙과 같은 조건에서 켜집니다. 그래서 토큰 색과 `dark:` 스타일이 엇갈리지 않습니다.
+
+| `<html>`의 `data-color-scheme` | OS가 light | OS가 dark |
+|---|---|---|
+| 없음 | 꺼짐 | 켜짐 |
+| `"light"` | 꺼짐 | 꺼짐 |
+| `"dark"` | 켜짐 | 켜짐 |
+
+```html
+<html data-color-scheme="dark">
+  …
+  <img class="opacity-100 dark:opacity-80" … />
+</html>
+```
+
+- 속성은 `<html>`에서만 봅니다. 페이지 일부에 `data-color-scheme`을 달아 Color Scheme을 바꾸는 것은 지원하지 않습니다.
+- Tailwind 기본 `dark:`는 `prefers-color-scheme`만 보므로, 이 패키지가 `@custom-variant dark`로 다시 정의합니다. 조건을 `:where()`로 감싸서 `dark:` 클래스의 명시도는 클래스 하나와 같습니다.
+
 ## 토큰 밖의 값은 없습니다
 
 토큰이 있는 범주(색, 간격, 모서리)에서는 Tailwind 기본값을 비웠습니다. 디자인 언어 밖의 값을 실수로 쓰지 않게 하려는 것입니다.
@@ -86,3 +108,4 @@ Role에 맞지 않는 조합(`text-bg-surface`, `bg-fg-default`)은 클래스가
 - Role·범주와 Tailwind namespace의 대응은 [`scripts/format-theme.helper.ts`](./scripts/format-theme.helper.ts)에만 있습니다. 토큰 하나가 어떤 `@theme` 변수가 되는지는 [`scripts/format-theme.helper.test.ts`](./scripts/format-theme.helper.test.ts)에서 볼 수 있습니다.
 - [`scripts/build.ts`](./scripts/build.ts)가 이 함수를 실제 공개 토큰 목록으로 실행해 `dist/theme.css`에 씁니다.
 - 테스트([`scripts/format-theme.test.ts`](./scripts/format-theme.test.ts))는 생성된 텍스트를 비교하지 않고, [`entry.css`](./entry.css)(배포하지 않는 진입 CSS, 위의 import 두 줄)와 함께 `@tailwindcss/node`로 컴파일해 어떤 클래스가 어떤 CSS로 나오는지 확인합니다. 실제 공개 토큰 목록의 모든 토큰도 확인하므로, Tailwind를 올렸을 때 Role별 namespace 동작이 깨지면 테스트가 실패합니다.
+- 컴파일하는 함수(`compileClasses`)와 결과 CSS에서 클래스의 규칙을 찾는 함수(`collectRules`, `findDeclarations`)는 [`scripts/__test__/`](./scripts/__test__/)에 있고, 각각 무엇을 받아 무엇을 돌려주는지 옆의 테스트에서 볼 수 있습니다.

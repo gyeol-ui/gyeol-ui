@@ -38,5 +38,14 @@ export function formatTheme(tokens: readonly PublicToken[]): string {
     ...declarations,
     "}",
     "",
+    // 토큰의 Color Scheme 규칙과 같게 켠다: OS가 dark이고 <html>에 data-color-scheme="light"가 없을 때, 또는 <html data-color-scheme="dark">일 때.
+    // :where()로 감싸 명시도를 클래스 하나로 유지한다.
+    "@custom-variant dark {",
+    "  @media (prefers-color-scheme: dark) {",
+    `    &:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *) { @slot; }`,
+    "  }",
+    `  &:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *) { @slot; }`,
+    "}",
+    "",
   ].join("\n");
 }

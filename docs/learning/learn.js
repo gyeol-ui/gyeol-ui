@@ -43,6 +43,11 @@ const learnFolders = [
         title: "Tailwind @theme inline이 하는 일",
         tags: ["tailwind", "design-token"],
       },
+      {
+        file: "tailwind-custom-variant.html",
+        title: "Tailwind @custom-variant로 dark: 다시 정의하기",
+        tags: ["tailwind"],
+      },
     ],
   },
 ];
