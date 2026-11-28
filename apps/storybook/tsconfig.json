@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // 스토리는 브라우저에서 돈다
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "jsx": "react-jsx",
+    // 공개 토큰 목록(tokens.json)을 import한다
+    "resolveJsonModule": true,
+    // 배포하지 않는 앱이라 선언 파일을 쓰지 않는다
+    "declaration": false,
+    "isolatedDeclarations": false
+  },
+  "include": ["src", ".storybook"]
+}

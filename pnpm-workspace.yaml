@@ -1,4 +1,5 @@
 packages:
+  - apps/*
   - packages/*
 
 minimumReleaseAgeExclude:
@@ -24,3 +25,7 @@ minimumReleaseAgeExclude:
   - oxlint@1.94.0
 
 saveExact: true
+
+# esbuild의 postinstall은 플랫폼 바이너리를 확인만 한다. 바이너리는 optionalDependencies(@esbuild/*)로 들어오므로 실행하지 않는다
+allowBuilds:
+  esbuild: false
