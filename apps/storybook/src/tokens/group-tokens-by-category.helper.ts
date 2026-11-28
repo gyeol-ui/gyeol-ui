@@ -26,10 +26,8 @@ const DIMENSION_CATEGORIES: readonly TokenCategory[] = ["spacing", "radius"];
 function findCategory(token: PublicToken): TokenCategory | undefined {
   if (token.type === "color") return "color";
   if (token.type !== "dimension") return undefined;
-  const [first, ...rest] = token.path.split(".");
-  return DIMENSION_CATEGORIES.find(
-    (category) => category === first && rest.length > 0,
-  );
+  const [first] = token.path.split(".");
+  return DIMENSION_CATEGORIES.find((category) => category === first);
 }
 
 /**

@@ -62,8 +62,6 @@ describe(groupTokensByCategory.name, () => {
     ["shadow.md", "shadow"],
     // 모르는 범주
     ["size.4", "dimension"],
-    // 범주만 있고 이름이 없음
-    ["spacing", "dimension"],
   ])("%s(%s)가 있으면 그 경로를 담아 실패한다", (path, type) => {
     // given, when, then
     expect(() =>
