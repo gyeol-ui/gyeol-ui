@@ -131,8 +131,6 @@ tools/
 - `@tailwindcss/node`, `@tailwindcss/postcss`, `@tailwindcss/vite` 모두 패키지 CSS 안의 다른 패키지 CSS `@import`를 푼다. resolver는 `style` 조건을 보고, `import` 조건만 있으면 실패한다.
 - compile API의 `build()`는 앞서 넣은 후보를 계속 쌓는다.
 - `prettier-plugin-tailwindcss`(0.8)는 v4에서 `tailwindStylesheet`가 필수다. 패키지 이름이 아니라 파일 경로만 받고, 그 CSS에 `@import "tailwindcss"`가 있어야 한다.
-- `prettier-plugin-tailwindcss`(0.8.1)는 `tailwindStylesheet`의 `@import`를 풀지 못하면(예: 빌드 전이라 생성된 테마가 없으면) Tailwind 클래스가 없는 JS, CSS, HTML 파일에서도 Prettier를 실패시킨다. Prettier `overrides`로 플러그인을 특정 경로에만 걸면, 그 밖의 파일은 빌드 없이도 통과한다.
-- `turbo run build --filter=@gyeol-ui/tailwind`는 캐시가 없으면 1초, 있으면 0.1초 안에 끝난다. Prettier 앞에 이 빌드를 두면 클린 체크아웃에서도 pre-commit hook과 `prettier --check`가 통과하고, 토큰 클래스가 Tailwind 기본 클래스 사이에 정렬된다([#36](https://github.com/gyeol-ui/gyeol-ui/issues/36)).
 
 ## 컴포넌트
 
