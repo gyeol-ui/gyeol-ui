@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tailwind @custom-variant로 dark: 다시 정의하기</title>
+    <link rel="stylesheet" href="learn.css" />
+    <script src="vendor/highlightjs/highlight.min.js" defer></script>
+    <script src="learn.js" defer></script>
+  </head>
+  <body>
+    <div class="layout">
+      <nav aria-label="목차">
+        <strong>목차</strong>
+        <ol>
+          <li><a href="#why">왜 다시 정의하나</a></li>
+          <li><a href="#variant">variant</a></li>
+          <li><a href="#forms">@custom-variant의 두 형태</a></li>
+          <li><a href="#slot">&amp;와 @slot이 채워지는 과정</a></li>
+          <li><a href="#branches">두 갈래와 경우의 수</a></li>
+          <li><a href="#selector">선택자 해부</a></li>
+          <li><a href="#root">:root와 :root *</a></li>
+          <li><a href="#where">:where()와 명시도</a></li>
+          <li><a href="#stack">다른 variant와 겹치기</a></li>
+          <li><a href="#check">점검 문제</a></li>
+          <li><a href="#code">쓰인 곳</a></li>
+          <li><a href="#sources">출처</a></li>
+        </ol>
+      </nav>
+
+      <main>
+        <h1>Tailwind @custom-variant로 dark: 다시 정의하기</h1>
+        <p class="lead">
+          <code>@gyeol-ui/tailwind</code>의 <code>theme.css</code>는 Tailwind의
+          <code>dark:</code>를 <code>@custom-variant</code>로 다시 정의해,
+          토큰의 Color Scheme 규칙과 같은 조건에서 켜지게 한다. 정의 블록의
+          <code>&amp;</code>와 <code>@slot</code>이 어떻게 채워지는지, 그 결과로
+          나오는 표준 CSS 선택자(<code>:where()</code>, <code>:root</code>,
+          <code>*</code>)가 무엇을 뜻하는지를 실제 컴파일 결과와 Chrome에서
+          확인한 매칭 결과로 따라간다.
+        </p>
+
+        <section id="why">
+          <h2>왜 다시 정의하나</h2>
+          <p>
+            토큰 CSS(<code>tokens.css</code>)는 Semantic 색을 두 조건에서 dark
+            값으로 바꾼다. OS가 dark이고 <code>&lt;html&gt;</code>에
+            <code>data-color-scheme="light"</code>가 없을 때, 또는
+            <code>&lt;html data-color-scheme="dark"&gt;</code>일 때다(<a
+              href="color-scheme-blocks.html"
+              >dark 블록이 두 개인 이유</a
+            >). Tailwind 기본 <code>dark:</code>는
+            <code>prefers-color-scheme</code>만 본다. 그대로 두면 둘이 엇갈린다.
+          </p>
+          <div class="compare">
+            <div class="compare-card blue">
+              <div class="compare-title">Tailwind 기본<small>dark:</small></div>
+              <dl class="compare-facts">
+                <dt>보는 것</dt>
+                <dd>OS 설정(<code>prefers-color-scheme</code>)만</dd>
+                <dt>
+                  <code>&lt;html data-color-scheme="light"&gt;</code>, OS dark
+                </dt>
+                <dd><strong>켜짐</strong></dd>
+                <dt>
+                  <code>&lt;html data-color-scheme="dark"&gt;</code>, OS light
+                </dt>
+                <dd><strong>꺼짐</strong></dd>
+              </dl>
+              <p class="compare-result">
+                토큰 색은 light인데 <code>dark:</code> 스타일이 켜지거나, 그
+                반대가 된다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">
+                다시 정의한 것<small>@custom-variant dark</small>
+              </div>
+              <dl class="compare-facts">
+                <dt>보는 것</dt>
+                <dd>OS 설정과 <code>&lt;html&gt;</code>의 속성</dd>
+                <dt>
+                  <code>&lt;html data-color-scheme="light"&gt;</code>, OS dark
+                </dt>
+                <dd><strong>꺼짐</strong></dd>
+                <dt>
+                  <code>&lt;html data-color-scheme="dark"&gt;</code>, OS light
+                </dt>
+                <dd><strong>켜짐</strong></dd>
+              </dl>
+              <p class="compare-result">
+                토큰 색과 <code>dark:</code> 스타일이 언제나 같은 Color Scheme을
+                따른다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="variant">
+          <h2>variant</h2>
+          <p>
+            <code>dark:</code>, <code>hover:</code>, <code>md:</code>처럼 클래스
+            앞에 붙는 접두어가 variant다. variant는 유틸리티의 선언은 그대로
+            두고 <strong>언제 적용되는지</strong>만 바꾼다.
+          </p>
+          <div class="pipe">
+            <div class="pipe-row">
+              <span class="pipe-label">유틸리티</span>
+              <span class="pipe-val"
+                ><code>opacity-80</code><small>항상 적용</small></span
+              >
+              <span class="pipe-fn">dark: 붙이기</span>
+              <span class="pipe-val ok"
+                ><code>dark:opacity-80</code
+                ><small>dark 조건에서만 적용</small></span
+              >
+            </div>
+          </div>
+          <p>
+            <code>@custom-variant</code>는 이 조건을 CSS로 직접 정의하는
+            Tailwind v4 지시어다. 이미 있는 이름(<code>dark</code>)으로 정의하면
+            기본 동작을 덮어쓴다.
+          </p>
+        </section>
+
+        <section id="forms">
+          <h2>@custom-variant의 두 형태</h2>
+          <p>
+            아래 출력은 모두 <code>dark:opacity-80</code> 하나를
+            <code>@tailwindcss/node</code> 4.3.5로 컴파일한 결과의
+            <code>@layer utilities</code> 부분이다.
+          </p>
+          <h3>한 줄 형태</h3>
+          <p>조건이 선택자 하나로 끝날 때 쓴다. Tailwind 문서의 예다.</p>
+          <pre><code class="language-css">@custom-variant dark (&amp;:where(.dark, .dark *));</code></pre>
+          <pre><code class="language-css">.dark\:opacity-80:where(.dark, .dark *) {
+  opacity: 80%;
+}</code></pre>
+          <h3>블록 형태</h3>
+          <p>
+            <code>@media</code>로 감싸거나 갈래가 여럿일 때 쓴다. 블록 안에서
+            유틸리티의 선언이 들어갈 자리를 <code>@slot</code>으로 표시한다. 이
+            저장소의 정의다.
+          </p>
+          <pre><code class="language-css">@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &amp;:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *) { @slot; }
+  }
+  &amp;:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *) { @slot; }
+}</code></pre>
+          <div class="callout warn">
+            <p>
+              블록에 <code>@slot</code>이 없으면 유틸리티의 선언이 버려진다.
+              <code
+                >@custom-variant dark { &amp;:where(.dark *) { color: red; }
+                }</code
+              >로 <code>dark:opacity-80</code>을 컴파일하면
+              <code>opacity: 80%</code>는 사라지고 <code>color: red</code>만
+              나왔다. 오류도 나지 않는다.
+            </p>
+          </div>
+        </section>
+
+        <section id="slot">
+          <h2>&amp;와 @slot이 채워지는 과정</h2>
+          <p>
+            정의 블록은 틀이고, 유틸리티 하나를 만들 때마다 두 자리가 채워진다.
+            <code>&amp;</code>에는 그 유틸리티의 선택자가,
+            <code>@slot</code>에는 그 유틸리티의 선언이 들어간다.
+            <code>@slot</code>이 두 번 나오면 규칙도 두 개 생기고, Tailwind는
+            중첩을 평탄하게 풀어 낸다.
+          </p>
+          <ol class="trace">
+            <li class="trace-phase">
+              컴파일 (Tailwind)<small>dark:opacity-80을 만들 때</small>
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where"
+                  >유틸리티<small>opacity-80</small></span
+                >
+                <pre class="trace-val">
+선택자: <b>.dark\:opacity-80</b>
+선언:   <b>opacity: 80%;</b></pre>
+              </div>
+              <div class="trace-at">
+                <span class="trace-where"
+                  >정의 블록<small>theme.css</small></span
+                >
+                <pre class="trace-val">
+@media (prefers-color-scheme: dark) {
+  <b>&amp;</b>:where(…light 아님…) { <b>@slot</b>; }
+}
+<b>&amp;</b>:where(…dark…) { <b>@slot</b>; }</pre>
+              </div>
+            </li>
+            <li class="trace-step">
+              <strong>&amp; ← 선택자, @slot ← 선언</strong>@slot 하나마다 규칙이
+              하나 생기고, 중첩된 <code>&amp;</code>는 바깥 선택자에 붙여
+              평탄하게 푼다
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at ok">
+                <span class="trace-where">출력<small>표준 CSS</small></span>
+                <pre class="trace-val">
+@media (prefers-color-scheme: dark) {
+  <b>.dark\:opacity-80</b>:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *) {
+    <b>opacity: 80%;</b>
+  }
+}
+<b>.dark\:opacity-80</b>:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *) {
+  <b>opacity: 80%;</b>
+}</pre>
+              </div>
+              <div class="trace-at dim">
+                <span class="trace-where"
+                  >비교: 기본 dark:<small>다시 정의하기 전</small></span
+                >
+                <pre class="trace-val">
+@media (prefers-color-scheme: dark) {
+  .dark\:opacity-80 {
+    opacity: 80%;
+  }
+}</pre>
+              </div>
+            </li>
+          </ol>
+          <p>
+            출력에는 <code>&amp;</code>도 <code>@slot</code>도 남지 않는다.
+            Tailwind 전용 문법은 컴파일 전의 <code>theme.css</code>에만 있고,
+            브라우저가 받는 CSS는 모두 표준 문법이다.
+          </p>
+        </section>
+
+        <section id="branches">
+          <h2>두 갈래와 경우의 수</h2>
+          <p>
+            출력의 두 규칙은 선언이 같다. 둘 중 하나라도 맞으면 스타일이
+            적용되므로 OR 조건이다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>갈래</th>
+                  <th>켜지는 조건</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>① media 갈래</td>
+                  <td>
+                    OS가 dark <strong>이고</strong> <code>&lt;html&gt;</code>이
+                    <code>data-color-scheme="light"</code>가
+                    <strong>아님</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td>② 속성 갈래</td>
+                  <td>
+                    <code>&lt;html data-color-scheme="dark"&gt;</code> (OS와
+                    무관)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>여섯 경우를 모두 펼치면 이렇다.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    <code>&lt;html&gt;</code>의 <code>data-color-scheme</code>
+                  </th>
+                  <th>OS가 light</th>
+                  <th>OS가 dark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>없음</td>
+                  <td><span class="badge muted">꺼짐</span></td>
+                  <td>
+                    <span class="badge green">켜짐</span>
+                    <small>①</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>"light"</code></td>
+                  <td><span class="badge muted">꺼짐</span></td>
+                  <td>
+                    <span class="badge muted">꺼짐</span>
+                    <small>①이 <code>:not</code>으로 제외</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>"dark"</code></td>
+                  <td>
+                    <span class="badge green">켜짐</span>
+                    <small>②</small>
+                  </td>
+                  <td>
+                    <span class="badge green">켜짐</span>
+                    <small>①②</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>토큰 CSS가 Semantic 색을 dark 값으로 바꾸는 경우와 칸마다 같다.</p>
+        </section>
+
+        <section id="selector">
+          <h2>선택자 해부</h2>
+          <p>속성 갈래의 선택자를 부분으로 나누면 이렇다.</p>
+          <div class="anatomy">
+            <span class="part blue" data-label="클래스 (& 자리)"
+              >.dark\:opacity-80</span
+            ><span class="part green" data-label=":where( 시작">:where(</span
+            ><span class="part" data-label="<html> 자신">:root</span
+            ><span class="part warn" data-label="속성 선택자"
+              >[data-color-scheme="dark"]</span
+            ><span class="part dim" data-label="목록 구분">, </span
+            ><span class="part" data-label="<html>">:root</span
+            ><span class="part warn" data-label="속성 선택자"
+              >[data-color-scheme="dark"]</span
+            ><span class="part blue" data-label="공백 = 자손 결합자"
+              >&nbsp;</span
+            ><span class="part" data-label="* = 아무 요소">*</span
+            ><span class="part green" data-label=") 끝">)</span>
+            <span class="anatomy-caption"
+              >클래스가 붙은 요소가, 괄호 안의 두 선택자 중 하나에도 맞으면
+              매칭된다.</span
+            >
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>부분</th>
+                  <th>뜻</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>.dark\:opacity-80</code></td>
+                  <td>
+                    클래스 이름 <code>dark:opacity-80</code>. <code>:</code>는
+                    CSS에서 가상 클래스를 여는 글자라서 <code>\:</code>로
+                    이스케이프한다. HTML에는
+                    <code>class="dark:opacity-80"</code>로 쓴다
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>:where(A, B)</code></td>
+                  <td>
+                    A나 B 중 하나에 맞으면 매칭되는 가상 클래스. 명시도는 항상
+                    0이다
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>:root</code></td>
+                  <td>
+                    문서의 루트 요소. HTML 문서에서는
+                    <code>&lt;html&gt;</code>이다
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>[data-color-scheme="dark"]</code></td>
+                  <td>그 속성 값을 가진 요소</td>
+                </tr>
+                <tr>
+                  <td><code>:not(X)</code></td>
+                  <td>X에 맞지 않는 요소. media 갈래에서 light를 뺄 때 쓴다</td>
+                </tr>
+                <tr>
+                  <td>공백</td>
+                  <td>
+                    자손 결합자. 왼쪽 요소 안에 있는(자식, 손자, 그 아래 모두)
+                    오른쪽 요소
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>*</code></td>
+                  <td>전체 선택자. 종류와 상관없이 아무 요소</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            모두 표준 CSS다. <code>:where()</code>는 Selectors Level 4에서
+            들어왔고, MDN 기준 2021년 1월부터 주요 브라우저에서 쓸 수 있다.
+            Tailwind v4가 요구하는 브라우저(Chrome 111, Safari 16.4, Firefox
+            128)보다 이르므로, 이 선택자 때문에 지원 범위가 좁아지지 않는다.
+          </p>
+        </section>
+
+        <section id="root">
+          <h2>:root와 :root *</h2>
+          <p>
+            속성은 <code>&lt;html&gt;</code>에서만 보는데 왜
+            자손(<code>*</code>)까지 넣을까. 두 가지가 서로 다른 것을 가리키기
+            때문이다.
+          </p>
+          <ul>
+            <li>
+              <strong>속성을 보는 곳</strong>은 <code>:root[…]</code>, 즉
+              <code>&lt;html&gt;</code> 하나다.
+            </li>
+            <li>
+              <strong>스타일을 받는 요소</strong>는 클래스가 붙은
+              <code>&amp;</code> 자리의 요소이고, 페이지 어디에나 있다.
+              <code>:root[…] *</code>는 그 요소가 그런
+              <code>&lt;html&gt;</code>의 자손인지 묻는다.
+            </li>
+          </ul>
+          <p>
+            <code>*</code>를 빼면 <code>dark:</code>는
+            <code>&lt;html class="dark:…"&gt;</code>에만 동작한다.
+            <code>:root</code>만 빼면 아무 조상의 속성이나 보게 되어, 이
+            저장소가 지원하지 않는 "페이지 일부의 Color Scheme 바꾸기"가 된다.
+            Chrome 155에서 <code>element.matches()</code>로 확인한 결과다.
+          </p>
+          <pre><code class="language-html">&lt;html&gt;                      &lt;!-- 경우마다 속성을 바꾼다 --&gt;
+  &lt;body&gt;
+    &lt;img&gt;                   &lt;!-- 본문의 요소 --&gt;
+    &lt;section&gt;               &lt;!-- 경우마다 속성을 바꾼다 --&gt;
+      &lt;img&gt;                 &lt;!-- section 안의 요소 --&gt;</code></pre>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>경우</th>
+                  <th>선택자</th>
+                  <th><code>&lt;html&gt;</code></th>
+                  <th>본문의 <code>img</code></th>
+                  <th>section 안의 <code>img</code></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td rowspan="3">
+                    <code>&lt;html data-color-scheme="dark"&gt;</code>
+                  </td>
+                  <td>
+                    <code>:where(:root[…], :root[…] *)</code>
+                    <small>지금 형태</small>
+                  </td>
+                  <td><span class="badge green">맞음</span></td>
+                  <td><span class="badge green">맞음</span></td>
+                  <td><span class="badge green">맞음</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>:root[…]</code>
+                    <small>* 없이</small>
+                  </td>
+                  <td><span class="badge green">맞음</span></td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>:where([…], […] *)</code>
+                    <small>:root 없이</small>
+                  </td>
+                  <td><span class="badge green">맞음</span></td>
+                  <td><span class="badge green">맞음</span></td>
+                  <td><span class="badge green">맞음</span></td>
+                </tr>
+                <tr>
+                  <td rowspan="2">
+                    <code>&lt;html&gt;</code>에는 없고
+                    <code>&lt;section data-color-scheme="dark"&gt;</code>
+                  </td>
+                  <td>
+                    <code>:where(:root[…], :root[…] *)</code>
+                    <small>지금 형태</small>
+                  </td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>:where([…], […] *)</code>
+                    <small>:root 없이</small>
+                  </td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                  <td><span class="badge muted">안 맞음</span></td>
+                  <td><span class="badge warn">맞음</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            <code>&lt;html&gt;</code>에만 속성이 있으면 지금 형태와
+            <code>:root</code> 없는 형태가 같다. 둘은
+            <code>&lt;section&gt;</code>에 속성을 달았을 때 갈린다. 지금 형태는
+            무시하고, 토큰 CSS도 Semantic 색을 <code>:root</code>에서만 바꾸므로
+            그 안의 토큰 색도 바뀌지 않는다. 그래서 <code>dark:</code>와 토큰
+            색이 엇갈리지 않는다.
+          </p>
+          <p>
+            <code>*</code>가 붙어도 느리지 않다. 이 규칙은
+            <code>.dark\:opacity-80</code> 클래스가 있는 요소에만 걸리고,
+            <code>* { … }</code>처럼 모든 요소에 스타일을 거는 것이 아니다.
+          </p>
+        </section>
+
+        <section id="where">
+          <h2>:where()와 명시도</h2>
+          <p>
+            <code>:where()</code>와 <code>:is()</code>는 매칭이 같고 명시도만
+            다르다.
+          </p>
+          <div class="compare">
+            <div class="compare-card blue">
+              <div class="compare-title">:is(A, B)</div>
+              <dl class="compare-facts">
+                <dt>매칭</dt>
+                <dd>A나 B</dd>
+                <dt>명시도</dt>
+                <dd>목록에서 <strong>가장 높은</strong> 선택자의 명시도</dd>
+              </dl>
+              <p class="compare-result">
+                조건의 <code>:root</code>와 속성이 명시도를 올린다.
+              </p>
+            </div>
+            <div class="compare-card green">
+              <div class="compare-title">:where(A, B)</div>
+              <dl class="compare-facts">
+                <dt>매칭</dt>
+                <dd>A나 B</dd>
+                <dt>명시도</dt>
+                <dd><strong>항상 0</strong></dd>
+              </dl>
+              <p class="compare-result">명시도는 앞의 클래스 하나만 센다.</p>
+            </div>
+          </div>
+          <p>
+            같은 요소에 <code>dark:</code> 규칙과, 그 <strong>뒤에</strong> 오는
+            일반 클래스 <code>.later { opacity: 0.5 }</code>를 함께 걸고
+            <code>&lt;html data-color-scheme="dark"&gt;</code>에서 Chrome 155의
+            <code>getComputedStyle</code>로 읽은 결과다. 명시도가 같으면 뒤에 온
+            규칙이 이긴다.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th><code>dark:</code> 규칙의 선택자</th>
+                  <th>명시도</th>
+                  <th>결과 <code>opacity</code></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>.v:where(:root[…], :root[…] *)</code>
+                    <small>지금 형태</small>
+                  </td>
+                  <td>(0, 1, 0)</td>
+                  <td>
+                    0.5
+                    <small
+                      >뒤의 <code>.later</code>가 이김. 일반 클래스
+                      <code>.v</code>와 같음</small
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>.v:is(:root[…], :root[…] *)</code></td>
+                  <td>(0, 3, 0)</td>
+                  <td>
+                    0.8 <small><code>dark:</code>가 이김</small>
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>:root[…] .v</code> <small>감싸지 않음</small></td>
+                  <td>(0, 3, 0)</td>
+                  <td>
+                    0.8 <small><code>dark:</code>가 이김</small>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            명시도가 높으면 <code>dark:</code> 클래스가 뒤에 오는 다른 클래스나
+            컴포넌트 스타일을 예상과 다르게 이긴다. <code>:where()</code>로
+            감싸면 <code>dark:</code> 클래스도 일반 유틸리티와 같은 규칙, 즉
+            같은 명시도에서 순서로 정해지는 규칙을 따른다.
+          </p>
+        </section>
+
+        <section id="stack">
+          <h2>다른 variant와 겹치기</h2>
+          <p>
+            variant를 쌓으면 조건이 차례로 덧붙고, <code>@slot</code>에는 맨
+            안쪽의 선언이 들어간다. 다시 정의한 <code>dark:</code>도
+            <code>hover:</code>, <code>md:</code>와 그대로 조합된다. 4.3.5로
+            컴파일한 결과다.
+          </p>
+          <pre><code class="language-css">/* dark:hover:opacity-80 */
+@media (prefers-color-scheme: dark) {
+  @media (hover: hover) {
+    .dark\:hover\:opacity-80:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *):hover {
+      opacity: 80%;
+    }
+  }
+}
+@media (hover: hover) {
+  .dark\:hover\:opacity-80:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *):hover {
+    opacity: 80%;
+  }
+}</code></pre>
+          <p>
+            <code>md:dark:opacity-80</code>은 두 갈래가 모두
+            <code>@media (width &gt;= 48rem)</code> 안에 들어간다.
+          </p>
+        </section>
+
+        <section id="check">
+          <h2>점검 문제</h2>
+          <div class="quiz">
+            <p class="quiz-q">
+              1. OS는 light이고 HTML이 아래와 같다. 두 <code>img</code> 중
+              <code>opacity: 80%</code>가 적용되는 것은?
+            </p>
+            <p class="quiz-context">
+              "두 갈래와 경우의 수"의 표와 ":root와 :root *"의 표를 쓴다.
+            </p>
+            <pre><code class="language-html">&lt;html&gt;
+  &lt;body&gt;
+    &lt;img id="a" class="dark:opacity-80"&gt;
+    &lt;section data-color-scheme="dark"&gt;
+      &lt;img id="b" class="dark:opacity-80"&gt;
+    &lt;/section&gt;
+  &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  둘 다 적용되지 않는다. OS가 light라서 media 갈래(①)는 꺼져
+                  있다. 속성 갈래(②)는
+                  <code>:root[data-color-scheme="dark"]</code>, 즉
+                  <code>&lt;html&gt;</code>의 속성만 본다.
+                  <code>&lt;section&gt;</code>의 속성은 무시되므로 b도 꺼진다.
+                  같은 이유로 b 근처의 토큰 색도 light 그대로다.
+                </p>
+              </div>
+            </details>
+          </div>
+          <div class="quiz">
+            <p class="quiz-q">
+              2. 정의를 아래처럼 바꾸면 <code>dark:opacity-80</code>은 어떤
+              CSS가 될까?
+            </p>
+            <p class="quiz-context">
+              "@custom-variant의 두 형태"의 주의 상자와 "&amp;와 @slot이
+              채워지는 과정"을 쓴다.
+            </p>
+            <pre><code class="language-diff">-  &amp;:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *) { @slot; }
++  &amp;:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *) { color-scheme: dark; }</code></pre>
+            <details class="quiz-answer">
+              <summary>답 보기</summary>
+              <div class="fold-body">
+                <p>
+                  속성 갈래의 규칙은 <code>opacity: 80%</code> 대신
+                  <code>color-scheme: dark</code>를 담는다. <code>@slot</code>이
+                  없는 자리에는 유틸리티의 선언이 들어가지 않고, 블록에 직접 쓴
+                  선언만 나온다. media 갈래에는 <code>@slot</code>이 남아
+                  있으므로 그쪽 규칙은 <code>opacity: 80%</code> 그대로다. 결국
+                  <code>&lt;html data-color-scheme="dark"&gt;</code>에서는 OS가
+                  light일 때 <code>dark:opacity-80</code>이 opacity를 바꾸지
+                  않는다.
+                </p>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section id="code">
+          <h2>쓰인 곳</h2>
+          <ul>
+            <li>
+              <code>packages/tailwind/scripts/format-theme.ts</code>의
+              <code>formatTheme</code>: 테마 텍스트 끝에
+              <code>@custom-variant dark</code> 블록을 쓴다
+            </li>
+            <li>
+              <code>packages/tailwind/dist/theme.css</code>: 빌드한 테마의
+              끝부분
+            </li>
+            <li>
+              <code>packages/tailwind/scripts/format-theme.test.ts</code>:
+              <code>dark:opacity-80</code>을 컴파일해, media 갈래와 속성 갈래의
+              규칙이 위 출력과 같은 선택자로 나오는지 확인한다
+            </li>
+            <li>
+              <code>packages/tailwind/README.md</code> "<code>dark:</code>":
+              사용자에게 보이는 동작과 경우의 수 표
+            </li>
+            <li>
+              <code>docs/architecture.md</code> "스타일과 토큰": Color Scheme
+              규칙(속성은 <code>&lt;html&gt;</code>에서만 지원). "Tailwind
+              테마": <code>dark:</code>를 그 규칙과 같게 다시 정의한다는 규칙
+            </li>
+          </ul>
+        </section>
+
+        <section id="sources">
+          <h2>출처</h2>
+          <p>
+            컴파일 결과는 <code>@tailwindcss/node</code> 4.3.5로 직접 컴파일해
+            얻었다(기본 <code>dark:</code>, 한 줄 형태, 이 저장소의 블록,
+            <code>@slot</code>을 뺀 블록, <code>dark:hover:</code>와
+            <code>md:dark:</code>). 선택자 매칭은 Chrome 155에서
+            <code>element.matches()</code>로, 명시도에 따른 결과는 같은
+            브라우저에서 <code>getComputedStyle</code>로 확인했다. Tailwind
+            문서는 <code>@slot</code>과 블록 형태를 설명하지 않으므로, 이 두
+            가지는 컴파일 결과만을 근거로 한다.
+          </p>
+          <ul>
+            <li>
+              Tailwind CSS,
+              <a href="https://tailwindcss.com/docs/functions-and-directives"
+                >Functions and directives</a
+              >: <code>@custom-variant</code>로 프로젝트에 variant를 더한다는
+              것과 한 줄 형태의 예
+            </li>
+            <li>
+              Tailwind CSS,
+              <a href="https://tailwindcss.com/docs/dark-mode">Dark mode</a>:
+              기본 <code>dark:</code>는 <code>prefers-color-scheme</code>을
+              쓴다는 것, <code>dark</code>를 덮어써 수동 전환을 지원하는 예
+            </li>
+            <li>
+              Tailwind CSS,
+              <a href="https://tailwindcss.com/docs/compatibility"
+                >Compatibility</a
+              >: v4가 기대는 브라우저 버전(Chrome 111, Safari 16.4, Firefox 128)
+            </li>
+            <li>
+              MDN,
+              <a href="https://developer.mozilla.org/en-US/docs/Web/CSS/:where"
+                >:where()</a
+              >: 선택자 목록 중 하나에 맞으면 매칭되고 명시도는 항상 0이며,
+              <code>:is()</code>는 가장 높은 선택자의 명시도를 가진다는 것.
+              2021년 1월부터 주요 브라우저에서 쓸 수 있다는 것
+            </li>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/Universal_selectors"
+                >Universal selectors</a
+              >: <code>*</code>는 종류와 상관없이 요소에 맞는다는 것
+            </li>
+            <li>
+              MDN,
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/CSS/Descendant_combinator"
+                >Descendant combinator</a
+              >: 공백이 조상을 가진 요소를 고르는 결합자라는 것
+            </li>
+          </ul>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
