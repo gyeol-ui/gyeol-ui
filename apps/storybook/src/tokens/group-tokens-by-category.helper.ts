@@ -5,8 +5,8 @@ export interface PublicToken {
   cssVariable: string;
 }
 
-/** 구역에 보여줄 Token 하나 */
-export interface SectionToken {
+/** 범주별 스토리에 보여줄 Token 하나 */
+export interface CategoryToken {
   path: string;
   cssVariable: string;
 }
@@ -14,7 +14,7 @@ export interface SectionToken {
 /** 토큰 스토리의 범주. 스토리 하나가 범주 하나다 */
 export type TokenCategory = "color" | "spacing" | "radius";
 
-export type TokenSections = Record<TokenCategory, SectionToken[]>;
+export type TokensByCategory = Record<TokenCategory, CategoryToken[]>;
 
 /** `dimension` 토큰은 경로의 첫 조각이 범주다 */
 const DIMENSION_CATEGORIES: readonly TokenCategory[] = ["spacing", "radius"];
@@ -33,20 +33,20 @@ function findCategory(token: PublicToken): TokenCategory | undefined {
 }
 
 /**
- * 공개 토큰 목록을 범주별 구역으로 나눈다. 구역 안의 순서는 공개 토큰 목록의 순서를 따른다.
+ * 공개 토큰 목록을 범주별로 나눈다. 범주 안의 순서는 공개 토큰 목록의 순서를 따른다.
  * 범주를 정할 수 없는 토큰(모르는 `type`이나 범주)이 있으면, 그런 토큰을 모두 담아 실패한다.
  */
-export function collectTokenSections(
+export function groupTokensByCategory(
   tokens: readonly PublicToken[],
-): TokenSections {
-  const sections: TokenSections = { color: [], spacing: [], radius: [] };
+): TokensByCategory {
+  const groups: TokensByCategory = { color: [], spacing: [], radius: [] };
   const unknownTokens: string[] = [];
   for (const token of tokens) {
     const category = findCategory(token);
     if (category === undefined) {
       unknownTokens.push(`${token.path}(${token.type})`);
     } else {
-      sections[category].push({
+      groups[category].push({
         path: token.path,
         cssVariable: token.cssVariable,
       });
@@ -54,8 +54,8 @@ export function collectTokenSections(
   }
   if (unknownTokens.length > 0) {
     throw new Error(
-      `토큰 스토리의 구역을 정할 수 없는 토큰이 있다. type이 color이거나, dimension이면서 경로가 ${DIMENSION_CATEGORIES.map((category) => `${category}.*`).join(", ")} 중 하나여야 한다: ${unknownTokens.join(", ")}`,
+      `토큰 스토리의 범주를 정할 수 없는 토큰이 있다. type이 color이거나, dimension이면서 경로가 ${DIMENSION_CATEGORIES.map((category) => `${category}.*`).join(", ")} 중 하나여야 한다: ${unknownTokens.join(", ")}`,
     );
   }
-  return sections;
+  return groups;
 }

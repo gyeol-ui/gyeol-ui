@@ -1,5 +1,8 @@
 import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
-import type { SectionToken, TokenCategory } from "./token-sections.helper.ts";
+import type {
+  CategoryToken,
+  TokenCategory,
+} from "./group-tokens-by-category.helper.ts";
 
 /** 범주마다 Token 값을 칠해 보이는 시각화. 모두 `var(--gyeol-…)`를 inline style로 칠한다 */
 const PREVIEWS: Record<TokenCategory, (variable: string) => ReactNode> = {
@@ -61,7 +64,7 @@ export function TokenSection({
   tokens,
 }: {
   category: TokenCategory;
-  tokens: readonly SectionToken[];
+  tokens: readonly CategoryToken[];
 }): ReactNode {
   const [computedValues, setComputedValues] = useState<Record<string, string>>(
     {},

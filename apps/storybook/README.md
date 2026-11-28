@@ -17,7 +17,7 @@ http://localhost:6006 에서 봅니다.
 |---|---|
 | `dev` | 로컬 Storybook을 6006 포트로 띄운다 |
 | `build` | 정적 Storybook을 `storybook-static/`에 만든다 |
-| `test` | 토큰 구역 함수의 Vitest 테스트를 돌린다 |
+| `test` | 토큰을 범주별로 나누는 함수의 Vitest 테스트를 돌린다 |
 | `typecheck` | 타입 검사 |
 
 ## 토큰 스토리
@@ -32,7 +32,7 @@ http://localhost:6006 에서 봅니다.
 
 Token마다 이름(경로), CSS 변수, `getComputedStyle`로 읽은 계산된 값이 보입니다. 공개 API가 아닌 Primitive 색은 보여 주지 않습니다.
 
-스토리는 공개 토큰 목록(`@gyeol-ui/tokens/tokens.json`)에서 생성하므로, 토큰이 추가되거나 바뀌어도 스토리를 고치지 않습니다. 구역을 정할 수 없는 토큰(모르는 `type`이나 범주)이 생기면 `src/tokens/token-sections.helper.ts`가 실패합니다.
+스토리는 공개 토큰 목록(`@gyeol-ui/tokens/tokens.json`)에서 생성하므로, 토큰이 추가되거나 바뀌어도 스토리를 고치지 않습니다. 범주를 정할 수 없는 토큰(모르는 `type`이나 범주)이 생기면 `src/tokens/group-tokens-by-category.helper.ts`가 실패하고, `src/tokens/public-tokens.test.ts`가 CI에서 이를 잡습니다.
 
 ## 스토리 위치
 
