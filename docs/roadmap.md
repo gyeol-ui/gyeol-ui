@@ -32,7 +32,7 @@
 
 1. **모노레포 기반** (완료, 노트: [concurrency](./learning/github-actions-concurrency.html), [release-please 다음 버전](./learning/squash-merge-and-release-please.html), [oxlint 범주](./learning/oxlint-categories.html)): 루트 도구 설정, 최소 CI, `packages/tokens` 껍데기(자명한 함수 하나와 테스트 하나). 다른 패키지와 앱은 각자의 스펙에서 만든다. TS 7에서 tsdown의 타입 선언 생성과 oxlint 타입 인식 lint가 도는지 여기서 검증하고, 막히면 TS 6으로 내리고 타입 인식 lint를 끈다.
 2. **토큰 파이프라인** (완료, spec: [#16](https://github.com/gyeol-ui/gyeol-ui/issues/16), 노트: [collection과 mode](./learning/figma-collection-and-mode.html), [Style Dictionary 빌드](./learning/style-dictionary-build.html), [dark 블록이 두 개인 이유](./learning/color-scheme-blocks.html)): `packages/tokens`, DTCG JSON → CSS 변수와 TS 상수. 입력은 손으로 쓴 **임시 씨앗 토큰**(색과 간격 몇 개, Figma collection 구조를 따름)이다.
-3. **Tailwind 테마**: `packages/tailwind`, `@theme` CSS. `prettier-plugin-tailwindcss`는 Tailwind 클래스를 쓰는 패키지가 처음 생기는 Phase 1 첫 컴포넌트 스펙에서 추가한다([#36](https://github.com/gyeol-ui/gyeol-ui/issues/36)).
+3. **Tailwind 테마** (완료, spec: [#31](https://github.com/gyeol-ui/gyeol-ui/issues/31), 노트: [`@theme inline`](./learning/tailwind-theme-inline.html), [`@custom-variant`로 `dark:` 다시 정의하기](./learning/tailwind-custom-variant.html)): `packages/tailwind`, `@theme` CSS. `prettier-plugin-tailwindcss`는 Tailwind 클래스를 쓰는 패키지가 처음 생기는 Phase 1 첫 컴포넌트 스펙에서 추가한다([#36](https://github.com/gyeol-ui/gyeol-ui/issues/36)).
 4. **Storybook**: `apps/storybook`, 토큰을 보여주는 스토리.
 5. **릴리스 기반**: release-please, `@gyeol-ui/tokens`와 `@gyeol-ui/tailwind`를 npm에 0.x로 실제 배포한다. `react`는 Phase 1에서 첫 컴포넌트와 함께 배포하고, `figma-plugin`은 private으로 둔다.
 6. **Figma ① 토큰 내보내기 플러그인**: 씨앗 토큰을 Figma에 한 번 옮겨 적고, 플러그인이 내보낸 결과로 교체한다. 그 뒤로 토큰 JSON을 손으로 편집하지 않는다([ADR-0001](./adr/0001-figma-as-source-of-truth.md)).
