@@ -40,28 +40,8 @@ async function compileClasses({
   return compiler.build(classes);
 }
 
-/** CSS에서 클래스를 선택하는 규칙들의 선언을 모은다. 규칙이 없으면 undefined */
-function findDeclarations({
-  css,
-  className,
-}: {
-  css: string;
-  className: string;
-}): Record<string, string> | undefined {
-  const selector = new RegExp(`\\.${className}(?![\\w-])`);
-  let declarations: Record<string, string> | undefined;
-  postcss.parse(css).walkRules((rule) => {
-    if (!selector.test(rule.selector)) return;
-    declarations ??= {};
-    rule.walkDecls((decl) => {
-      declarations![decl.prop] = decl.value;
-    });
-  });
-  return declarations;
-}
-
-/** 클래스를 선택하는 규칙마다 감싼 @media 조건, 선택자, 선언을 모은다 */
-function findRules({ css, className }: { css: string; className: string }): {
+/** CSS에서 클래스를 선택하는 규칙마다 감싼 @media 조건, 선택자, 선언을 모은다 */
+function collectRules({ css, className }: { css: string; className: string }): {
   media: string | undefined;
   selector: string;
   declarations: Record<string, string>;
@@ -70,7 +50,7 @@ function findRules({ css, className }: { css: string; className: string }): {
     .replaceAll(":", "\\:")
     .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const selector = new RegExp(`\\.${escaped}(?![\\w-])`);
-  const rules: ReturnType<typeof findRules> = [];
+  const rules: ReturnType<typeof collectRules> = [];
   postcss.parse(css).walkRules((rule) => {
     if (!selector.test(rule.selector)) return;
     const declarations: Record<string, string> = {};
@@ -84,6 +64,19 @@ function findRules({ css, className }: { css: string; className: string }): {
     rules.push({ media, selector: rule.selector, declarations });
   });
   return rules;
+}
+
+/** CSS에서 클래스를 선택하는 규칙들의 선언을 하나로 모은다. 규칙이 없으면 undefined */
+function findDeclarations({
+  css,
+  className,
+}: {
+  css: string;
+  className: string;
+}): Record<string, string> | undefined {
+  const rules = collectRules({ css, className });
+  if (rules.length === 0) return undefined;
+  return Object.assign({}, ...rules.map(({ declarations }) => declarations));
 }
 
 const FIXTURE: PublicToken[] = [
@@ -295,20 +288,20 @@ describe("formatTheme", () => {
     // given, when
     const css = await compileClasses({
       theme: formatTheme(FIXTURE),
-      classes: ["dark:bg-bg-surface"],
+      classes: ["dark:opacity-80"],
     });
 
     // then
-    const mediaRules = findRules({
+    const mediaRules = collectRules({
       css,
-      className: "dark:bg-bg-surface",
+      className: "dark:opacity-80",
     }).filter(({ media }) => media === "(prefers-color-scheme: dark)");
     expect(mediaRules).toEqual([
       {
         media: "(prefers-color-scheme: dark)",
         selector:
-          '.dark\\:bg-bg-surface:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *)',
-        declarations: { "background-color": "var(--gyeol-bg-surface)" },
+          '.dark\\:opacity-80:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *)',
+        declarations: { opacity: "80%" },
       },
     ]);
   });
@@ -317,20 +310,20 @@ describe("formatTheme", () => {
     // given, when
     const css = await compileClasses({
       theme: formatTheme(FIXTURE),
-      classes: ["dark:bg-bg-surface"],
+      classes: ["dark:opacity-80"],
     });
 
     // then
-    const attributeRules = findRules({
+    const attributeRules = collectRules({
       css,
-      className: "dark:bg-bg-surface",
+      className: "dark:opacity-80",
     }).filter(({ media }) => media === undefined);
     expect(attributeRules).toEqual([
       {
         media: undefined,
         selector:
-          '.dark\\:bg-bg-surface:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *)',
-        declarations: { "background-color": "var(--gyeol-bg-surface)" },
+          '.dark\\:opacity-80:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *)',
+        declarations: { opacity: "80%" },
       },
     ]);
   });
