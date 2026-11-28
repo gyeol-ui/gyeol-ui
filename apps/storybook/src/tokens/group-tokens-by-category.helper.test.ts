@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { groupTokensByCategory } from "./group-tokens-by-category.helper.ts";
 
-describe("groupTokensByCategory", () => {
+describe(groupTokensByCategory.name, () => {
   it("color는 색, dimension은 경로의 첫 조각(spacing, radius)으로 나눈다", () => {
     // given, when
     // 지금 공개 토큰 목록에 없는 이름(bg-danger, spacing.12, radius.lg)을 섞는다.
