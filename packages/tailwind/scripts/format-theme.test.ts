@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compile } from "@tailwindcss/node";
-import postcss from "postcss";
+import postcss, { AtRule } from "postcss";
 import { describe, expect, it, onTestFinished } from "vitest";
 import { formatTheme, type PublicToken } from "./format-theme.ts";
 import { readPublicTokens } from "./read-public-tokens.ts";
@@ -58,6 +58,32 @@ function findDeclarations({
     });
   });
   return declarations;
+}
+
+/** 클래스를 선택하는 규칙마다 감싼 @media 조건, 선택자, 선언을 모은다 */
+function findRules({ css, className }: { css: string; className: string }): {
+  media: string | undefined;
+  selector: string;
+  declarations: Record<string, string>;
+}[] {
+  const escaped = className
+    .replaceAll(":", "\\:")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const selector = new RegExp(`\\.${escaped}(?![\\w-])`);
+  const rules: ReturnType<typeof findRules> = [];
+  postcss.parse(css).walkRules((rule) => {
+    if (!selector.test(rule.selector)) return;
+    const declarations: Record<string, string> = {};
+    rule.walkDecls((decl) => {
+      declarations[decl.prop] = decl.value;
+    });
+    const media =
+      rule.parent instanceof AtRule && rule.parent.name === "media"
+        ? rule.parent.params
+        : undefined;
+    rules.push({ media, selector: rule.selector, declarations });
+  });
+  return rules;
 }
 
 const FIXTURE: PublicToken[] = [
@@ -263,6 +289,50 @@ describe("formatTheme", () => {
       "border-radius": "var(--gyeol-radius-full)",
     });
     expect(findDeclarations({ css, className: "rounded-lg" })).toBeUndefined();
+  });
+
+  it('dark:는 OS가 dark이고 <html>에 data-color-scheme="light"가 없을 때 켜진다', async () => {
+    // given, when
+    const css = await compileClasses({
+      theme: formatTheme(FIXTURE),
+      classes: ["dark:bg-bg-surface"],
+    });
+
+    // then
+    const mediaRules = findRules({
+      css,
+      className: "dark:bg-bg-surface",
+    }).filter(({ media }) => media === "(prefers-color-scheme: dark)");
+    expect(mediaRules).toEqual([
+      {
+        media: "(prefers-color-scheme: dark)",
+        selector:
+          '.dark\\:bg-bg-surface:where(:root:not([data-color-scheme="light"]), :root:not([data-color-scheme="light"]) *)',
+        declarations: { "background-color": "var(--gyeol-bg-surface)" },
+      },
+    ]);
+  });
+
+  it('dark:는 <html data-color-scheme="dark">이면 OS 설정과 상관없이 켜진다', async () => {
+    // given, when
+    const css = await compileClasses({
+      theme: formatTheme(FIXTURE),
+      classes: ["dark:bg-bg-surface"],
+    });
+
+    // then
+    const attributeRules = findRules({
+      css,
+      className: "dark:bg-bg-surface",
+    }).filter(({ media }) => media === undefined);
+    expect(attributeRules).toEqual([
+      {
+        media: undefined,
+        selector:
+          '.dark\\:bg-bg-surface:where(:root[data-color-scheme="dark"], :root[data-color-scheme="dark"] *)',
+        declarations: { "background-color": "var(--gyeol-bg-surface)" },
+      },
+    ]);
   });
 
   it("표에 없는 Role이나 범주의 토큰이 있으면 모든 토큰 경로를 담아 실패한다", () => {

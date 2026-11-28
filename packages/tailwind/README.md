@@ -52,6 +52,28 @@ Role에 맞지 않는 조합(`text-bg-surface`, `bg-fg-default`)은 클래스가
 
 `p-0`처럼 `0`은 토큰이 아니지만 `0px`로 들어 있습니다.
 
+## `dark:`
+
+Semantic 색 토큰은 Color Scheme에 따라 값이 바뀌므로, 토큰 클래스만 쓰면 `dark:` 없이도 dark에서 맞는 색이 나옵니다. 토큰 밖의 스타일을 Color Scheme에 따라 바꿀 때 `dark:`를 씁니다.
+
+`dark:`는 토큰의 Color Scheme 규칙과 같은 조건에서 켜집니다. 그래서 토큰 색과 `dark:` 스타일이 엇갈리지 않습니다.
+
+| `<html>`의 `data-color-scheme` | OS가 light | OS가 dark |
+|---|---|---|
+| 없음 | 꺼짐 | 켜짐 |
+| `"light"` | 꺼짐 | 꺼짐 |
+| `"dark"` | 켜짐 | 켜짐 |
+
+```html
+<html data-color-scheme="dark">
+  …
+  <img class="opacity-100 dark:opacity-80" … />
+</html>
+```
+
+- 속성은 `<html>`에서만 봅니다. 페이지 일부에 `data-color-scheme`을 달아 Color Scheme을 바꾸는 것은 지원하지 않습니다.
+- Tailwind 기본 `dark:`는 `prefers-color-scheme`만 보므로, 이 패키지가 `@custom-variant dark`로 다시 정의합니다. 조건을 `:where()`로 감싸서 `dark:` 클래스의 명시도는 클래스 하나와 같습니다.
+
 ## 토큰 밖의 값은 없습니다
 
 토큰이 있는 범주(색, 간격, 모서리)에서는 Tailwind 기본값을 비웠습니다. 디자인 언어 밖의 값을 실수로 쓰지 않게 하려는 것입니다.
