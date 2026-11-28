@@ -22,6 +22,8 @@
           <li><a href="#timeline">시간 막대</a></li>
           <li><a href="#scene">요청 장면</a></li>
           <li><a href="#pipe">변환 줄</a></li>
+          <li><a href="#trace">추적</a></li>
+          <li><a href="#inherit">상속 상자</a></li>
           <li><a href="#anatomy">해부도</a></li>
           <li><a href="#gates">관문</a></li>
           <li><a href="#compare">비교 카드</a></li>
@@ -265,6 +267,112 @@
               <span class="pipe-note">보충 설명</span>
             </div>
           </div>
+        </section>
+
+        <section id="trace">
+          <h2>추적</h2>
+          <ol class="trace">
+            <li class="trace-phase">단계 이름<small>보충 설명</small></li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where">원본 파일<small>역할</small></span>
+                <pre class="trace-val">"name": "value"</pre>
+              </div>
+            </li>
+            <li class="trace-step">
+              <strong>변환하는 것</strong>무엇이 어떻게 바뀌는지
+            </li>
+            <li class="trace-stop">
+              <div class="trace-at">
+                <span class="trace-where">갈래 A</span>
+                <pre class="trace-val">--name: <b>바뀐 부분</b>;</pre>
+              </div>
+              <div class="trace-at dim">
+                <span class="trace-where"
+                  >갈래 B<small>따라가지 않는 갈래</small></span
+                >
+                <pre class="trace-val">{ "name": "value" }</pre>
+              </div>
+            </li>
+            <li class="trace-phase green">다음 단계 이름</li>
+            <li class="trace-step green"><strong>다음 변환</strong>설명</li>
+            <li class="trace-stop">
+              <div class="trace-at ok">
+                <span class="trace-where">의도한 결과</span>
+                <pre class="trace-val"><b>#ffffff</b></pre>
+              </div>
+              <div class="trace-at bad">
+                <span class="trace-where">의도와 다른 결과</span>
+                <pre class="trace-val"><b>#000000</b></pre>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        <section id="inherit">
+          <h2>상속 상자</h2>
+          <div class="inherit-pair">
+            <figure class="inherit">
+              <figcaption>경우 A<small>한 줄 설명</small></figcaption>
+              <div class="inh-el">
+                <span class="inh-tag">:root</span>
+                <ul class="inh-vars">
+                  <li class="set">
+                    <span class="inh-name">--color</span
+                    ><span class="inh-val" style="--c: #ffffff">#ffffff</span
+                    ><small>선언한 식</small>
+                  </li>
+                </ul>
+                <div class="inh-el">
+                  <span class="inh-tag">div</span>
+                  <ul class="inh-vars">
+                    <li>
+                      <span class="inh-name">--color</span
+                      ><span class="inh-val" style="--c: #ffffff">#ffffff</span>
+                    </li>
+                  </ul>
+                  <p class="inh-paint" style="--c: #ffffff">
+                    <span
+                      ><code>var(--color)</code> →
+                      <strong>#ffffff</strong></span
+                    >
+                  </p>
+                </div>
+              </div>
+            </figure>
+            <figure class="inherit green">
+              <figcaption>경우 B<small>한 줄 설명</small></figcaption>
+              <div class="inh-el">
+                <span class="inh-tag">:root</span>
+                <ul class="inh-vars">
+                  <li class="set">
+                    <span class="inh-name">--other</span
+                    ><span class="inh-val" style="--c: #ffffff">#ffffff</span>
+                  </li>
+                </ul>
+                <div class="inh-el">
+                  <span class="inh-tag">div</span>
+                  <ul class="inh-vars">
+                    <li class="set">
+                      <span class="inh-name">--color</span
+                      ><span class="inh-val" style="--c: #fde68a">#fde68a</span>
+                    </li>
+                    <li>
+                      <span class="inh-name">--other</span
+                      ><span class="inh-val" style="--c: #ffffff">#ffffff</span>
+                    </li>
+                  </ul>
+                  <p class="inh-paint bad" style="--c: #ffffff">
+                    <span
+                      ><code>var(--other)</code> →
+                      <strong>#ffffff</strong> (의도와 다름)</span
+                    >
+                  </p>
+                </div>
+              </div>
+            </figure>
+          </div>
+          <p class="inherit-note">무엇을 견주어 볼지 한 문장</p>
         </section>
 
         <section id="anatomy">
